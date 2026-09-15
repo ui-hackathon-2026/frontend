@@ -1,0 +1,8 @@
+# Dispatch Instructions
+
+## 2026-09-11T13:41:36Z
+
+Assemble the requested team (Research, Systems Architecture, Technical Writing) to execute the following requirements:
+1. R1: Dataset Readiness & Feasibility Research — Investigate open-access formulation datasets (e.g., SEDDS/SNEDDS PMC10733404, AqSolDB, ChEMBL, TDC) and Python cheminformatics libraries (RDKit, Morgan Fingerprints). Document actionable data schemas, feature extraction pipelines, and a fast surrogate ML model strategy (Tabular LightGBM / Bayesian Optimization) feasible for a 24-hour hackathon MVP. Save findings to `explorations/dataset_readiness_and_ml_pipeline.md`.
+2. R2: Lintasarta AI Pipeline & Architecture Compliance Validation — Analyze PT Aplikanusa Lintasarta's AI offerings (Cloudeka GPU Cloud, AI Studio/Sovereign LLMs) and map out how the Formulation Co-Pilot architecture integrates with Lintasarta's infrastructure to strictly satisfy the hackathon requirement ("Hanya platform AI Lintasarta yang diperkenankan"). Specify the division of labor between Lintasarta AI and local/cloud deterministic engines. Save analysis to `explorations/lintasarta_ai_integration_strategy.md`.
+3. R3: Proposal Refinement & Standardization — Synthesize the research and existing market explorations into an updated, complete `explorations/PROPOSAL STARTUP AI-DRIVEN FORMULATION CO-PILOT.md`. Ensure it includes Section 1: Executive Summary & Multidisciplinary Team Structure, clear 24h MVP vs. Long-term Roadmap separation, addresses PT Paragon pain points (tropical stability at 40°C, Halal/BPOM, local raw materials/TKDN), and includes an index linking all supporting markdown research files in `explorations/`.
