@@ -18,7 +18,7 @@ export interface IngredientInput {
   weightPct: number;
   phase: "A" | "B" | "C" | "D";
   hlb?: number;
-  role: "solvent" | "active" | "emulsifier" | "emollient" | "thickener" | "preservative";
+  role: "solvent" | "active" | "emulsifier" | "emollient" | "thickener" | "preservative" | "chelating" | "humectant";
 }
 
 export interface SimulationRequest {
