@@ -4,9 +4,30 @@ import React, { useState } from "react";
 import { useEditor } from "@/contexts/EditorContext";
 import { MOLECULAR_CATALOG } from "@/data/mock/molecularData";
 import { COSMETIC_INGREDIENTS_CATALOG } from "@/data/mock/ingredientsCatalog";
+import type { MoleculeItem } from "@/domain/models/molecule";
 import { Molecule3DViewer } from "@/components/molecular/Molecule3DViewer";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { Atom, BookOpen, Plus, Search, Check, Sparkles } from "lucide-react";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+const ROLE_CATEGORY = (role?: string): MoleculeItem["category"] => {
+  switch ((role || "").toLowerCase()) {
+    case "emulsifier":
+      return "emulsifier";
+    case "emollient":
+      return "emollient";
+    case "humectant":
+      return "humectant";
+    case "thickener":
+      return "thickener";
+    case "solvent":
+      return "active";
+    default:
+      return "active";
+  }
+};
 
 export const LeftContextualPanel: React.FC = () => {
   const {
@@ -19,9 +40,124 @@ export const LeftContextualPanel: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [addedNotice, setAddedNotice] = useState<string | null>(null);
+  const [liveMolecule, setLiveMolecule] = useState<MoleculeItem | null>(null);
+  const [libraryItems, setLibraryItems] = useState<typeof COSMETIC_INGREDIENTS_CATALOG | null>(null);
+  const smilesMapRef = React.useRef<Record<string, string> | null>(null);
+
+  const ensureSmiles = async (): Promise<Record<string, string>> => {
+    if (smilesMapRef.current) return smilesMapRef.current;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`);
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, string> = {};
+        for (const it of data.items || []) {
+          if (it.inci && it.smiles) map[String(it.inci).toLowerCase()] = String(it.smiles);
+        }
+        smilesMapRef.current = map;
+        return map;
+      }
+    } catch {
+      // offline: marker-only resolution
+    }
+    smilesMapRef.current = {};
+    return {};
+  };
+
+  // Live conformer from backend, fallback to mock catalog
+  React.useEffect(() => {
+    if (!selectedMoleculeIngredient) {
+      setLiveMolecule(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const smilesMap = await ensureSmiles();
+        const key = selectedMoleculeIngredient.inci.toLowerCase();
+        const res = await fetch(`${API_BASE}/api/v1/molecules/conformer-3d`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: `${selectedMoleculeIngredient.name} ${selectedMoleculeIngredient.inci}`,
+            ...(smilesMap[key] ? { smiles: smilesMap[key] } : {}),
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setLiveMolecule({
+          id: `be-${selectedMoleculeIngredient.id}`,
+          name: data.molecule_name || selectedMoleculeIngredient.name,
+          inci: selectedMoleculeIngredient.inci,
+          category: ROLE_CATEGORY((selectedMoleculeIngredient as any).role),
+          smiles: "",
+          description: selectedMoleculeIngredient.name,
+          properties: {
+            formula: data.molecular_formula || "",
+            molecularWeight: data.molecular_weight || 0,
+            logP: data.logP ?? 0,
+            tpsa: data.tpsa ?? 0,
+            hBondDonors: data.h_bond_donors ?? 0,
+            hBondAcceptors: data.h_bond_acceptors ?? 0,
+            rotatableBonds: data.rotatable_bonds ?? 0,
+            charge: data.charge ?? 0,
+          },
+          atoms: (data.atoms || []).map((a: any) => ({
+            id: a.id,
+            element: a.element,
+            x: a.x,
+            y: a.y,
+            z: a.z,
+          })),
+          bonds: (data.bonds || []).map((b: any) => ({
+            source: b.source,
+            target: b.target,
+            order: b.order,
+          })),
+        });
+      } catch {
+        if (!cancelled) setLiveMolecule(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMoleculeIngredient]);
+
+  // Live library from backend, fallback to mock catalog
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data.items)) return;
+        setLibraryItems(
+          data.items.map((it: any) => ({
+            id: String(it.id),
+            name: String(it.name),
+            inci: String(it.inci),
+            defaultPhase: it.phase,
+            defaultWeightPct: Number(it.weightPct ?? 0),
+            role: it.role,
+          })) as typeof COSMETIC_INGREDIENTS_CATALOG
+        );
+      } catch {
+        // keep mock fallback
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const catalogSource = libraryItems ?? COSMETIC_INGREDIENTS_CATALOG;
 
   // Find 3D conformer for selected ingredient
   const targetMolecule = React.useMemo(() => {
+    if (liveMolecule) return liveMolecule;
     if (!selectedMoleculeIngredient) return MOLECULAR_CATALOG[0];
     const nameLower = selectedMoleculeIngredient.name.toLowerCase();
     const inciLower = selectedMoleculeIngredient.inci.toLowerCase();
@@ -32,16 +168,16 @@ export const LeftContextualPanel: React.FC = () => {
       m.id.toLowerCase().includes(selectedMoleculeIngredient.id.toLowerCase())
     );
     return matched || MOLECULAR_CATALOG[0];
-  }, [selectedMoleculeIngredient]);
+  }, [selectedMoleculeIngredient, liveMolecule]);
 
   // Filter library ingredients
   const filteredCatalog = React.useMemo(() => {
-    if (!searchQuery.trim()) return COSMETIC_INGREDIENTS_CATALOG;
+    if (!searchQuery.trim()) return catalogSource;
     const q = searchQuery.toLowerCase();
-    return COSMETIC_INGREDIENTS_CATALOG.filter(
+    return catalogSource.filter(
       (it) => it.name.toLowerCase().includes(q) || it.inci.toLowerCase().includes(q) || it.role.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, catalogSource]);
 
   const handleAddFromLibrary = (item: typeof COSMETIC_INGREDIENTS_CATALOG[0]) => {
     addIngredient({

@@ -13,6 +13,31 @@ import {
 
 const STORAGE_KEY = "ps_editor_workspace_v2";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Backend ${path} menjawab ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Backend ${path} menjawab ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 const INITIAL_INGREDIENTS_V1: EditorIngredient[] = [
   // Fase A (Minyak)
   { id: "ing-squalane", name: "Plant-Derived Squalane (Olive)", inci: "Squalane", phase: "A", weightPct: 4.5, role: "emollient" },
@@ -77,6 +102,7 @@ interface EditorContextType {
   removeIngredient: (id: string) => void;
   addIngredient: (item: Omit<EditorIngredient, "isLocked">) => void;
   applyProposal: (proposal: FormulaModificationProposal) => void;
+  applyCandidateRecipe: (entries: Array<{ inci: string; weightPct: number }>) => void;
   // Contextual Left Panel
   selectedMoleculeIngredient: EditorIngredient | null;
   setSelectedMoleculeIngredient: (item: EditorIngredient | null) => void;
@@ -109,13 +135,16 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [centerViewMode, setCenterViewMode] = useState<"chat" | "artifact">("chat");
   const [activeArtifact, setActiveArtifact] = useState<EditorArtifact | null>(null);
   const [artifactsListModalOpen, setArtifactsListModalOpen] = useState(false);
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const smilesMapRef = React.useRef<Record<string, string>>({});
   const [actionConfigModal, setActionConfigModal] = useState<{ isOpen: boolean; actionType: ArtifactType | null }>({
     isOpen: false,
     actionType: null,
   });
 
-  // Restore workspace from localStorage
+  // Restore workspace from localStorage, else seed from backend chassis
   useEffect(() => {
+    let cancelled = false;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -126,11 +155,48 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           if (active.ingredients.length > 0) {
             setSelectedMoleculeIngredient(active.ingredients[0]);
           }
+          return;
         }
       }
     } catch {
       // fallback to default
     }
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/orchestrator/chassis`);
+        if (!res.ok) return;
+        const list = await res.json();
+        const first = Array.isArray(list) && list.length > 0 ? list[0] : null;
+        const items = first?.ingredients;
+        if (cancelled || !Array.isArray(items) || items.length === 0) return;
+        const roleForPhase: Record<string, EditorIngredient["role"]> = {
+          A: "emollient",
+          B: "solvent",
+          C: "emulsifier",
+          D: "active",
+        };
+        const seeded: EditorIngredient[] = items.map((it: any, idx: number) => ({
+          id: `ing-seed-${idx}`,
+          name: String(it.name || it.inci),
+          inci: String(it.inci),
+          phase: ["A", "B", "C", "D"].includes(it.phase) ? it.phase : "B",
+          weightPct: Number(it.weightPct) || 0,
+          role: roleForPhase[it.phase] || "active",
+        }));
+        setWorkspace((prev) => ({
+          ...prev,
+          drafts: prev.drafts.map((d, i) =>
+            i !== 0 ? d : { ...d, ingredients: seeded }
+          ),
+        }));
+        setSelectedMoleculeIngredient(seeded[0]);
+      } catch {
+        // keep hardcoded defaults offline
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Save workspace to localStorage
@@ -143,8 +209,52 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, []);
 
+  // Persist every workspace change (covers streaming chat and artifacts)
+  const hydratedRef = React.useRef(false);
+  useEffect(() => {
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+    } catch {
+      // ignore storage full
+    }
+  }, [workspace]);
+
   const activeDraft = workspace.drafts.find((d) => d.id === workspace.activeDraftId) || workspace.drafts[0];
   const ingredients = activeDraft.ingredients;
+
+  // SMILES lookup from backend catalog (for simulate calls)
+  const ensureSmilesMap = useCallback(async () => {
+    if (Object.keys(smilesMapRef.current).length > 0) return smilesMapRef.current;
+    try {
+      const data = await apiGet<{ items: Array<{ inci: string; smiles: string }> }>(
+        "/api/v1/workbench/ingredients"
+      );
+      const map: Record<string, string> = {};
+      for (const item of data.items || []) {
+        if (item.inci && item.smiles) map[item.inci.toLowerCase()] = item.smiles;
+      }
+      smilesMapRef.current = map;
+    } catch {
+      // offline catalog: simulate calls will fail gracefully at request time
+    }
+    return smilesMapRef.current;
+  }, []);
+
+  const toSimulateIngredients = useCallback(async () => {
+    const smilesMap = await ensureSmilesMap();
+    return ingredients.map((it) => ({
+      name: it.name,
+      inci: it.inci,
+      smiles: smilesMap[it.inci.toLowerCase()] || "O",
+      weight_pct: it.weightPct,
+      phase: it.phase,
+      role: it.role,
+    }));
+  }, [ingredients, ensureSmilesMap]);
 
   // Switch Draft
   const switchDraft = useCallback((draftId: string) => {
@@ -289,6 +399,24 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     saveWorkspace({ ...workspace, drafts: updatedDrafts });
   }, [workspace, activeDraft, saveWorkspace]);
 
+  // Apply candidate recipe (bulk, by INCI match, single renormalization)
+  const applyCandidateRecipe = useCallback((entries: Array<{ inci: string; weightPct: number }>) => {
+    const byInci = new Map(entries.map((e) => [e.inci.toLowerCase(), e.weightPct]));
+    const matched = ingredients.map((it) =>
+      byInci.has(it.inci.toLowerCase())
+        ? { ...it, weightPct: byInci.get(it.inci.toLowerCase()) as number }
+        : it
+    );
+    const total = matched.reduce((acc, it) => acc + it.weightPct, 0);
+    const normalized = total > 0
+      ? matched.map((it) => ({ ...it, weightPct: Number(((it.weightPct / total) * 100).toFixed(2)) }))
+      : matched;
+    const updatedDrafts = workspace.drafts.map((d) =>
+      d.id !== activeDraft.id ? d : { ...d, ingredients: normalized }
+    );
+    saveWorkspace({ ...workspace, drafts: updatedDrafts });
+  }, [ingredients, workspace, activeDraft, saveWorkspace]);
+
   // View Artifact
   const viewArtifact = useCallback((art: EditorArtifact) => {
     setActiveArtifact(art);
@@ -309,94 +437,187 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setActionConfigModal({ isOpen: false, actionType: null });
   }, []);
 
-  // Execute Action & Generate Artifact
-  const executeAction = useCallback((type: ArtifactType, configParams?: any) => {
+  // Execute Action & Generate Artifact (real backend engines)
+  const executeAction = useCallback(async (type: ArtifactType, configParams?: any) => {
     closeActionConfig();
 
     const timestamp = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    let artifactTitle = "";
-    let artifactSubtitle = "";
-    let dataPayload: any = {};
-    let assistantChatText = "";
+    const simIngredients = await toSimulateIngredients();
 
-    if (type === "pareto") {
-      artifactTitle = "Hasil Optimasi Multi-Objektif Pareto NSGA-II";
-      artifactSubtitle = "50.000 iterasi evaluasi simpleks massa ∑w = 100%";
-      assistantChatText = "Saya telah mengevaluasi 50.000 iterasi formula menggunakan Optuna NSGA-II pada GPU L40S. Report **Pareto Frontier** telah siap ditinjau.";
-      dataPayload = {
-        config: configParams || { maxCost: 50000, minStability: 85, targetTkdn: 40 },
-        candidates: [
-          { name: "Kandidat A (Balanced)", stability: "92.4%", cogs: "Rp 38.500", tkdn: "46.2%", hlb: "9.4" },
-          { name: "Kandidat B (Cost Leader)", stability: "88.1%", cogs: "Rp 29.200", tkdn: "41.5%", hlb: "9.1" },
-          { name: "Kandidat C (High-TKDN)", stability: "90.8%", cogs: "Rp 44.000", tkdn: "54.8%", hlb: "9.6" },
-        ],
+    const pushArtifact = (
+      title: string,
+      subtitle: string,
+      dataPayload: any,
+      chatText: string
+    ) => {
+      const newArtifact: EditorArtifact = {
+        id: `art-${type}-${Date.now()}`,
+        type,
+        title,
+        subtitle,
+        createdAt: timestamp,
+        data: dataPayload,
       };
-    } else if (type === "sentinel") {
-      artifactTitle = "Laporan Audit Regulasi BPOM & Halal HAS 23000";
-      artifactSubtitle = "Skrining Perka BPOM No. 17/2022 & sertifikasi Halal bahan";
-      assistantChatText = "Audit regulasi selesai. Seluruh bahan dalam batas aman BPOM dan bebas dari kontaminan non-halal. Report kepatuhan telah dibuka.";
-      dataPayload = {
-        status: "COMPLIANT",
-        bpomScore: "100%",
-        halalScore: "Lolos Uji HAS 23000",
-        tkdnScore: "44.8%",
-        checkedRules: 18,
+      const newChatMsg: EditorChatMessage = {
+        id: `msg-${Date.now()}`,
+        sender: "assistant" as const,
+        content: chatText,
+        timestamp,
+        linkedArtifactId: newArtifact.id,
       };
-    } else if (type === "simulation") {
-      artifactTitle = "Hasil Simulasi Fisikokimia Kestabilan 40°C";
-      artifactSubtitle = "Inkubator Iklim Tropis Zona IVb (40°C / 75% RH / 90 Hari)";
-      assistantChatText = "Simulasi kestabilan 40°C in-silico selesai (LightGBM surrogate inference <1 ms). Probabilitas kestabilan fisik terprediksi tinggi.";
-      dataPayload = {
-        probStability: 94.2,
-        viscosityMpaS: 5350,
-        dropletDlsNm: 145,
-        gibbsDeltaG: -14.2,
+      setWorkspace((prev) => ({
+        ...prev,
+        drafts: prev.drafts.map((d) =>
+          d.id !== activeDraft.id
+            ? d
+            : {
+                ...d,
+                artifacts: [newArtifact, ...d.artifacts],
+                messages: [...d.messages, newChatMsg],
+              }
+        ),
+      }));
+      setActiveArtifact(newArtifact);
+      setCenterViewMode("artifact");
+    };
+
+    const pushError = (label: string) => {
+      const newChatMsg: EditorChatMessage = {
+        id: `msg-${Date.now()}`,
+        sender: "assistant" as const,
+        content: `${label} gagal dijalankan: backend tidak tersedia. Coba lagi nanti.`,
+        timestamp,
       };
-    } else if (type === "similarity") {
-      artifactTitle = "Analisis Kemiripan Formula & Patent Novelty FTO";
-      artifactSubtitle = "Paragon Cross-Brand Knowledge Base vs Global Patent Landscape";
-      assistantChatText = "Analisis komparasi formula selesai. Chassis memiliki kemiripan 78% dengan Wardah Hydra Rose dan skor Patent Freedom-to-Operate 89%.";
-      dataPayload = {
-        chassisOverlap: 78,
-        brandClosest: "Wardah Hydra Rose Dewy Gel",
-        patentNoveltyIndex: 89,
-        infringementRisk: "LOW",
-      };
+      setWorkspace((prev) => ({
+        ...prev,
+        drafts: prev.drafts.map((d) =>
+          d.id !== activeDraft.id ? d : { ...d, messages: [...d.messages, newChatMsg] }
+        ),
+      }));
+    };
+
+    try {
+      if (type === "pareto") {
+        const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
+          constraints: {
+            minStabilityPct: configParams?.minStability ?? 85,
+            maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
+            minTkdnPct: configParams?.targetTkdn ?? 40,
+            targetViscosityMpaS: 5200,
+          },
+          trialsCount: 500,
+        });
+        const candidates = (res.topCandidates || []).map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          stability: `${c.metrics.stabilityPct}%`,
+          cogs: `Rp ${Number(c.metrics.cogsIdrPerKg).toLocaleString("id-ID")}`,
+          tkdn: `${c.metrics.tkdnPct}%`,
+          badge: c.badgeLabel,
+          desc: c.tradeOffSummary,
+          recipe: c.ingredients,
+        }));
+        pushArtifact(
+          "Hasil Optimasi Multi-Objektif Pareto NSGA-II",
+          `${res.trialsEvaluated} iterasi evaluasi simpleks massa ∑w = 100%`,
+          {
+            config: configParams || {},
+            candidates,
+            trialsEvaluated: res.trialsEvaluated,
+            executionTimeMs: res.executionTimeMs,
+            nonDominatedCount: res.nonDominatedCount,
+          },
+          `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`
+        );
+      } else if (type === "sentinel") {
+        const res: any = await apiPost("/api/v1/compliance/audit", {
+          formula_name: activeDraft.name,
+          ingredients: simIngredients,
+        });
+        const violations = (res.ingredients_audit || []).filter((a: any) => a.status !== "PASSED").length;
+        pushArtifact(
+          "Laporan Audit Regulasi BPOM & Halal HAS 23000",
+          "Skrining Perka BPOM No. 25/2025 & sertifikasi Halal bahan",
+          {
+            status: res.overall_status,
+            bpomScore: `${res.compliance_score != null ? Math.round(res.compliance_score * 100) : 0}%`,
+            halalScore: res.halal_status,
+            tkdnScore: `${res.total_tkdn_pct}%`,
+            checkedRules: (res.ingredients_audit || []).length,
+            violations,
+          },
+          `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan. Report kepatuhan telah dibuka.`
+        );
+      } else if (type === "simulation") {
+        const res: any = await apiPost("/api/v1/simulate/stability", {
+          formula_name: activeDraft.name,
+          temperature_c: configParams?.tempCelsius ?? 40,
+          duration_days: configParams?.durationDays ?? 90,
+          ingredients: simIngredients,
+        });
+        pushArtifact(
+          "Hasil Simulasi Fisikokimia Kestabilan 40°C",
+          "Inkubator Iklim Tropis Zona IVb (40°C / 75% RH / 90 Hari)",
+          {
+            probStability: Math.round((res.stability_score_40c_90days || 0) * 1000) / 10,
+            viscosityMpaS: Math.round(res.dynamic_viscosity_mpas || 0),
+            dropletDlsNm: Math.round((res.mean_droplet_size_nm || 0) * 10) / 10,
+            gibbsDeltaG: res.thermodynamics?.gibbs_free_energy_kj_mol ?? null,
+            verdict: res.verdict,
+          },
+          `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}).`
+        );
+      } else if (type === "similarity") {
+        const payload = {
+          ingredients: simIngredients.map((it: any) => ({
+            inci: it.inci,
+            weight_pct: it.weight_pct,
+          })),
+        };
+        const [internal, external] = await Promise.all([
+          apiPost<any>("/api/v1/similarity/check", payload),
+          apiPost<any>("/api/v1/similarity/external", payload),
+        ]);
+        pushArtifact(
+          "Analisis Kemiripan Formula & Patent Novelty",
+          "Paragon Cross-Brand Knowledge Base vs komposisi produk beredar",
+          {
+            internal: {
+              matches: (internal.matches || []).map((m: any) => ({
+                name: m.name,
+                formula_id: m.formula_id,
+                jaccard: m.jaccard,
+                cosine: m.cosine,
+                chassis_overlap_pct: m.chassis_overlap_pct,
+              })),
+            },
+            external: {
+              noveltyScore: Math.round((external.novelty_score || 0) * 100),
+              matches: (external.top_matches || []).map((m: any) => ({
+                brand: m.brand,
+                productName: m.product_name,
+                url: m.url,
+                similarity: Math.round(m.similarity * 1000) / 10,
+                shared: m.shared_ingredients,
+              })),
+            },
+          },
+          `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%.`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      pushError(
+        type === "pareto" ? "Optimasi Pareto"
+        : type === "sentinel" ? "Audit regulasi"
+        : type === "simulation" ? "Simulasi kestabilan"
+        : "Analisis similaritas"
+      );
     }
+  }, [activeDraft, toSimulateIngredients, closeActionConfig]);
 
-    const newArtifact: EditorArtifact = {
-      id: `art-${type}-${Date.now()}`,
-      type,
-      title: artifactTitle,
-      subtitle: artifactSubtitle,
-      createdAt: timestamp,
-      data: dataPayload,
-    };
-
-    const newChatMsg: EditorChatMessage = {
-      id: `msg-${Date.now()}`,
-      sender: "assistant" as const,
-      content: assistantChatText,
-      timestamp,
-      linkedArtifactId: newArtifact.id,
-    };
-
-    const updatedDrafts = workspace.drafts.map((d) => {
-      if (d.id !== activeDraft.id) return d;
-      return {
-        ...d,
-        artifacts: [newArtifact, ...d.artifacts],
-        messages: [...d.messages, newChatMsg],
-      };
-    });
-
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-    setActiveArtifact(newArtifact);
-    setCenterViewMode("artifact");
-  }, [workspace, activeDraft, saveWorkspace, closeActionConfig]);
-
-  // Send Chat Message
-  const sendMessage = useCallback((text: string) => {
+  // Send Chat Message (real backend SSE stream)
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim()) return;
     const timestamp = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 
@@ -407,73 +628,141 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       timestamp,
     };
 
-    // Check if user is asking to modify formula
-    const lower = text.toLowerCase();
-    let proposal: FormulaModificationProposal | undefined;
-    let assistantReply = "";
-
-    if (lower.includes("tambah") || lower.includes("kurang") || lower.includes("ganti") || lower.includes("optimasi") || lower.includes("niacinamide")) {
-      // Create a smart proposal diff
-      const currentNiacinamide = ingredients.find((it) => it.id === "ing-niacinamide")?.weightPct || 3.0;
-      const targetNiacinamide = currentNiacinamide >= 4 ? 2.0 : 4.0;
-      const water = ingredients.find((it) => it.id === "ing-water")?.weightPct || 70.0;
-      const waterDiff = currentNiacinamide - targetNiacinamide;
-      const newWater = Number((water + waterDiff).toFixed(2));
-
-      const updated = ingredients.map((it) => {
-        if (it.id === "ing-niacinamide") return { ...it, weightPct: targetNiacinamide };
-        if (it.id === "ing-water") return { ...it, weightPct: newWater };
-        return it;
-      });
-
-      proposal = {
-        id: `prop-${Date.now()}`,
-        title: `Penyesuaian Konsentrasi Niacinamide (${targetNiacinamide}%) & Keseimbangan Air`,
-        explanation: `Menaikkan Niacinamide ke ${targetNiacinamide}% untuk memperkuat klaim pencerah dan sawar kulit, dengan menyeimbangkan Demineralized Water ke ${newWater}% agar total formula tetap 100%.`,
-        changes: [
-          {
-            ingredientId: "ing-niacinamide",
-            name: "Niacinamide (Vitamin B3)",
-            oldPct: currentNiacinamide,
-            newPct: targetNiacinamide,
-            phase: "D",
-            action: "modified",
-          },
-          {
-            ingredientId: "ing-water",
-            name: "Demineralized Water",
-            oldPct: water,
-            newPct: newWater,
-            phase: "B",
-            action: "modified",
-          },
-        ],
-        updatedIngredients: updated,
-      };
-
-      assistantReply = `Saya telah merancang usulan modifikasi formula berdasarkan permintaan Anda. Silakan periksa rincian perubahannya di kartu bawah dan klik **Terapkan ke Kitchen Panel** untuk mengaplikasikannya.`;
-    } else {
-      assistantReply = `Saran formulasi R&D: Formula pada **${activeDraft.name}** saat ini memiliki kesetimbangan fase yang sangat baik dengan rasio surfaktan-ke-minyak (SOR) terukur. Anda dapat menjalankan aksi **Simulasi 40°C** atau **Pareto Optimizer** di tombol (+) untuk validasi lebih mendalam.`;
-    }
-
-    const assistantMsg: EditorChatMessage = {
-      id: `ai-${Date.now()}`,
-      sender: "assistant" as const,
-      content: assistantReply,
-      timestamp,
-      proposal,
-    };
-
-    const updatedDrafts = workspace.drafts.map((d) => {
-      if (d.id !== activeDraft.id) return d;
-      return {
-        ...d,
-        messages: [...d.messages, userMsg, assistantMsg],
-      };
+    const assistantId = `ai-${Date.now()}`;
+    let streamed = "";
+    const pushUserAndPlaceholder = (prev: EditorWorkspace): EditorWorkspace => ({
+      ...prev,
+      drafts: prev.drafts.map((d) =>
+        d.id !== activeDraft.id
+          ? d
+          : {
+              ...d,
+              messages: [
+                ...d.messages,
+                userMsg,
+                { id: assistantId, sender: "assistant" as const, content: "", timestamp },
+              ],
+            }
+      ),
+    });
+    const appendToken = (prev: EditorWorkspace, token: string): EditorWorkspace => ({
+      ...prev,
+      drafts: prev.drafts.map((d) =>
+        d.id !== activeDraft.id
+          ? d
+          : {
+              ...d,
+              messages: d.messages.map((m) =>
+                m.id === assistantId ? { ...m, content: m.content + token } : m
+              ),
+            }
+      ),
     });
 
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
+    setWorkspace(pushUserAndPlaceholder);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          session_id: chatSessionId,
+          canvas: {
+            formula_name: activeDraft.name,
+            ingredients: ingredients.map((it) => ({
+              inci: it.inci,
+              weight_pct: it.weightPct,
+              phase: it.phase,
+            })),
+          },
+        }),
+      });
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === "[DONE]") continue;
+          let evt: any;
+          try {
+            evt = JSON.parse(data);
+          } catch {
+            continue;
+          }
+          if (evt.type === "token" && typeof evt.token === "string") {
+            streamed += evt.token;
+            setWorkspace((prev) => appendToken(prev, evt.token));
+          } else if (evt.type === "meta" && typeof evt.session_id === "string") {
+            setChatSessionId(evt.session_id);
+          } else if (evt.type === "error") {
+            throw new Error(typeof evt.detail === "string" ? evt.detail : "AI error");
+          }
+        }
+      }
+      if (!streamed) throw new Error("empty reply");
+    } catch (err) {
+      console.error(err);
+      const fallback =
+        streamed || "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
+      setWorkspace((prev) => ({
+        ...prev,
+        drafts: prev.drafts.map((d) =>
+          d.id !== activeDraft.id
+            ? d
+            : {
+                ...d,
+                messages: d.messages.map((m) =>
+                  m.id === assistantId ? { ...m, content: fallback } : m
+                ),
+              }
+        ),
+      }));
+      streamed = fallback;
+    } finally {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved) as EditorWorkspace;
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
+              ...parsed,
+              drafts: parsed.drafts.map((d) =>
+                d.id !== activeDraft.id
+                  ? d
+                  : {
+                      ...d,
+                      messages: [
+                        ...d.messages.filter(
+                          (m) => m.id !== userMsg.id && m.id !== assistantId
+                        ),
+                        userMsg,
+                        {
+                          id: assistantId,
+                          sender: "assistant" as const,
+                          content: streamed,
+                          timestamp,
+                        },
+                      ],
+                    }
+              ),
+            })
+          );
+        }
+      } catch {
+        // persistence best-effort
+      }
+    }
+  }, [activeDraft, ingredients, chatSessionId]);
 
   return (
     <EditorContext.Provider
@@ -490,6 +779,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         removeIngredient,
         addIngredient,
         applyProposal,
+        applyCandidateRecipe,
         selectedMoleculeIngredient,
         setSelectedMoleculeIngredient,
         leftPanelMode,
