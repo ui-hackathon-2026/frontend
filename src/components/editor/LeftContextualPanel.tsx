@@ -12,6 +12,12 @@ import { Atom, BookOpen, Plus, Search, Check, Sparkles } from "lucide-react";
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ps_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const ROLE_CATEGORY = (role?: string): MoleculeItem["category"] => {
   switch ((role || "").toLowerCase()) {
     case "emulsifier":
@@ -47,7 +53,9 @@ export const LeftContextualPanel: React.FC = () => {
   const ensureSmiles = async (): Promise<Record<string, string>> => {
     if (smilesMapRef.current) return smilesMapRef.current;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`);
+      const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`, {
+        headers: { Accept: "application/json", ...authHeaders() },
+      });
       if (res.ok) {
         const data = await res.json();
         const map: Record<string, string> = {};
@@ -77,7 +85,7 @@ export const LeftContextualPanel: React.FC = () => {
         const key = selectedMoleculeIngredient.inci.toLowerCase();
         const res = await fetch(`${API_BASE}/api/v1/molecules/conformer-3d`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
             name: `${selectedMoleculeIngredient.name} ${selectedMoleculeIngredient.inci}`,
             ...(smilesMap[key] ? { smiles: smilesMap[key] } : {}),
@@ -130,7 +138,9 @@ export const LeftContextualPanel: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`);
+        const res = await fetch(`${API_BASE}/api/v1/workbench/ingredients`, {
+          headers: { Accept: "application/json", ...authHeaders() },
+        });
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled || !Array.isArray(data.items)) return;

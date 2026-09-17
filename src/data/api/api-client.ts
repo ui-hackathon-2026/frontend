@@ -18,6 +18,12 @@ export interface ApiClientConfig {
   timeoutMs?: number;
 }
 
+export function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ps_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export class ApiClient {
   private baseUrl: string;
   private timeoutMs: number;
@@ -40,6 +46,7 @@ export class ApiClient {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...authHeader(),
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -85,6 +92,7 @@ export class ApiClient {
         method: "GET",
         headers: {
           Accept: "application/json",
+          ...authHeader(),
         },
         signal: controller.signal,
       });

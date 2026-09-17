@@ -16,10 +16,16 @@ const STORAGE_KEY = "ps_editor_workspace_v2";
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ps_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -30,7 +36,7 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
 
 async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", ...authHeaders() },
   });
   if (!res.ok) {
     throw new Error(`Backend ${path} menjawab ${res.status}`);
@@ -163,7 +169,9 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/orchestrator/chassis`);
+        const res = await fetch(`${API_BASE}/api/v1/orchestrator/chassis`, {
+          headers: { Accept: "application/json", ...authHeaders() },
+        });
         if (!res.ok) return;
         const list = await res.json();
         const first = Array.isArray(list) && list.length > 0 ? list[0] : null;
@@ -663,7 +671,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     try {
       const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({
           message: text,
           session_id: chatSessionId,
