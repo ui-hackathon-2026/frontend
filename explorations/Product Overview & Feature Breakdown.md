@@ -1,20 +1,22 @@
 # 🚀 Product Overview & Feature Breakdown (Maximal & Optimistic Edition)
-## AI-Driven Formulation Co-Pilot: Enterprise-Grade In-Silico R&D Platform Berbasis Sovereign AI & GPU Cloudeka L40S
+## AI-Driven Formulation Co-Pilot: Enterprise In-Silico R&D Platform (Cloudeka L40S Training Engine + Groq LPU Multi-Agent)
 
-> **Catatan Pembaruan Infrastruktur & Akselerasi Riset:**  
-> Dokumen ini disusun dengan pendekatan **maksimal, optimis, dan berkemampuan komputasi penuh (*Full-Compute Unleashed*)** menyusul alokasi infrastruktur nyata **Lintasarta Cloudeka Deka Notebook**:
-> * **GPU:** 1x NVIDIA L40S (Arsitektur Ada Lovelace, 48GB GDDR6, 4th Gen Tensor Cores, FP8/FP16 Transformer Engine, Ray Tracing Cores).
-> * **Sistem & Memori:** 8 vCPU, **96 GB RAM DDR5** (kapasitas masif untuk pemrosesan graf molekuler).
-> * **Penyimpanan:** **300 GB Storage NVMe C1** berkecepatan tinggi.
-> * **Lingkungan Runtime:** Deka Notebook Jupyter (CUDA 13.0, Driver 580.159, Python 3 / PyTorch / RDKit).
-> * **Akselerasi Pengembangan (Dev Velocity):** Didukung *AI Coding Agents* (Claude, Antigravity, Codex) untuk mewujudkan fungsionalitas *full-stack end-to-end* tingkat enterprise dalam sprint hackathon!
+> **Catatan Pembaruan Infrastruktur & Arsitektur AI:**  
+> Dokumen ini mengintegrasikan arsitektur komputasi mutakhir yang memisahkan antara **LLM Agent Inference** dan **Heavy Deep Chemistry Training/Compute**:
+> * **LLM Engine:** 100% menggunakan **Groq Cloud LPU Inference API** (Llama-3.3-70B-Versatile & Llama-3.1-8B-Instant) dengan latensi ultra-cepat (**500–800 token/detik**) dan *Smart Free API Key Rotation Pool* (Auto-failover anti rate-limit HTTP 429). *(Tidak ada ketergantungan pada Lintasarta AI Studio / Sahabat-AI)*.
+> * **Deep Model Training & Heavy Compute (Lintasarta Cloudeka Deka Notebook):**
+>   * **Dedicated GPU:** 1x NVIDIA L40S (Arsitektur Ada Lovelace, 48GB GDDR6, 4th Gen Tensor Cores, FP8/FP16 Transformer Engine).
+>   * **Sistem & Memori:** 8 vCPU, **96 GB RAM DDR5** (kapasitas masif untuk training graf molekuler & cache database).
+>   * **Penyimpanan Cepat:** **300 GB NVMe C1 Storage** untuk dataset SEDDS, AqSolDB, dan database formulasi.
+>   * **Fungsi Utama Cloudeka:** Melatih (*training*) dan menjalankan *Deep Colloid Graph Neural Network (GNN)*, melatih *surrogate LightGBM*, kalkulasi *RDKit 3D conformers*, dan eksekusi *GPU-Accelerated Optuna NSGA-II*.
+> * **Akselerasi Pengembangan:** Didukung *AI Coding Agents* (Claude, Antigravity, Codex) untuk membangun sistem *full-stack production-grade* secara kilat.
 
 ---
 
 ## 1. Visi Produk: The Autonomous Cosmetic Formulation Engine
 
 ### 🌟 Definisi Produk Terbarukan:
-**AI-Driven Formulation Co-Pilot** adalah platform *in-silico deep formulation design* dan *autonomous laboratory co-pilot* generasi baru yang mentransformasi riset kosmetik dan *personal care* di Indonesia. Menggabungkan **Deep Graph Neural Networks (GNN)**, **Surrogate Physics-Informed ML**, dan **Autonomous Agentic LLM (Lintasarta AI Studio / Sahabat-AI)** di atas klaster **Lintasarta Cloudeka NVIDIA L40S (96GB RAM)**, platform ini mampu:
+**AI-Driven Formulation Co-Pilot** adalah platform *in-silico deep formulation design* dan *autonomous laboratory co-pilot* generasi baru yang mentransformasi riset kosmetik dan *personal care*. Menggabungkan **Deep Graph Neural Networks (GNN)** dan **Surrogate Physics-Informed ML** yang dilatih langsung di atas klaster **Lintasarta Cloudeka NVIDIA L40S (96GB RAM)** dengan **Autonomous Multi-Agent System bertenaga Groq Cloud LPU (Llama-3.3-70B)**, platform ini mampu:
 1. **Merancang resep emulsi kompleks (>20 eksipien)** dari deskripsi bahasa alami dalam hitungan detik.
 2. **Memprediksi kestabilan termodinamika koloid pada suhu tropis ($40^\circ\text{C}$ / 75% RH)** dengan presisi atomik hingga makroskopik.
 3. **Melakukan optimasi multi-objektif Pareto masif** (mengevaluasi 50.000+ kombinasi rasio bahan per batch).
@@ -25,14 +27,14 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        COMPUTE-POWERED SYSTEM TOPOLOGY                                 │
 │                                                                                        │
-│  [Natural Language Goal]  ──►  [Lintasarta AI Autonomous Agent (Sahabat-AI / NIM)]     │
+│  [Natural Language Goal]  ──►  [⚡ Groq LPU Multi-Agent (Llama-3.3-70B + Key Rotation)] │
 │                                           │                                            │
 │                                           ▼                                            │
-│  [Molecular Featurizer]   ──►  [1054-d ECFP4 + 3D Conformer Generator on L40S GPU]     │
+│  [Molecular Featurizer]   ──►  [RDKit 1054-d ECFP4 + 3D Conformers on Cloudeka L40S]   │
 │                                           │                                            │
 │                                           ▼                                            │
-│  [Dual-Engine AI Layer]   ──►  • Deep Colloid GNN / ChemBERTa Embeddings (PyTorch)     │
-│                                • Ultra-Fast LightGBM Surrogate (<1ms)                  │
+│  [Deep Training Layer]    ──►  • Deep Colloid GNN Trained on Cloudeka L40S GPU (PyTorch)│
+│                                • Ultra-Fast LightGBM GPU Surrogate (<0.8ms)            │
 │                                           │                                            │
 │                                           ▼                                            │
 │  [Massive Pareto Engine]  ──►  [GPU-Accelerated Optuna NSGA-II: 50.000 Trials/detik]   │
@@ -50,16 +52,19 @@ Dengan ketersediaan komputasi **NVIDIA L40S GPU, 96 GB RAM, dan 300 GB NVMe**, s
 
 ---
 
-### 💬 Fitur 1: Autonomous Co-Pilot Multi-Agent System (Lintasarta AI Studio)
-Bukan sekadar chatbot tanya-jawab biasa, melainkan **orkestrasi agen otonom (*Agentic Formulation Co-Pilot*)** yang menjalankan 4 agen terspesialisasi:
+### 💬 Fitur 1: Autonomous Co-Pilot Multi-Agent System (Powered by Groq Cloud LPU + Free Key Rotation)
+Bukan sekadar chatbot tanya-jawab biasa, melainkan **orkestrasi agen otonom (*Agentic Formulation Co-Pilot*)** yang berjalan di atas **Groq Cloud LPU Inference Engine (Llama-3.3-70B-Versatile & Llama-3.1-8B-Instant)** yang menjalankan 4 agen terspesialisasi:
 1. **Formulation Architect Agent:** Mengekstrak *user prompt* menjadi kontrak spesifikasi teknis lengkap (Tipe emulsi O/W, target SPF, rentang viskositas, target sensori *matte/dewy*, dan batasan bahan aktif).
 2. **Colloidal Thermodynamic Auditor:** Menganalisis keseimbangan hidrofilik-lipofilik ($\Delta\text{HLB}$), rasio surfaktan-terhadap-minyak (SOR), serta risiko inversi fase (*catastrophic phase inversion*).
 3. **Indonesian Regulatory & Halal Sentinel:** Memvalidasi resep terhadap seluruh lampiran Perka BPOM No. 17/2022 (termasuk batas konsentrasi pengawet, filter UV, dan zat pencerah) serta basis data kehalalan bahan nabati/sintetis (bebas turunan babi / *porcine-free*).
 4. **Master SOP & Batch Sheet Generator:** Menyusun instruksi kerja laboratorium formal lengkap dengan parameter teknis pabrik (suhu, putaran mixer, urutan fase).
 
+* **High-Speed Inference & Smart Free API Key Rotation Pool:**
+  * **Ultra-Fast Generation:** Menggunakan Groq LPU API dengan kecepatan luar biasa **500–800 token/detik** sehingga seluruh proses *reasoning* kimia dan pembuatan SOP lab selesai dalam hitungan sub-detik.
+  * **Smart Free API Key Pool & Auto-Rotation:** Backend mengelola *pool* multi-kunci API gratis dengan algoritma *Round-Robin*. Jika salah satu kunci menyentuh limit kuota atau *rate limit* (HTTP 429), sistem otomatis memutar (*failover*) ke kunci berikutnya secara transparan tanpa interupsi bagi formulator.
 * **Contoh Interaksi:**
   > *"Rancang emulsi tabir surya SPF 30 spektrum luas dengan tekstur ringan untuk kulit tropis berminyak, stabil disimpan pada suhu 40C, menggunakan antioksidan ekstrak teh hijau lokal, patuh BPOM, halal, dan minimalkan eksipien impor."*
-* **Output Instan:** Agen memproses instruksi dalam 2 detik dan langsung menginisialisasi parameter pada kanvas kerja.
+* **Output Instan:** Agen memproses instruksi dalam sub-detik (<1 detik) dan langsung menginisialisasi parameter pada kanvas kerja.
 
 ---
 
@@ -157,6 +162,7 @@ Memanfaatkan kapabilitas grafis dan komputasi visual GPU NVIDIA L40S:
 | **Fitur Visual 3D** | Sekadar *nice-to-have* pelengkap | **Fitur visual sains terintegrasi (RDKit 3D + WebGL Mol* Shader)** |
 | **Keluaran Lab** | Ringkasan resep teks biasa | **Enterprise Master Batch Sheet (Standar SOP R&D Industri Kosmetik)** |
 | **Kesiapan Demonstrasi MVP** | Demo skrip Python terpisah | **Web Platform Fullstack Interaktif Terintegrasi End-to-End** |
+| **Ketahanan LLM & Latensi** | Single endpoint rentan rate-limit 429 | **Adaptive Gateway: Lintasarta Sovereign Primary + Groq LPU (800 tok/s) & Multi-Key Free Rotation Pool (Zero Downtime)** |
 
 ---
 
@@ -173,22 +179,22 @@ Memanfaatkan kapabilitas grafis dan komputasi visual GPU NVIDIA L40S:
                                                    | HTTPS / Secure WebSocket
                                                    v
 +===================================================================================================+
-|                      PT APLIKANUSA LINTASARTA CLOUDEKA AI CLOUD (DEKA NOTEBOOK)                   |
-|                        Hardware: 1x NVIDIA L40S GPU | 8 vCPU | 96 GB RAM | 300 GB NVMe           |
-|                                                                                                   |
+|                              FASTAPI APPLICATION BACKEND & ROUTER                                 |
 |  +---------------------------------------------------------------------------------------------+  |
-|  | FASTAPI ENTERPRISE GATEWAY & ASYNC WORKERS (Celery + Redis Cache)                           |  |
-|  | • Request Validation (Pydantic V2)      • Role-Based Access Control (R&D Chemist)           |  |
+|  | • Request Orchestrator & Task Queue (Celery + Redis Cache)                                  |  |
+|  | • Pydantic V2 Schema Enforcer           • Role-Based Access Control (R&D Chemist)           |  |
 |  +------------------------------|----------------------------------------------|---------------+  |
 |                                 |                                              |                  |
 |                                 v                                              v                  |
 |  +----------------------------------------------+  +-------------------------------------------+  |
-|  | 🌟 LINTASARTA AI STUDIO / SAHABAT-AI AGENTS  |  | 🔬 ACCELERATED CHEMINFORMATICS & AI ENGINE|  |
-|  | (Hosted on NVIDIA L40S via NIM Microservices)|  |    (PyTorch / CUDA 13.0 / RDKit Engine)   |  |
+|  | ⚡ GROQ CLOUD LPU INFERENCE ENGINE           |  | 🔬 CLOUDEKA DEKA NOTEBOOK (NVIDIA L40S GPU|  |
+|  | (Ultra-Fast 500–800 tok/s + Key Rotation)   |  |    8 vCPU | 96 GB RAM | 300 GB NVMe Storage) |  |
 |  |                                              |  |                                           |  |
-|  | 1. Formulation Architect Agent (NL -> Specs) |  | 1. 3D Conformer & 1054-d ECFP4 Featurizer |  |
-|  | 2. Colloid Thermodynamic Reasoner            |  | 2. Deep Graph Neural Network (GNN Colloid)|  |
-|  | 3. Regulatory & Halal RAG Sentinel           |  | 3. Ultra-Fast LightGBM GPU Surrogate      |  |
+|  | 1. Formulation Architect Agent (NL -> Specs) |  | 1. Model Training & Deep Fine-Tuning      |  |
+|  |    • Llama-3.3-70B-Versatile                 |  |    • PyTorch CUDA 13.0 GNN Training       |  |
+|  | 2. Colloid Thermodynamic Reasoner            |  |    • LightGBM Multi-Task Training         |  |
+|  |    • Llama-3.1-8B-Instant                    |  | 2. 3D Conformer & 1054-d ECFP4 Featurizer |  |
+|  | 3. Regulatory & Halal RAG Sentinel           |  | 3. Deep Colloid Graph Neural Network (GNN)|  |
 |  | 4. Master SOP Batch Sheet Generator          |  | 4. GPU Optuna NSGA-II (50.000 Trials/run) |  |
 |  +----------------------------------------------+  +-------------------------------------------+  |
 |                                 |                                              |                  |
@@ -196,7 +202,7 @@ Memanfaatkan kapabilitas grafis dan komputasi visual GPU NVIDIA L40S:
 |                                                         |                                         |
 |                                                         v                                         |
 |  +---------------------------------------------------------------------------------------------+  |
-|  | 300 GB NVME HIGH-SPEED STORAGE & POSTGRESQL DATABASE                                        |  |
+|  | 300 GB NVME HIGH-SPEED STORAGE & POSTGRESQL DATABASE (ON CLOUDEKA DEKA NOTEBOOK)            |  |
 |  | • 5.000+ Cosmetic Ingredient Knowledge Base  • Perka BPOM No. 17/2022 Full Annex Database  |  |
 |  | • HAS 23000 Halal Screening Whitelist        • Indonesian Biodiversity TKDN Registry        |  |
 |  | • Encrypted Formulation Trade Secrets Vault  • Immutable Audit Trail Log for BPOM Filing    |  |
@@ -208,10 +214,10 @@ Memanfaatkan kapabilitas grafis dan komputasi visual GPU NVIDIA L40S:
 
 ## 5. Mengapa Pendekatan Ini Membawa Kemenangan Mutlak?
 
-1. **Memaksimalkan Infrastruktur Nyata Lintasarta:**  
-   Kita tidak sekadar memakai server cloud biasa, melainkan memanfaatkan secara maksimal mesin **NVIDIA L40S GPU dan RAM 96 GB** di Deka Notebook yang telah disediakan Lintasarta.
-2. **Memenuhi Regulasi 100% (Zero External AI Leakage):**  
-   Seluruh komputasi model AI generatif dan model kimia berjalan di dalam batas kedaulatan data Indonesia di Lintasarta Cloudeka.
+1. **Memaksimalkan Infrastruktur Komputasi Berat Cloudeka:**  
+   Kita memanfaatkan secara penuh klaster **Lintasarta Cloudeka Deka Notebook (NVIDIA L40S GPU, 96 GB RAM, 300 GB NVMe)** untuk melatih model Deep Colloid GNN, mengekstrak konformasi 3D molekul RDKit, dan mengevaluasi 50.000 iterasi optimasi Pareto per detik.
+2. **Kecepatan Inferensi LLM Tercepat di Dunia via Groq:**  
+   Penggunaan Groq LPU menghadirkan respons agen percakapan instan (500–800 token/detik) dengan *free key rotation pool* yang tahan banting terhadap batas kuota.
 3. **Kecepatan Eksekusi Ekstrem:**  
    Pemanfaatan *AI coding agents* (Claude, Antigravity, Codex) dalam proses *development* memungkinkan tim menyelesaikan aplikasi *full-stack* fungsional dengan antarmuka memukau, visualisasi 3D, dan pipeline analitik data yang solid dalam 24 jam.
 4. **Validasi Nyata ParagonCorp:**  

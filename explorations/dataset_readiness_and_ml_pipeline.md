@@ -1073,8 +1073,8 @@ To ensure that all engineering deliverables transition smoothly from research co
 │               │                                  │ • NSGA-II completes 250 trials in < 10 sec    │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────────────────────┤
 │ T+15 – T+19   │ Phase 5: FastAPI Backend Engine  │ • Expose `/api/v1/predict-stability`          │
-│ (03:00–07:00) │ & Lintasarta AI Contract         │ • Expose `/api/v1/optimize-formulation`       │
-│               │                                  │ • Bridge prompt exchange with Sahabat-AI LLM  │
+│ (03:00–07:00) │ & Groq Agent Gateway Contract    │ • Expose `/api/v1/optimize-formulation`       │
+│               │                                  │ • Bridge prompt exchange with Groq LPU LLM    │
 ├───────────────┼──────────────────────────────────┼───────────────────────────────────────────────┤
 │ T+19 – T+22   │ Phase 6: Interactive UI          │ • Wire Next.js formulation sliders & gauges   │
 │ (07:00–10:00) │ Workbench Integration            │ • Render live 3D Pareto frontier charts       │

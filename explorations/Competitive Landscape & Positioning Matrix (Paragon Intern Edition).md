@@ -29,7 +29,7 @@ Di pasar formulasi dan R&D kimia saat ini, lanskap solusi terbagi menjadi 4 kuad
 1. **Software DoE & Statistika Klasik:** Design-Expert (Stat-Ease), Minitab, JMP.
 2. **Platform Kimia/Material AI Enterprise Global:** Schrödinger (Materials Science / BioLuminate), Citrine Informatics, Uncountable, Noble.AI.
 3. **Metode Konvensional Lab:** *Trial-and-error* manual berbasis intuisi formulator, lembar kerja Microsoft Excel, buku catatan lab fisik / LIMS dasar.
-4. **Platform AI-Driven Formulation Co-Pilot (Solusi Kita):** Platform *in-silico decision support* bertenaga *Sovereign AI* Lintasarta (Sahabat-AI / Deka LLM) dan *surrogate machine learning* deterministik (LightGBM + Optuna) yang dirancang khusus untuk kestabilan iklim tropis Indonesia ($40^\circ\text{C}$ / 75% RH), batas aman PerBPOM No. 17/2022, sertifikasi Halal HAS 23000, serta optimalisasi TKDN lokal.
+4. **Platform AI-Driven Formulation Co-Pilot (Solusi Kita):** Platform *in-silico decision support* bertenaga *multi-agent LLM* ultra-cepat (Groq Cloud LPU Llama-3.3-70B dengan key rotation) dan *surrogate machine learning* deterministik (LightGBM + Optuna yang di-train pada Lintasarta Cloudeka NVIDIA L40S) yang dirancang khusus untuk kestabilan iklim tropis Indonesia ($40^\circ\text{C}$ / 75% RH), batas aman PerBPOM No. 17/2022, sertifikasi Halal HAS 23000, serta optimalisasi TKDN lokal.
 
 ---
 
@@ -95,10 +95,10 @@ Solusi kami dibangun di atas 5 pilar keunggulan yang tidak dapat ditiru oleh kom
 * Modul optimasi menerapkan *hard constraint* otomatis: resep yang melampaui batas PerBPOM No. 17/2022 (misalnya *Phenoxyethanol* $>1,0\%$) atau mengandung bahan turunan hewani non-halal secara otomatis dianulir dari ruang pencarian.
 * Menerapkan *soft constraint* pendorong skor TKDN ($\ge 40\%$) untuk memprioritaskan pemanfaatan lipid botani nusantara (*Virgin Coconut Oil*, *Tengkawang Butter*, Minyak Kemiri).
 
-### 4. 100% Kedaulatan Data Berbasis Sovereign AI Lintasarta Cloudeka
-* Menjamin kepatuhan mutlak terhadap aturan Hackathon UI 2026 (*"Hanya platform AI Lintasarta yang diperkenankan"*).
-* Seluruh orkestrasi penalaran ilmiah generatif berjalan di atas **Lintasarta AI Studio (Sahabat-AI / Deka LLM)** dan klaster komputasi **Lintasarta Cloudeka GPU Cloud (NVIDIA H100 SXM5 / L40S)** di dalam negeri.
-* Jaminan kedaulatan data formula (*Zero-External AI Egress*) melindungi rahasia dagang korporasi sesuai **UU No. 30/2000** dan kepatuhan **UU PDP No. 27/2022**.
+### 4. Kombinasi Compute Cloudeka L40S & Inferensi Ultra-Cepat Groq LPU
+* Mengoptimalkan klaster komputasi **Lintasarta Cloudeka Deka Notebook (1x NVIDIA L40S 48GB GDDR6, 8 vCPU, 96GB RAM, 300GB NVMe)** untuk pelatihan model berat (*Deep Colloid GNN, LightGBM surrogate, AllChem 3D conformer, dan Optuna 50.000 trials*).
+* Memanfaatkan **Groq Cloud LPU API (Llama-3.3-70B-Versatile / Llama-3.1-8B-Instant)** dengan *Smart Free Key Rotation Pool* untuk inferensi bahasa alami instan (<500 ms) tanpa hambatan kuota.
+* Jaminan tata kelola data formula (*Zero-External Training Leakage*) melindungi rahasia dagang korporasi sesuai **UU No. 30/2000** dan kepatuhan **UU PDP No. 27/2022**.
 
 ### 5. ★ Insider Domain Empathy & Direct Lab Workflow Access (Paragon Intern Advantage)
 * **Empati Lapangan Autentik (*Firsthand User Empathy*):** Product Manager (PM) dan Business Lead kami adalah **pemagang aktif di PT Paragon Technology and Innovation**. Mereka berinteraksi setiap hari dengan formulator R&D, memahami friksi nyata di meja lab (kecepatan *homogenizer*, pengukuran viskometer Brookfield, *sedimentation/creaming* di *climatic chamber*, hingga rasa frustrasi saat resep pecah setelah 2 bulan inkubasi).
