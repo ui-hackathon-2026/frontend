@@ -36,12 +36,12 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
   const [autoRotate, setAutoRotate] = useState(true);
   const [hoveredAtom, setHoveredAtom] = useState<Atom3D | null>(null);
 
-  // Compute ideal zoomed-out perspective based on molecule bounding volume
+  // Compute ideal balanced perspective based on molecule bounding volume
   const computeIdealZoom = useCallback(() => {
-    if (!molecule || molecule.atoms.length === 0) return 14;
+    if (!molecule || molecule.atoms.length === 0) return 25;
     const maxBound = Math.max(...molecule.atoms.map((a) => Math.hypot(a.x, a.y, a.z)), 4);
-    // Generously zoomed out (9-15) so entire molecule is centered cleanly above bottom HUD
-    return Math.min(15, Math.max(9, Math.round(55 / maxBound)));
+    // Balanced default zoom (20-28) providing clear atomic details without crowding controls
+    return Math.min(28, Math.max(20, Math.round(110 / maxBound)));
   }, [molecule]);
 
   // 3D camera state
