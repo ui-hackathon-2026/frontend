@@ -27,15 +27,22 @@ export const CenterChatPanel: React.FC = () => {
     sendMessage,
     executeAction,
     applyProposal,
+    applyPresetBenchmark,
     viewArtifact,
     setArtifactsListModalOpen,
     createNewDraft,
   } = useEditor();
 
+  const [presets, setPresets] = useState<PresetFormulaItem[]>([]);
   const [inputPrompt, setInputPrompt] = useState("");
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [activeInlineAction, setActiveInlineAction] = useState<ArtifactType | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const simRepo = getSimulationRepository();
+    simRepo.getPresetFormulas().then(setPresets);
+  }, []);
 
   const messages = activeDraft ? activeDraft.messages : [];
 
@@ -119,7 +126,7 @@ export const CenterChatPanel: React.FC = () => {
             </button>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, idx) => {
             const isUser = msg.sender === "user";
 
             return (
@@ -149,6 +156,52 @@ export const CenterChatPanel: React.FC = () => {
                   >
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                   </div>
+
+                  {/* Benchmark Presets Selector from Workbench (Shown on empty canvas) */}
+                  {!isUser && activeDraft.ingredients.length === 0 && presets.length > 0 && idx === 0 && (
+                    <div className="pt-2 space-y-2.5 max-w-2xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                          Pilihan Riset &amp; Benchmark (Workbench)
+                        </span>
+                        <span className="text-[10px] text-[#001299] font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md">
+                          {presets.length} Formula Acuan
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {presets.map((preset) => (
+                          <div
+                            key={preset.id}
+                            onClick={() => applyPresetBenchmark(preset)}
+                            className="group text-left p-4 rounded-2xl border border-slate-200 hover:border-[#001299] bg-white hover:bg-blue-50/40 transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-2xs hover:shadow-xs ring-0 hover:ring-2 hover:ring-[#001299]/20"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-[#001299] bg-blue-100/70 px-2 py-0.5 rounded-md">
+                                  {preset.category}
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-xs leading-snug group-hover:text-[#001299] transition-colors">
+                                {preset.name}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">
+                                {preset.description}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                              <span>{preset.request.ingredients.length} Komponen Bahan</span>
+                              <span className="inline-flex items-center gap-1 font-semibold text-[#001299] group-hover:translate-x-0.5 transition-transform">
+                                <span>Pilih</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Linked Artifact Button */}
                   {msg.linkedArtifactId && (
