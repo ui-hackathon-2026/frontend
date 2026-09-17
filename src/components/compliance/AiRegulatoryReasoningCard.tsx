@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { LlmRegulatoryReasoning } from "@/domain/models/compliance";
@@ -18,7 +18,6 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
             AI Regulatory Reasoning &amp; Local TKDN Booster
           </h3>
         </div>
-        <span className="text-[11px] font-mono text-slate-400">LLM Synthesis Engine</span>
       </div>
 
       {/* Toxicology Narrative */}
