@@ -198,14 +198,6 @@ export const Step3SimulationConsole: React.FC<Step3SimulationConsoleProps> = ({
                   </span>
                 </div>
               </div>
-
-              {/* Calibration Notice from AI/ML team */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start space-x-2.5">
-                <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  <strong>Kalibrasi Model Terpadu:</strong> Model surrogate fisikokimia dikalibrasi presisi khusus untuk rezim termodinamika <strong>40°C &amp; 90 Hari</strong> guna memastikan deviasi MAE &lt; 3.2% terhadap data uji empiris lab Paragon.
-                </p>
-              </div>
             </div>
 
             {/* 2. AI Model Engine Selection: LightGBM Active, GNN Disabled */}

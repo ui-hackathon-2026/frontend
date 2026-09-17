@@ -160,10 +160,6 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             </span>
           </div>
         </div>
-
-        <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
-          <strong>Catatan Tim AI/ML:</strong> Model surrogate dikalibrasi presisi pada kondisi spesifik <strong>40°C / 90 Hari</strong> sesuai pedoman percepatan stabilitas sediaan kosmetik BPOM.
-        </p>
       </div>
 
       {/* 3. AI Model Engine Selection: LightGBM Active, GNN Disabled */}
