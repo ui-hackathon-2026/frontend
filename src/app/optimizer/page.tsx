@@ -8,6 +8,15 @@ import { ParetoFrontierScatterPlot } from "@/components/optimizer/ParetoFrontier
 import { ParetoCandidateComparisonCard } from "@/components/optimizer/ParetoCandidateComparisonCard";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { ParetoPresetId } from "@/domain/models/optimizer";
+import { Scale, DollarSign, ShieldCheck, Sprout } from "lucide-react";
+
+const PRESET_OPTIONS: { id: ParetoPresetId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "balanced", label: "Balanced Trade-off", icon: Scale },
+  { id: "cost_leader", label: "Cost Leader (Hemat)", icon: DollarSign },
+  { id: "max_stability", label: "Stabilitas Maksimal", icon: ShieldCheck },
+  { id: "high_tkdn", label: "High-TKDN Lokal", icon: Sprout },
+];
 
 export default function OptimizerPage() {
   const {
@@ -32,7 +41,7 @@ export default function OptimizerPage() {
       <Navbar brandName="Paragon Studio" />
 
       <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
-        {/* Header Title */}
+        {/* Header Title & Preset Selector */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
@@ -46,6 +55,29 @@ export default function OptimizerPage() {
               />
             </div>
           </div>
+
+          {/* Preset Selector */}
+          <div className="flex items-center flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
+            {PRESET_OPTIONS.map((p) => {
+              const isSelected = preset === p.id;
+              const Icon = p.icon;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => selectPreset(p.id)}
+                  className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                    isSelected
+                      ? "bg-white text-[#001299] shadow-xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-[#001299]" : "text-slate-400"}`} />
+                  <span>{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Error Alert */}
@@ -57,8 +89,6 @@ export default function OptimizerPage() {
 
         {/* Constraints & Objectives Card */}
         <ParetoObjectivesCard
-          preset={preset}
-          onSelectPreset={selectPreset}
           weights={weights}
           onUpdateWeight={updateWeight}
           constraints={constraints}

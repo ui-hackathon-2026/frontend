@@ -4,14 +4,10 @@ import React from "react";
 import {
   ParetoObjectiveWeights,
   ParetoConstraints,
-  ParetoPresetId,
 } from "@/domain/models/optimizer";
-import { Sliders, Sparkles, Scale, DollarSign, ShieldCheck, Sprout } from "lucide-react";
-import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { Sparkles } from "lucide-react";
 
 interface ParetoObjectivesCardProps {
-  preset: ParetoPresetId;
-  onSelectPreset: (preset: ParetoPresetId) => void;
   weights: ParetoObjectiveWeights;
   onUpdateWeight: <K extends keyof ParetoObjectiveWeights>(key: K, val: number) => void;
   constraints: ParetoConstraints;
@@ -21,8 +17,6 @@ interface ParetoObjectivesCardProps {
 }
 
 export const ParetoObjectivesCard: React.FC<ParetoObjectivesCardProps> = ({
-  preset,
-  onSelectPreset,
   weights,
   onUpdateWeight,
   constraints,
@@ -30,13 +24,6 @@ export const ParetoObjectivesCard: React.FC<ParetoObjectivesCardProps> = ({
   isOptimizing,
   onRunOptimization,
 }) => {
-  const presets: { id: ParetoPresetId; label: string; icon: any }[] = [
-    { id: "balanced", label: "Balanced Trade-off", icon: Scale },
-    { id: "cost_leader", label: "Cost Leader (Hemat)", icon: DollarSign },
-    { id: "max_stability", label: "Stabilitas Maksimal", icon: ShieldCheck },
-    { id: "high_tkdn", label: "High-TKDN Lokal", icon: Sprout },
-  ];
-
   const cogsPct = Math.round(((constraints.maxCogsIdrPerKg - 20000) / (60000 - 20000)) * 100);
   const stabPct = Math.round(((constraints.minStabilityPct - 75) / (95 - 75)) * 100);
   const tkdnPct = Math.round(((constraints.minTkdnPct - 30) / (70 - 30)) * 100);
@@ -44,46 +31,6 @@ export const ParetoObjectivesCard: React.FC<ParetoObjectivesCardProps> = ({
 
   return (
     <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
-      {/* Header & Presets */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-base font-bold text-[#0a192f] font-heading">
-              Parameter Kendala &amp; Prioritas Multi-Objektif
-            </h3>
-            <DelayedInfoTooltip
-              content="Algoritma NSGA-II mencari solusi non-dominated melintasi batas simpleks massa 100% berdasarkan preferensi pembobotan ini."
-              delayMs={300}
-            />
-          </div>
-          <span className="text-xs text-slate-500">
-            Pilih preset skenario atau atur batas toleransi spesifik formulator
-          </span>
-        </div>
-
-        {/* Preset Selector */}
-        <div className="flex items-center flex-wrap gap-1.5 p-1 bg-slate-100 rounded-xl">
-          {presets.map((p) => {
-            const isSelected = preset === p.id;
-            const Icon = p.icon;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onSelectPreset(p.id)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-white text-[#001299] font-bold shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{p.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* 4 Constraint Sliders Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
