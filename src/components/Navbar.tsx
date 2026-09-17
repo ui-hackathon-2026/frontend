@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   Box,
-  Palette,
 } from "lucide-react";
 import { MegaMenu } from "./MegaMenu";
 
@@ -98,17 +97,6 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
                   </Link>
                 );
               })}
-
-              <Link
-                href="/contoh-halaman"
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  pathname === "/contoh-halaman"
-                    ? "bg-blue-50 text-[#0018a8] font-semibold border border-blue-200/60"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-                }`}
-              >
-                Showcase UI
-              </Link>
             </nav>
           </div>
 
@@ -198,14 +186,6 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
               >
                 <Box className="w-4 h-4 text-purple-600" />
                 <span>3D Molecular Inspector</span>
-              </Link>
-              <Link
-                href="/contoh-halaman"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-slate-800 hover:bg-slate-50"
-              >
-                <Palette className="w-4 h-4 text-rose-600" />
-                <span>Design System Showcase</span>
               </Link>
             </div>
           </div>
