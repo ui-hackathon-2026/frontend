@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { IngredientAuditItem } from "@/domain/models/compliance";
@@ -94,17 +94,22 @@ export const IngredientAuditTable: React.FC<IngredientAuditTableProps> = ({ ingr
 
                 {/* Right: Status Pill & Expand Trigger */}
                 <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${
                       isPassed
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        ? "bg-slate-50 text-slate-700 border-slate-200"
                         : isViolation
-                        ? "bg-rose-50 text-rose-800 border-rose-200"
-                        : "bg-amber-50 text-amber-800 border-amber-200"
+                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
                     }`}
                   >
-                    {isPassed ? "Lolos BPOM" : isViolation ? "Melanggar Batas" : "Perhatian"}
-                  </span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isPassed ? "bg-emerald-500" : isViolation ? "bg-rose-500" : "bg-amber-500"
+                      }`}
+                    />
+                    <span>{isPassed ? "Lolos" : isViolation ? "Melanggar" : "Perhatian"}</span>
+                  </div>
 
                   {item.ragCitation && (
                     <span className="text-[11px] text-[#001299] font-medium flex items-center gap-1">

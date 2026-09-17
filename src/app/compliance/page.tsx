@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -86,18 +86,10 @@ export default function CompliancePage() {
 
         {/* Formula Selector Bar */}
         <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#001299] flex items-center justify-center border border-blue-100 shrink-0">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-[#0a192f] block">
-                {report?.formulaName || "Memuat Formula..."}
-              </span>
-              <span className="text-[11px] text-slate-500">
-                Pilih formula benchmark untuk diaudit langsung:
-              </span>
-            </div>
+          <div className="flex items-center space-x-2.5">
+            <span className="text-xs font-bold text-slate-700 block">
+              Pilih Formula Uji:
+            </span>
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto">

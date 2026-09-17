@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { ComplianceAuditReport } from "@/domain/models/compliance";
@@ -41,7 +41,7 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
                 {report.formulaName}
               </h2>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5 ${
                   isPassed
                     ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                     : isWarning
@@ -49,7 +49,12 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
                     : "bg-rose-50 text-rose-800 border-rose-200"
                 }`}
               >
-                {isPassed ? "LOLOS BPOM & HALAL" : isWarning ? "CONDITIONAL APPROVAL" : "PELANGGARAN BPOM"}
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isPassed ? "bg-emerald-500" : isWarning ? "bg-amber-500" : "bg-rose-500"
+                  }`}
+                />
+                <span>{isPassed ? "Lolos Regulasi BPOM & Halal" : isWarning ? "Persetujuan Bersyarat" : "Pelanggaran Regulasi"}</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">{report.summaryVerdict}</p>
