@@ -61,10 +61,6 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400 self-end sm:self-center">
-          <span>AI Audit Engine:</span>
-          <span className="font-semibold text-slate-700">RAG + LLM Reasoning</span>
-        </div>
       </div>
 
       {/* 3 Core Metric KPI Blocks */}
