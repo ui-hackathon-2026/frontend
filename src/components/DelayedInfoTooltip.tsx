@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { Info } from "lucide-react";
@@ -6,7 +6,7 @@ import { Info } from "lucide-react";
 export interface DelayedInfoTooltipProps {
   /** Content to display in the tooltip popover */
   content: React.ReactNode;
-  /** Hover duration before tooltip appears (in milliseconds). Defaults to 1000ms (1 second). */
+  /** Hover duration before tooltip appears (in milliseconds). Defaults to 300ms (0.3 second). */
   delayMs?: number;
   /** Tooltip position relative to trigger */
   position?: "top" | "bottom" | "left" | "right";
@@ -20,7 +20,7 @@ export interface DelayedInfoTooltipProps {
 
 export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
   content,
-  delayMs = 1000,
+  delayMs = 300,
   position = "top",
   children,
   iconSizeClass = "w-3.5 h-3.5",

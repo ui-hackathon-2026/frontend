@@ -48,7 +48,7 @@ export default function SimulatorPage() {
               </h1>
               <DelayedInfoTooltip
                 content="Simulasi uji kestabilan fisik emulsi 90 hari di climatic chamber (40°C / 75% RH) berbasis model prediksi ML Cloudeka."
-                delayMs={1000}
+                delayMs={300}
                 position="right"
               />
             </div>

@@ -10,7 +10,6 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
-import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { AddIngredientSidebar } from "./AddIngredientSidebar";
 
 interface FormulaEditorPanelProps {

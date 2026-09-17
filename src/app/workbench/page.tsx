@@ -60,7 +60,7 @@ export default function WorkbenchPage() {
             </h1>
             <DelayedInfoTooltip
               content="Meja kerja digital presisi 4-fase: Pilih formula benchmark awal atau rancang komposisi bahan secara langsung."
-              delayMs={1000}
+              delayMs={300}
               position="right"
             />
           </div>
@@ -218,7 +218,7 @@ export default function WorkbenchPage() {
                       content={`Σ Total: ${totalWeightPct.toFixed(1)}% ${
                         Math.abs(totalWeightPct - 100.0) <= 0.1 ? "(Balanced)" : "(Unbalanced)"
                       }`}
-                      delayMs={1000}
+                      delayMs={300}
                       position="right"
                     />
                   </div>

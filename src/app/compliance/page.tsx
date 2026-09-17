@@ -35,7 +35,7 @@ export default function CompliancePage() {
             </h1>
             <DelayedInfoTooltip
               content="Audit forensik regulasi otomatis: penarikan pasal hukum Perka BPOM No. 17/2022 via Vector RAG, verifikasi titik kritis halal, dan rekomendasi substitusi bahan hayati lokal."
-              delayMs={1000}
+              delayMs={300}
               position="right"
             />
           </div>
