@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -45,10 +45,6 @@ export default function SimulatorPage() {
               <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
                 In-Silico 40°C Stability &amp; Physicochemical Simulator
               </h1>
-              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Engine Active</span>
-              </div>
             </div>
             <p className="text-slate-500 text-xs sm:text-sm">
               Simulasi uji kestabilan fisik emulsi 90 hari di climatic chamber (40°C / 75% RH) berbasis model prediksi ML Cloudeka.

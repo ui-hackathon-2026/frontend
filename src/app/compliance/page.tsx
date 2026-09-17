@@ -45,10 +45,6 @@ export default function CompliancePage() {
               <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
                 Enterprise BPOM, Halal HAS 23000 &amp; TKDN Sentinel
               </h1>
-              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>RAG + LLM Active</span>
-              </div>
             </div>
             <p className="text-slate-500 text-xs sm:text-sm">
               Audit forensik regulasi otomatis: penarikan pasal hukum Perka BPOM No. 17/2022 via Vector RAG, verifikasi titik kritis halal, dan rekomendasi substitusi bahan hayati lokal.
