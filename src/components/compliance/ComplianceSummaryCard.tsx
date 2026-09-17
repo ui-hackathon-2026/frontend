@@ -63,7 +63,7 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
           />
           <div className="flex flex-col text-left">
             <span className="text-[10px] uppercase font-bold tracking-wider opacity-70 leading-none">
-              Status Audit Resmi
+              Status Audit
             </span>
             <span className="text-xs sm:text-sm font-bold font-heading mt-0.5">
               {isPassed
