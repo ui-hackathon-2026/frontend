@@ -48,18 +48,15 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
     {
       value: 25,
       label: "25°C",
-      title: "Suhu Kamar (Ambient)",
     },
     {
       value: 40,
       label: "40°C",
-      title: "Dipercepat Tropis (ICH Q1A)",
       recommended: true,
     },
     {
       value: 50,
       label: "50°C",
-      title: "Thermal Stress Ekstrem",
     },
   ];
 
@@ -67,17 +64,14 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
     {
       value: 30,
       label: "30 Hari",
-      title: "Skrining Cepat",
     },
     {
       value: 60,
       label: "60 Hari",
-      title: "Mid-Term Stability",
     },
     {
       value: 90,
       label: "90 Hari",
-      title: "Standar BPOM 3 Bulan",
       recommended: true,
     },
   ];
@@ -161,76 +155,64 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
       </div>
 
       {/* 1. Incubator Temperature Selection */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
           <Thermometer className="w-4 h-4 text-blue-600" />
           <span>1. Suhu Inkubator (Incubator Temperature)</span>
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5">
           {tempOptions.map((opt) => {
             const isSelected = temperatureC === opt.value;
             return (
-              <div
+              <button
                 key={opt.value}
+                type="button"
                 onClick={() => onUpdateTemperature(opt.value)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                className={`py-3 px-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-center space-x-2 ${
                   isSelected
-                    ? "border-[#0018a8] bg-blue-50/50 ring-2 ring-[#0018a8]/20 shadow-xs"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    ? "border-[#0018a8] bg-blue-50/70 text-[#0018a8] ring-2 ring-[#0018a8]/20 shadow-xs font-bold"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/60 font-semibold"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-slate-900 font-heading">
-                    {opt.label}
+                <span className="text-sm font-heading">{opt.label}</span>
+                {opt.recommended && (
+                  <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
+                    Standar
                   </span>
-                  {opt.recommended && (
-                    <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/70 px-1.5 py-0.5 rounded-md">
-                      Standar
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs font-semibold text-slate-700 leading-snug">
-                  {opt.title}
-                </p>
-              </div>
+                )}
+              </button>
             );
           })}
         </div>
       </div>
 
       {/* 2. Simulated Duration Selection */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
           <Calendar className="w-4 h-4 text-blue-600" />
           <span>2. Periode Uji Simulasi (Simulated Period)</span>
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5">
           {durationOptions.map((opt) => {
             const isSelected = durationDays === opt.value;
             return (
-              <div
+              <button
                 key={opt.value}
+                type="button"
                 onClick={() => onUpdateDuration(opt.value)}
-                className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-1 ${
+                className={`py-3 px-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-center space-x-2 ${
                   isSelected
-                    ? "border-[#0018a8] bg-blue-50/50 ring-2 ring-[#0018a8]/20 shadow-xs"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    ? "border-[#0018a8] bg-blue-50/70 text-[#0018a8] ring-2 ring-[#0018a8]/20 shadow-xs font-bold"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/60 font-semibold"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-base font-bold text-slate-900 font-heading">
-                    {opt.label}
+                <span className="text-sm font-heading">{opt.label}</span>
+                {opt.recommended && (
+                  <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
+                    BPOM
                   </span>
-                  {opt.recommended && (
-                    <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/70 px-1.5 py-0.5 rounded-md">
-                      BPOM
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs font-semibold text-slate-700 leading-snug">
-                  {opt.title}
-                </p>
-              </div>
+                )}
+              </button>
             );
           })}
         </div>
