@@ -102,28 +102,13 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   return (
     <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
       {/* Header & Formula Summary */}
-      <div className="border-b border-slate-100 pb-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onBackToFormula}
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-[#0018a8] transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Komposisi Bahan</span>
-          </button>
-
-          <span className="text-[11px] font-mono text-slate-400">Tahap 3 dari 3</span>
-        </div>
-
-        <div>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-            Parameter Kondisi Uji In-Silico
-          </span>
-          <h2 className="text-xl font-bold text-[#0a192f] font-heading mt-0.5">
-            Konfigurasi Simulasi Stabilitas
-          </h2>
-        </div>
+      <div className="border-b border-slate-100 pb-4">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+          Parameter Kondisi Uji In-Silico
+        </span>
+        <h2 className="text-xl font-bold text-[#0a192f] font-heading mt-0.5">
+          Konfigurasi Simulasi Stabilitas
+        </h2>
       </div>
 
       {/* 1. Incubator Temperature Selection */}
