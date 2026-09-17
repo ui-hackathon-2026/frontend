@@ -101,6 +101,7 @@ export const ArtifactViewerPanel: React.FC = () => {
         <DelayedInfoTooltip
           content="Artifact adalah dokumen hasil analisis komputasi. Anda dapat meninjau report atau menerapkannya ke formula."
           position="bottom"
+          align="right"
           delayMs={300}
         />
       </div>

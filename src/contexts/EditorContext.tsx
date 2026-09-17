@@ -29,7 +29,7 @@ const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
     id: "msg-1",
     sender: "assistant",
     content:
-      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Kitchen panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
+      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Composition panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
     timestamp: "Baru saja",
   },
 ];
@@ -91,7 +91,7 @@ interface EditorContextType {
   deleteDraft: (draftId: string) => Promise<void>;
   saveCurrentFormula: () => Promise<void>;
   restoreVersion: (version: FormulaVersionItem) => Promise<void>;
-  // Ingredients (Kitchen Panel)
+  // Ingredients (Composition Panel)
   ingredients: EditorIngredient[];
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;

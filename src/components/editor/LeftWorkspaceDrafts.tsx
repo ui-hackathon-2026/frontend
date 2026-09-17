@@ -141,6 +141,7 @@ export const LeftWorkspaceDrafts: React.FC = () => {
           <DelayedInfoTooltip
             content="Seluruh draft tersimpan langsung di Neon Postgres Cloud. Setiap perubahan otomatis meng-create version snapshot append-only."
             position="bottom"
+            align="right"
             delayMs={300}
           />
         </div>
@@ -384,7 +385,7 @@ export const LeftWorkspaceDrafts: React.FC = () => {
                   <Clock className="w-6 h-6 mx-auto text-slate-300 mb-2" />
                   <p className="font-medium text-slate-600">Belum Ada Snapshot Versi</p>
                   <p className="text-[11px]">
-                    Setiap kali Anda mengubah komposisi bahan di Kitchen panel, backend akan otomatis
+                    Setiap kali Anda mengubah komposisi bahan di Composition Panel, backend akan otomatis
                     membuat snapshot versi di sini.
                   </p>
                 </div>

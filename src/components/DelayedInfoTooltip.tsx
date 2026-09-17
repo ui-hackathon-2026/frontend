@@ -10,6 +10,8 @@ export interface DelayedInfoTooltipProps {
   delayMs?: number;
   /** Tooltip position relative to trigger */
   position?: "top" | "bottom" | "left" | "right";
+  /** Horizontal alignment: 'auto' checks viewport & parent container boundaries, 'right' aligns to right edge of trigger */
+  align?: "auto" | "left" | "right" | "center";
   /** Optional custom trigger. Defaults to a small Info icon. */
   children?: React.ReactNode;
   /** Size class for default Info icon */
@@ -22,6 +24,7 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
   content,
   delayMs = 300,
   position = "top",
+  align = "auto",
   children,
   iconSizeClass = "w-3.5 h-3.5",
   className = "",
@@ -54,13 +57,32 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
         }
         setComputedPosition(activePos);
 
-        // Smart horizontal alignment: avoid clipping off viewport edges
-        if (window.innerWidth - rect.right < 180) {
-          setAlignMode("right");
-        } else if (rect.left < 180) {
-          setAlignMode("left");
+        // Smart horizontal alignment: avoid clipping off viewport or parent container edges
+        if (align !== "auto") {
+          setAlignMode(align);
         } else {
-          setAlignMode("center");
+          const boundaryParent =
+            containerRef.current.closest(
+              "main, aside, header, nav, [class*='overflow-hidden'], [class*='overflow-x-hidden']"
+            ) || containerRef.current.parentElement;
+
+          const parentRight = boundaryParent
+            ? boundaryParent.getBoundingClientRect().right
+            : window.innerWidth;
+          const parentLeft = boundaryParent
+            ? boundaryParent.getBoundingClientRect().left
+            : 0;
+
+          const distToRight = Math.min(window.innerWidth - rect.right, parentRight - rect.right);
+          const distToLeft = Math.min(rect.left, rect.left - parentLeft);
+
+          if (distToRight < 240) {
+            setAlignMode("right");
+          } else if (distToLeft < 240) {
+            setAlignMode("left");
+          } else {
+            setAlignMode("center");
+          }
         }
       }
       setIsVisible(true);
