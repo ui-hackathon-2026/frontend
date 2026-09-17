@@ -17,6 +17,8 @@ import {
   FileText,
   ArrowRight,
   Zap,
+  History,
+  RefreshCw,
 } from "lucide-react";
 import { getSimulationRepository } from "@/data/di/container";
 import { PresetFormulaItem } from "@/domain/models/simulation";
@@ -262,14 +264,25 @@ export const CenterChatPanel: React.FC = () => {
                         ))}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => applyProposal(msg.proposal!)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                      >
-                        <Sliders className="w-3.5 h-3.5" />
-                        <span>Terapkan ke Composition Panel</span>
-                      </button>
+                      {/* Action Choice: New Version vs Overwrite */}
+                      <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyProposal(msg.proposal!, "new_version")}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer group"
+                        >
+                          <History className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
+                          <span>Buat Versi Baru (Snapshot)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyProposal(msg.proposal!, "overwrite")}
+                          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Overwrite Versi Ini</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,6 @@
 import { IFormulaRepository } from "@/domain/repositories/IFormulaRepository";
 import {
+  FormulaAdjustmentResponse,
   FormulaCreatePayload,
   FormulaItemResponse,
   FormulaUpdatePayload,
@@ -28,11 +29,22 @@ export class HttpFormulaRepository implements IFormulaRepository {
 
   async updateFormula(
     formulaId: string,
-    payload: FormulaUpdatePayload
+    payload: FormulaUpdatePayload,
+    createVersion: boolean = true
   ): Promise<FormulaItemResponse> {
     return this.client.put<FormulaUpdatePayload, FormulaItemResponse>(
-      `/api/v1/formulas/${formulaId}`,
+      `/api/v1/formulas/${formulaId}?create_version=${createVersion}`,
       payload
+    );
+  }
+
+  async proposeAdjustment(
+    formulaId: string,
+    prompt: string
+  ): Promise<FormulaAdjustmentResponse> {
+    return this.client.post<{ prompt: string }, FormulaAdjustmentResponse>(
+      `/api/v1/formulas/${formulaId}/propose-adjustment`,
+      { prompt }
     );
   }
 

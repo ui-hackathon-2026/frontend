@@ -75,25 +75,28 @@ export class MockFormulaRepository implements IFormulaRepository {
 
   async updateFormula(
     formulaId: string,
-    payload: FormulaUpdatePayload
+    payload: FormulaUpdatePayload,
+    createVersion: boolean = true
   ): Promise<FormulaItemResponse> {
     const index = this.formulas.findIndex((it) => it.formula_id === formulaId);
     if (index === -1) throw new Error("Formula not found");
 
     const prev = this.formulas[index];
-    const curVersions = this.versionsMap[formulaId] || [];
-    curVersions.unshift({
-      version: curVersions.length + 1,
-      snapshot: {
-        name: prev.name,
-        category: prev.category,
-        batch_size_g: prev.batch_size_g,
-        notes: prev.notes,
-        ingredients: prev.ingredients,
-      },
-      created_at: new Date().toISOString(),
-    });
-    this.versionsMap[formulaId] = curVersions;
+    if (createVersion) {
+      const curVersions = this.versionsMap[formulaId] || [];
+      curVersions.unshift({
+        version: curVersions.length + 1,
+        snapshot: {
+          name: prev.name,
+          category: prev.category,
+          batch_size_g: prev.batch_size_g,
+          notes: prev.notes,
+          ingredients: prev.ingredients,
+        },
+        created_at: new Date().toISOString(),
+      });
+      this.versionsMap[formulaId] = curVersions;
+    }
 
     const allIngs = [
       ...payload.phases.phase_a.map((i) => ({ ...i, phase: "A", is_locked: !!i.is_locked })),
@@ -114,6 +117,36 @@ export class MockFormulaRepository implements IFormulaRepository {
     };
     this.formulas[index] = updated;
     return updated;
+  }
+
+  async proposeAdjustment(
+    formulaId: string,
+    prompt: string
+  ): Promise<any> {
+    const f = await this.getFormula(formulaId);
+    return {
+      formula_id: formulaId,
+      title: "Rekomendasi Penyesuaian Formula",
+      explanation: `Penyesuaian berbasis prompt "${prompt}"`,
+      changes: [
+        {
+          ingredient_id: "ing-1",
+          name: f.ingredients[0]?.name || "Active",
+          inci: f.ingredients[0]?.inci || "Active",
+          phase: f.ingredients[0]?.phase || "A",
+          old_pct: f.ingredients[0]?.weight_pct || 1.0,
+          new_pct: Math.max(0.1, (f.ingredients[0]?.weight_pct || 1.0) + 0.5),
+          action: "modified",
+        },
+      ],
+      updated_phases: {
+        phase_a: f.ingredients.filter((i) => i.phase === "A"),
+        phase_b: f.ingredients.filter((i) => i.phase === "B"),
+        phase_c: f.ingredients.filter((i) => i.phase === "C"),
+        phase_d: f.ingredients.filter((i) => i.phase === "D"),
+      },
+      total_weight_pct: 100.0,
+    };
   }
 
   async deleteFormula(formulaId: string): Promise<void> {

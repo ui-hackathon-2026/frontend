@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
-import { Compass, ShieldCheck, FileCheck, CheckCircle2, AlertTriangle, Layers, Building2, Globe } from "lucide-react";
+import { ShieldCheck, FileCheck, CheckCircle2, AlertTriangle, Layers, Building2, Globe } from "lucide-react";
 
 export const DualScopeSimilarityReport: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"internal" | "external">("internal");

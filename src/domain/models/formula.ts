@@ -64,3 +64,22 @@ export interface FormulaVersionItem {
   };
   created_at: string;
 }
+
+export interface FormulaChangeItemDto {
+  ingredient_id: string;
+  name: string;
+  inci: string;
+  phase: "A" | "B" | "C" | "D" | string;
+  old_pct: number;
+  new_pct: number;
+  action: "modified" | "added" | "removed";
+}
+
+export interface FormulaAdjustmentResponse {
+  formula_id: string;
+  title: string;
+  explanation: string;
+  changes: FormulaChangeItemDto[];
+  updated_phases: FormulaPhasesDto;
+  total_weight_pct: number;
+}

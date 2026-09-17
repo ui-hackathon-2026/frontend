@@ -1,4 +1,5 @@
 import {
+  FormulaAdjustmentResponse,
   FormulaCreatePayload,
   FormulaItemResponse,
   FormulaUpdatePayload,
@@ -22,9 +23,21 @@ export interface IFormulaRepository {
   createFormula(payload: FormulaCreatePayload): Promise<FormulaItemResponse>;
 
   /**
-   * Update existing formula (triggers append-only version snapshot in backend)
+   * Update existing formula (triggers append-only version snapshot in backend if createVersion is true)
    */
-  updateFormula(formulaId: string, payload: FormulaUpdatePayload): Promise<FormulaItemResponse>;
+  updateFormula(
+    formulaId: string,
+    payload: FormulaUpdatePayload,
+    createVersion?: boolean
+  ): Promise<FormulaItemResponse>;
+
+  /**
+   * Propose AI-based formulation adjustment based on natural language prompt
+   */
+  proposeAdjustment(
+    formulaId: string,
+    prompt: string
+  ): Promise<FormulaAdjustmentResponse>;
 
   /**
    * Delete formula by formula_id
