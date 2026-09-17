@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   Box,
+  Atom,
   LogOut,
   LogIn,
 } from "lucide-react";
@@ -60,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
     { label: "Formulation Canvas", href: "/workbench", icon: Sliders },
     { label: "Pareto Optimizer", href: "/optimizer", icon: Zap },
     { label: "Regulatory Sentinel", href: "/compliance", icon: ShieldCheck },
+    { label: "Molecular Inspector", href: "/molecular-inspector", icon: Atom },
   ];
 
   return (
@@ -81,29 +83,6 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
 
             {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center space-x-1 pl-2">
-              {/* All Features Dropdown */}
-              <div
-                className="relative"
-                onMouseEnter={() => setActiveMenu("features")}
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleMenu("features")}
-                  className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    activeMenu === "features"
-                      ? "bg-slate-100 text-[#0018a8]"
-                      : "text-slate-800 hover:text-[#0018a8] hover:bg-slate-50"
-                  }`}
-                >
-                  <span>Modul Formulasi</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      activeMenu === "features" ? "rotate-180 text-[#0018a8]" : "text-slate-400"
-                    }`}
-                  />
-                </button>
-              </div>
-
               {/* Direct Quick Links to Top Features */}
               {navFeatures.map((item) => {
                 const isActive = pathname === item.href;

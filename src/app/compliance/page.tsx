@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function CompliancePage() {
   const {
@@ -148,6 +149,14 @@ export default function CompliancePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* EMPTY STATE: no audit selected yet */}
+        {!isLoadingAudit && !report && (
+          <EmptyState
+            title="Belum Ada Hasil Audit Regulasi"
+            description="Pilih formula uji di atas untuk menampilkan audit forensik BPOM, Halal HAS 23000, dan skor TKDN."
+          />
         )}
       </main>
     </div>

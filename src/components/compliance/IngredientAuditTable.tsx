@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Bookmark,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface IngredientAuditTableProps {
   ingredients: IngredientAuditItem[];
@@ -37,7 +38,13 @@ export const IngredientAuditTable: React.FC<IngredientAuditTableProps> = ({ ingr
       </div>
 
       <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-        {ingredients.map((item) => {
+        {ingredients.length === 0 ? (
+          <EmptyState
+            title="Belum Ada Hasil Audit Bahan"
+            description="Tidak ada komponen bahan untuk diaudit. Pilih formula uji untuk menampilkan rincian audit forensik BPOM, Halal, dan TKDN."
+          />
+        ) : (
+          ingredients.map((item) => {
           const isExpanded = expandedId === item.id;
           const isPassed = item.status === "PASSED";
           const isViolation = item.status === "VIOLATION";
@@ -152,7 +159,8 @@ export const IngredientAuditTable: React.FC<IngredientAuditTableProps> = ({ ingr
               )}
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );

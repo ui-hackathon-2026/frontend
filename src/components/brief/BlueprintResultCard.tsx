@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { FormulationBlueprint } from "@/domain/models/brief";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { EmptyState } from "@/components/EmptyState";
 
 interface BlueprintResultCardProps {
   blueprint: FormulationBlueprint;
@@ -115,7 +116,14 @@ export const BlueprintResultCard: React.FC<BlueprintResultCardProps> = ({ bluepr
         </div>
 
         <div className="border border-slate-200/80 rounded-2xl overflow-hidden divide-y divide-slate-100 text-xs">
-          {blueprint.ingredients.map((ing) => (
+          {blueprint.ingredients.length === 0 ? (
+            <EmptyState
+              title="Komposisi Blueprint Kosong"
+              description="Hasil sintesis tidak menghasilkan komposisi bahan. Coba sesuaikan target brief dan sintesis ulang."
+              className="border-0 rounded-none"
+            />
+          ) : (
+            blueprint.ingredients.map((ing) => (
             <div
               key={ing.id}
               className="p-3.5 bg-white hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
@@ -155,7 +163,8 @@ export const BlueprintResultCard: React.FC<BlueprintResultCardProps> = ({ bluepr
                 </span>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ParetoPresetId } from "@/domain/models/optimizer";
 import { Scale, DollarSign, ShieldCheck, Sprout } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 const PRESET_OPTIONS: { id: ParetoPresetId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "balanced", label: "Balanced Trade-off", icon: Scale },
@@ -131,6 +132,14 @@ export default function OptimizerPage() {
               onSelectCandidate={(id) => setSelectedCandidateId(id)}
             />
           </>
+        )}
+
+        {/* EMPTY STATE: before first optimization */}
+        {!isOptimizing && !result && !error && (
+          <EmptyState
+            title="Belum Ada Hasil Optimasi Pareto"
+            description="Atur bobot objektif dan batasan di atas, lalu jalankan optimasi NSGA-II untuk menampilkan frontier stabilitas, COGS, dan TKDN."
+          />
         )}
       </main>
     </div>

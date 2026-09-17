@@ -12,6 +12,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { ChatMessage, ProjectBriefInput, FormulationBlueprint } from "@/domain/models/brief";
+import { EmptyState } from "@/components/EmptyState";
 
 interface PersistentAIChatPanelProps {
   isOpen: boolean;
@@ -98,7 +99,15 @@ export const PersistentAIChatPanel: React.FC<PersistentAIChatPanelProps> = ({
 
       {/* Message List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs">
-        {messages.map((m) => {
+        {messages.length === 0 && !isSending ? (
+          <EmptyState
+            compact
+            title="Belum Ada Percakapan"
+            description="Mulai konsultasi formulasi dengan AI Studio Assistant."
+            className="border-dashed"
+          />
+        ) : (
+          messages.map((m) => {
           const isAssistant = m.sender === "assistant";
           return (
             <div
@@ -127,7 +136,8 @@ export const PersistentAIChatPanel: React.FC<PersistentAIChatPanelProps> = ({
               )}
             </div>
           );
-        })}
+        })
+        )}
 
         {isSending && (
           <div className="flex items-center space-x-2 text-slate-400 text-xs p-2">
