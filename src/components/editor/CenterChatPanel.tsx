@@ -182,7 +182,7 @@ export const CenterChatPanel: React.FC = () => {
                       className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                     >
                       <Sliders className="w-3.5 h-3.5" />
-                      <span>Terapkan ke Kitchen Panel</span>
+                      <span>Terapkan ke Composition Panel</span>
                     </button>
                   </div>
                 )}

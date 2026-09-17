@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useEditor } from "@/contexts/EditorContext";
@@ -50,7 +50,7 @@ export const ArtifactViewerPanel: React.FC = () => {
     } else {
       updateIngredientWeight("ing-niacinamide", 4.5);
     }
-    setAppliedNotice(`Formula ${candName} berhasil diterapkan ke Kitchen Panel!`);
+    setAppliedNotice(`Formula ${candName} berhasil diterapkan ke Composition Panel!`);
     setTimeout(() => setAppliedNotice(null), 2500);
   };
 
@@ -214,7 +214,7 @@ export const ArtifactViewerPanel: React.FC = () => {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
                 >
                   <Sliders className="w-3.5 h-3.5" />
-                  <span>Terapkan Kandidat {selectedCandidate} ke Kitchen Panel</span>
+                  <span>Terapkan Kandidat {selectedCandidate} ke Composition Panel</span>
                 </button>
               </div>
             </div>

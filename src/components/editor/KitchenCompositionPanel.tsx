@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useMemo } from "react";
 import { useEditor } from "@/contexts/EditorContext";
@@ -75,7 +75,7 @@ export const KitchenCompositionPanel: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading">
-                Kitchen Panel
+                Composition Panel
               </h2>
               <span className="text-[10px] text-slate-400 font-mono block">
                 Komposisi Formula Baku 4-Fase

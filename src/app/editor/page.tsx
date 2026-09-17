@@ -38,7 +38,7 @@ function EditorStudioInner() {
         )}
       </main>
 
-      {/* 3. RIGHT PANEL (Kitchen Panel / 4-Phase Composition) */}
+      {/* 3. RIGHT PANEL (Composition Panel / 4-Phase Composition) */}
       <aside className="w-80 sm:w-96 flex flex-col border-l border-slate-200/80 bg-white shrink-0 overflow-hidden">
         <KitchenCompositionPanel />
       </aside>
