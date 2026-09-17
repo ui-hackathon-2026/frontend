@@ -112,7 +112,7 @@ export default function WorkbenchPage() {
         {/* STEP 1: PILIH FORMULA BENCHMARK */}
         {currentStep === 1 && (
           <section className="space-y-6 animate-in fade-in duration-200">
-            <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
+            <div className="relative overflow-hidden shimmer-card p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
                 <div>
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
@@ -137,7 +137,7 @@ export default function WorkbenchPage() {
                         setSelectedPresetId(preset.id);
                         setFormulaName(preset.name);
                       }}
-                      className={`text-left p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                      className={`relative overflow-hidden shimmer-card text-left p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
                         isSelected
                           ? "border-[#001299] bg-blue-50/40 ring-2 ring-[#001299]/20 shadow-xs"
                           : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
@@ -175,7 +175,7 @@ export default function WorkbenchPage() {
 
               {/* Action Bar for Step 1 */}
               {selectedPreset && (
-                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="relative overflow-hidden shimmer-card p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-0.5">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                       Formula Terpilih:
@@ -206,7 +206,7 @@ export default function WorkbenchPage() {
         {currentStep === 2 && (
           <section className="space-y-6 animate-in fade-in duration-200">
             {/* Top Sub-header with back button */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="relative overflow-hidden shimmer-card p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
               <div className="flex items-center space-x-2.5">
                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#001299] flex items-center justify-center border border-blue-100">
                   <FlaskConical className="w-4 h-4" />

@@ -82,7 +82,7 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3.5">
+    <div className="relative overflow-hidden shimmer-card p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3.5">
       {/* Formula Parameter Controls Header */}
       <div className="border-b border-slate-100 pb-2">
         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">

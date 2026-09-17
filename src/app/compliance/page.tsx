@@ -42,7 +42,7 @@ export default function CompliancePage() {
         </div>
 
         {/* Formula Selector Bar */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="relative overflow-hidden shimmer-card p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-2.5">
             <span className="text-xs font-bold text-slate-700 block">
               Pilih Formula Uji:

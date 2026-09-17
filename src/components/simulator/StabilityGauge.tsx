@@ -51,7 +51,7 @@ export const StabilityGauge: React.FC<StabilityGaugeProps> = ({
   }
 
   return (
-    <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-between space-y-4">
+    <div className="relative overflow-hidden shimmer-card p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col items-center justify-between space-y-4">
       <div className="w-full flex items-center justify-between">
         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Accelerated Stability Index

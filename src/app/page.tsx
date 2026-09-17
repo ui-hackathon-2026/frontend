@@ -136,7 +136,7 @@ export default function HomePage() {
                 <Link
                   key={f.id}
                   href={f.href}
-                  className={`p-6 rounded-3xl border transition-all group flex flex-col justify-between ${
+                  className={`relative overflow-hidden shimmer-card p-6 rounded-3xl border transition-all group flex flex-col justify-between ${
                     f.highlight
                       ? "border-[#0018a8] bg-blue-50/40 hover:bg-blue-50/70 ring-2 ring-[#0018a8]/20 shadow-xs"
                       : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-2xs"

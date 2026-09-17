@@ -46,7 +46,7 @@ export const DropletDistributionChart: React.FC<DropletDistributionChartProps> =
   const isTargetAchieved = meanSizeNm <= 200;
 
   return (
-    <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+    <div className="relative overflow-hidden shimmer-card p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">

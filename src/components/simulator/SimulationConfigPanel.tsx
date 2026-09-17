@@ -100,7 +100,7 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
   ];
 
   return (
-    <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
+    <div className="relative overflow-hidden shimmer-card p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
       {/* Header & Formula Summary */}
       <div className="border-b border-slate-100 pb-4">
         <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">

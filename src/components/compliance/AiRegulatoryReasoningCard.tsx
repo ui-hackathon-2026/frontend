@@ -10,7 +10,7 @@ interface AiRegulatoryReasoningCardProps {
 
 export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps> = ({ reasoning }) => {
   return (
-    <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-5">
+    <div className="relative overflow-hidden shimmer-card p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-5">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-indigo-600" />
@@ -21,7 +21,7 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
       </div>
 
       {/* Toxicology Narrative */}
-      <div className="p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/80 space-y-1.5">
+      <div className="relative overflow-hidden shimmer-card p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100/80 space-y-1.5">
         <span className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider block">
           Evaluasi Toksikologi &amp; Sawar Kulit
         </span>
@@ -41,7 +41,7 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
           {reasoning.localSubstitutionRecommendations.map((rec, idx) => (
             <div
               key={idx}
-              className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/70 space-y-1.5"
+              className="relative overflow-hidden shimmer-card p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/70 space-y-1.5"
             >
               <div className="flex items-center justify-between flex-wrap gap-1">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-950">
