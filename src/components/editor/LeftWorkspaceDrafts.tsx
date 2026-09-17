@@ -182,7 +182,7 @@ export const LeftWorkspaceDrafts: React.FC = () => {
                     isActive
                       ? "bg-[#001299] text-white shadow-xs font-semibold"
                       : "bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium"
-                  } ${isConfirmingDelete ? "ring-2 ring-rose-400/80 bg-rose-50/50" : ""}`}
+                  }`}
                 >
                   <div className="flex items-center gap-2 truncate flex-1 mr-1">
                     <Layers
