@@ -9,7 +9,6 @@ import { CookieConsentModal } from "@/components/CookieConsentModal";
 import { HighZModal } from "@/components/HighZModal";
 import { FontPickerToolbar, NICHE_FONTS } from "@/components/FontPickerToolbar";
 import {
-  Sparkles,
   Layers,
   Eye,
   Info,
@@ -61,10 +60,6 @@ export default function ContohHalamanPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-10 sm:py-14 space-y-16 sm:space-y-20">
         {/* Hero Section */}
         <section className="text-center max-w-3xl mx-auto space-y-5">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-xs font-semibold text-[#0018a8]">
-            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-            <span>Scientific Enterprise Design System • Light Mode</span>
-          </div>
 
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-[#0a192f] leading-tight sm:leading-tight">
             Designed for Science, Trusted by Senior R&D

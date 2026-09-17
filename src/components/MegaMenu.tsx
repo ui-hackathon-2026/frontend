@@ -1,7 +1,20 @@
 "use client";
 
 import React from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Sparkles,
+  Bot,
+  Sliders,
+  Gauge,
+  Zap,
+  ShieldCheck,
+  FileSpreadsheet,
+  Box,
+  Palette,
+  FlaskConical,
+} from "lucide-react";
 
 interface MegaMenuProps {
   isOpen: boolean;
@@ -17,127 +30,217 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
       onMouseLeave={onClose}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-8">
-        <div className="glass-dropdown rounded-2xl p-8 sm:p-10 border border-slate-200/80 shadow-2xl backdrop-blur-2xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-10">
-            {/* Column 1: Products */}
+        <div className="glass-dropdown rounded-3xl p-8 sm:p-10 border border-slate-200/80 shadow-2xl backdrop-blur-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {/* Column 1: Core AI & Simulation */}
             <div className="space-y-4">
-              <h4 className="text-sm font-bold tracking-wider text-[#002df5] uppercase">
-                Products
+              <h4 className="text-xs font-bold tracking-wider text-[#002df5] uppercase">
+                Core Engine &amp; Modeling
               </h4>
-              <ul className="space-y-2.5 text-sm">
-                {[
-                  "Product Overview",
-                  "Benchling Bioresearch",
-                  "Benchling Bioprocess",
-                  "Benchling Automation",
-                  "Benchling Biologics",
-                  "Benchling In Vivo",
-                  "PipeBio Antibodies",
-                ].map((item) => (
-                  <li key={item}>
-                    <a
-                      href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                      className="text-slate-800 hover:text-[#0018a8] font-medium transition-colors block py-0.5"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link
+                    href="/simulator"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/80 mt-0.5">
+                      <Gauge className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Stability &amp; PhysChem Simulator
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Simulasi kestabilan emulsi 40°C 90 hari dipercepat dengan model in-silico prediktif.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/copilot"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/80 mt-0.5">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        AI Formulation Co-Pilot
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Llama-3.3-70B LPU orchestrator untuk formulasi kosmetik cerdas.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/optimizer"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200/80 mt-0.5">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Pareto Multi-Objective Optimizer
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Optuna NSGA-II 50.000 trials paralel: stabilitas, COGS &amp; TKDN.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            {/* Column 2: Platform */}
+            {/* Column 2: Formulation & Regulatory */}
             <div className="space-y-4">
-              <h4 className="text-sm font-bold tracking-wider text-[#002df5] uppercase">
-                Platform
+              <h4 className="text-xs font-bold tracking-wider text-[#002df5] uppercase">
+                Formulation &amp; Standards
               </h4>
-              <ul className="space-y-2.5 text-sm">
-                {[
-                  "Platform Overview",
-                  "Validated Cloud",
-                  "Developer Platform",
-                  "Ecosystem Integrations",
-                  "Security & Compliance (GxP)",
-                ].map((item) => (
-                  <li key={item}>
-                    <a
-                      href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                      className="text-slate-800 hover:text-[#0018a8] font-medium transition-colors block py-0.5"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link
+                    href="/workbench"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/80 mt-0.5">
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Formulation Canvas
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Meja racik interaktif Fase A, B, C, D dengan balance matematis 100%.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/compliance"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/80 mt-0.5">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Regulatory &amp; Halal Sentinel
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Perka BPOM 17/2022, Halal HAS 23000, dan TKDN kalkulator lokal.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/molecular-inspector"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/80 mt-0.5">
+                      <Box className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        3D Molecular &amp; Colloid Inspector
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        RDKit 3D conformers &amp; struktur emulsi droplet 360° WebGL.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            {/* Column 3: Features */}
+            {/* Column 3: Factory Scale & Documents */}
             <div className="space-y-4">
-              <h4 className="text-sm font-bold tracking-wider text-[#002df5] uppercase">
-                Features
+              <h4 className="text-xs font-bold tracking-wider text-[#002df5] uppercase">
+                Plant Scale &amp; Explainability
               </h4>
-              <ul className="space-y-2.5 text-sm">
-                {[
-                  "Lab Notebook",
-                  "LIMS & Sample Tracking",
-                  "Molecular Biology Tools",
-                  "Registry & Inventory",
-                  "Automated Workflows",
-                  "AI Formulation Simulator",
-                ].map((item) => (
-                  <li key={item}>
-                    <a
-                      href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                      className="text-slate-800 hover:text-[#0018a8] font-medium transition-colors block py-0.5"
-                    >
-                      {item}
-                    </a>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link
+                    href="/batch-sheet"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200/80 mt-0.5">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Master Batch Record &amp; SOP
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Konversi gramatur batch lab/pabrik (500g–100kg), SOP, dan TreeSHAP.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/contoh-halaman"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200/80 mt-0.5">
+                      <Palette className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Design System Showcase
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Katalog komponen Benchling-inspired, font picker, &amp; modal.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
               </ul>
             </div>
 
-            {/* Column 4: Success & Highlights */}
+            {/* Column 4: Lintasarta AI Cloud Info */}
             <div className="space-y-4 flex flex-col justify-between">
               <div>
-                <h4 className="text-sm font-bold tracking-wider text-[#002df5] uppercase">
-                  Success
+                <h4 className="text-xs font-bold tracking-wider text-[#002df5] uppercase">
+                  Metode Ilmiah
                 </h4>
-                <ul className="space-y-2.5 text-sm mt-4">
-                  {[
-                    "Customer Success Packages",
-                    "Professional Services",
-                    "Scientific Advisory Board",
-                    "Paragon Innovation Hub",
-                  ].map((item) => (
-                    <li key={item}>
-                      <a
-                        href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-                        className="text-slate-800 hover:text-[#0018a8] font-medium transition-colors block py-0.5"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Callout box inside mega menu */}
-              <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-100 text-xs">
-                <div className="flex items-center space-x-1.5 text-[#0018a8] font-semibold mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Benchling AI Assistant</span>
+                <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-100/90 text-xs space-y-2">
+                  <div className="flex items-center space-x-1.5 text-[#0018a8] font-bold">
+                    <FlaskConical className="w-3.5 h-3.5 text-[#0018a8]" />
+                    <span>Simulasi Koloid In-Silico</span>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed text-[11px]">
+                    Kombinasi termodinamika koloid, kesetimbangan fasa, dan model machine learning prediktif untuk riset formulasi.
+                  </p>
+                  <div className="pt-1">
+                    <Link
+                      href="/simulator"
+                      onClick={onClose}
+                      className="text-[#0018a8] font-semibold inline-flex items-center space-x-1 hover:underline text-[11px]"
+                    >
+                      <span>Buka Stability Simulator</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
-                <p className="text-slate-600 mb-2 leading-relaxed">
-                  Accelerate scientific experiment workflows with native LPU inference.
-                </p>
-                <a
-                  href="#explore-ai"
-                  className="text-[#0018a8] font-medium inline-flex items-center space-x-1 hover:underline"
-                >
-                  <span>Explore AI</span>
-                  <ArrowRight className="w-3 h-3" />
-                </a>
               </div>
             </div>
           </div>
