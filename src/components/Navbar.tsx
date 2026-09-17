@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   Box,
   Atom,
+  Sparkles,
   LogOut,
   LogIn,
 } from "lucide-react";
@@ -153,11 +154,11 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
             )}
 
             <Link
-              href="/workbench"
+              href="/editor"
               className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-xs transition-all"
             >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Buka Canvas</span>
+              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+              <span>Studio Editor</span>
             </Link>
           </div>
 
