@@ -37,9 +37,6 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
           </div>
 
           <div className="min-w-0">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Formula Teruji
-            </span>
             <h2 className="text-base sm:text-xl font-bold text-[#0a192f] font-heading truncate">
               {report.formulaName}
             </h2>
