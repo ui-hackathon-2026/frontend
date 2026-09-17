@@ -24,7 +24,7 @@ export const IngredientAuditTable: React.FC<IngredientAuditTableProps> = ({ ingr
   };
 
   return (
-    <div className="relative overflow-hidden shimmer-card p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+    <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">

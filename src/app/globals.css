@@ -94,8 +94,9 @@ h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
 
 /* ==========================================================================
    SHIMMERING EFFECT DESIGN SYSTEM STANDARD (PARAGON STUDIO)
-   Semua widget / card wajib menerapkan efek shimmer untuk kedalaman visual,
-   tactile feedback, dan standar tampilan high-end enterprise.
+   Standar Shimmering: HANYA aktif saat status LOADING / proses asinkron
+   (Skeleton Loading). Widget normal yang sudah selesai dimuat tampil statis,
+   jernih, dan tenang tanpa animasi konstan yang mengganggu.
    ========================================================================== */
 
 @keyframes shimmer-sweep {
@@ -107,81 +108,16 @@ h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
   }
 }
 
-@keyframes shimmer-ambient-sweep {
-  0% {
-    transform: translateX(-120%);
-  }
-  30%, 100% {
-    transform: translateX(120%);
-  }
-}
-
-/* Standard Shimmer Card: Efek sapuan kilau halus saat hover */
-.shimmer-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    115deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.4) 45%,
-    rgba(224, 242, 254, 0.45) 50%,
-    rgba(255, 255, 255, 0.4) 55%,
-    transparent 80%
-  );
-  pointer-events: none;
-  z-index: 15;
-  transition: opacity 0.3s ease;
-}
-
-.shimmer-card:hover::after {
-  animation: shimmer-sweep 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Ambient Shimmer: Sapuan kilau periodik halus untuk widget aktif/running */
-.shimmer-ambient {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer-ambient::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform: translateX(-120%);
-  background: linear-gradient(
-    115deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.3) 45%,
-    rgba(224, 242, 254, 0.35) 50%,
-    rgba(255, 255, 255, 0.3) 55%,
-    transparent 80%
-  );
-  pointer-events: none;
-  z-index: 15;
-  animation: shimmer-ambient-sweep 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-}
-
-/* Skeleton Loading Shimmer */
-.shimmer-loading {
+/* Skeleton Loading Shimmer: Digunakan khusus saat data/widget sedang dimuat */
+.shimmer-loading,
+.skeleton-shimmer {
   position: relative;
   overflow: hidden;
   background-color: #f1f5f9;
 }
 
-.shimmer-loading::after {
+.shimmer-loading::after,
+.skeleton-shimmer::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -189,18 +125,17 @@ h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 255, 255, 0.75) 50%,
     transparent 100%
   );
-  animation: shimmer-sweep 1.6s infinite;
+  animation: shimmer-sweep 1.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
 /* Accessible Reduced-Motion Support */
 @media (prefers-reduced-motion: reduce) {
-  .shimmer-card::after,
-  .shimmer-ambient::after,
-  .shimmer-loading::after {
+  .shimmer-loading::after,
+  .skeleton-shimmer::after {
     animation: none !important;
     display: none !important;
   }

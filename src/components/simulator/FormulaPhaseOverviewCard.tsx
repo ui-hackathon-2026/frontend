@@ -79,7 +79,7 @@ export const FormulaPhaseOverviewCard: React.FC<FormulaPhaseOverviewCardProps> =
   }, [ingredients]);
 
   return (
-    <div className="relative overflow-hidden shimmer-card p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+    <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
       {/* Header */}
       <div className="border-b border-slate-100 pb-2.5 space-y-0.5">
         <div className="flex items-center justify-between">

@@ -32,7 +32,7 @@ export const WorkbenchRadarCard: React.FC<WorkbenchRadarCardProps> = ({
   ];
 
   return (
-    <div className="relative overflow-hidden shimmer-card p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+    <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-indigo-600" />

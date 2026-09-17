@@ -2,18 +2,39 @@
 
 import React from "react";
 
-export type ShimmerVariant = "hover" | "ambient" | "loading" | "none";
+export interface ShimmerSkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+}
+
+/**
+ * ShimmerSkeleton - Standar Elemen Loading Shimmer Paragon Studio
+ * Menghasilkan blok skeleton dengan sapuan kilau gradien halus (shimmer)
+ * yang hanya aktif saat komponen sedang memuat data.
+ */
+export const ShimmerSkeleton: React.FC<ShimmerSkeletonProps> = ({
+  className = "w-full h-6 rounded-xl",
+  ...props
+}) => {
+  return (
+    <div
+      className={`shimmer-loading rounded-xl ${className}`}
+      aria-hidden="true"
+      {...props}
+    />
+  );
+};
 
 export interface ShimmerWidgetProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   /**
-   * Shimmer mode:
-   * - 'hover' (default): Subtle refined light-beam shimmer sweep when the user hovers over the card.
-   * - 'ambient': Continuous gentle periodic shimmer sweep (e.g. for active simulation/running engines).
-   * - 'loading': High-tech pulse loading skeleton shimmer.
-   * - 'none': Disables the shimmer effect.
+   * Jika true, widget menampilkan state shimmer loading / skeleton.
+   * Jika false (default), widget menampilkan konten normal tanpa animasi konstan.
    */
-  shimmerVariant?: ShimmerVariant;
+  isLoading?: boolean;
+  /**
+   * Custom skeleton layout yang ditampilkan saat isLoading = true.
+   */
+  loadingFallback?: React.ReactNode;
   className?: string;
 }
 
@@ -21,29 +42,42 @@ export interface ShimmerWidgetProps extends React.HTMLAttributes<HTMLDivElement>
  * ShimmerWidget - Design System Component for Paragon Studio
  *
  * STANDARD DEVELOP:
- * Semua widget / card di seluruh platform wajib mengadopsi efek shimmering
- * untuk memberikan tactile responsiveness, visual depth, dan sentuhan premium enterprise.
+ * Efek shimmering HANYA aktif saat status `isLoading = true`.
+ * Ketika data sudah dimuat, widget tampil solid, jernih, dan tenang (bebas distraksi).
  */
 export const ShimmerWidget: React.FC<ShimmerWidgetProps> = ({
   children,
-  shimmerVariant = "hover",
+  isLoading = false,
+  loadingFallback,
   className = "",
   ...rest
 }) => {
-  const variantClass =
-    shimmerVariant === "hover"
-      ? "shimmer-card"
-      : shimmerVariant === "ambient"
-      ? "shimmer-ambient"
-      : shimmerVariant === "loading"
-      ? "shimmer-loading"
-      : "";
+  if (isLoading) {
+    if (loadingFallback) {
+      return <div className={className} {...rest}>{loadingFallback}</div>;
+    }
+
+    return (
+      <div
+        className={`p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 ${className}`}
+        {...rest}
+      >
+        <div className="flex items-center justify-between">
+          <ShimmerSkeleton className="w-36 h-5 rounded-lg" />
+          <ShimmerSkeleton className="w-20 h-5 rounded-full" />
+        </div>
+        <ShimmerSkeleton className="w-3/4 h-7 rounded-xl" />
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          <ShimmerSkeleton className="h-20 rounded-2xl" />
+          <ShimmerSkeleton className="h-20 rounded-2xl" />
+          <ShimmerSkeleton className="h-20 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={`relative overflow-hidden transition-all duration-200 ${variantClass} ${className}`}
-      {...rest}
-    >
+    <div className={`transition-all duration-200 ${className}`} {...rest}>
       {children}
     </div>
   );

@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 
 export default function CompliancePage() {
   const {
@@ -42,7 +43,7 @@ export default function CompliancePage() {
         </div>
 
         {/* Formula Selector Bar */}
-        <div className="relative overflow-hidden shimmer-card p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-2.5">
             <span className="text-xs font-bold text-slate-700 block">
               Pilih Formula Uji:
@@ -70,13 +71,40 @@ export default function CompliancePage() {
           </div>
         </div>
 
-        {/* Loading Spinner */}
+        {/* Shimmering Skeleton Loading State */}
         {isLoadingAudit && (
-          <div className="p-12 rounded-3xl bg-white border border-slate-200 text-center space-y-3">
-            <div className="w-8 h-8 border-2 border-[#001299] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs text-slate-500">
-              Melakukan pencarian semantik (Vector RAG) &amp; penalaran LLM regulasi BPOM...
-            </p>
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Shimmer Summary Card */}
+            <div className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center space-x-3">
+                  <ShimmerSkeleton className="w-11 h-11 rounded-2xl" />
+                  <ShimmerSkeleton className="w-64 h-6 rounded-xl" />
+                </div>
+                <ShimmerSkeleton className="w-48 h-10 rounded-2xl" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <ShimmerSkeleton className="h-24 rounded-2xl" />
+                <ShimmerSkeleton className="h-24 rounded-2xl" />
+                <ShimmerSkeleton className="h-24 rounded-2xl" />
+              </div>
+            </div>
+
+            {/* Shimmer 2-Column Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+                <ShimmerSkeleton className="w-48 h-5 rounded-lg" />
+                <ShimmerSkeleton className="w-full h-14 rounded-2xl" />
+                <ShimmerSkeleton className="w-full h-14 rounded-2xl" />
+                <ShimmerSkeleton className="w-full h-14 rounded-2xl" />
+                <ShimmerSkeleton className="w-full h-14 rounded-2xl" />
+              </div>
+              <div className="lg:col-span-5 p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+                <ShimmerSkeleton className="w-40 h-5 rounded-lg" />
+                <ShimmerSkeleton className="w-full h-24 rounded-2xl" />
+                <ShimmerSkeleton className="w-full h-32 rounded-2xl" />
+              </div>
+            </div>
           </div>
         )}
 

@@ -37,7 +37,7 @@ export const ThermodynamicAuditCard: React.FC<ThermodynamicAuditCardProps> = ({
   recommendations,
 }) => {
   return (
-    <div className="relative overflow-hidden shimmer-card p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
+    <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
       {/* Header with Engine Info & OOD Banner */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div>
