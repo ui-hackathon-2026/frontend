@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ChevronDown, Globe } from "lucide-react";
 
 interface AnnouncementBarProps {
@@ -30,12 +31,12 @@ export const AnnouncementBar: React.FC<AnnouncementBarProps> = ({
 
         {/* Right utilities: Login & Language Selector */}
         <div className="hidden sm:flex items-center space-x-6 text-[#0a192f]/90 text-xs font-medium shrink-0 ml-4">
-          <a
-            href="#login"
+          <Link
+            href="/login"
             className="hover:text-[#0018a8] transition-colors"
           >
             Login
-          </a>
+          </Link>
           <button
             type="button"
             className="flex items-center space-x-1.5 hover:text-[#0018a8] transition-colors focus:outline-none"

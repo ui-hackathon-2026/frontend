@@ -16,12 +16,17 @@ import { IOptimizerRepository } from "@/domain/repositories/IOptimizerRepository
 import { MockOptimizerRepository } from "../repositories/MockOptimizerRepository";
 import { HttpOptimizerRepository } from "../repositories/HttpOptimizerRepository";
 
+import { IAuthRepository } from "@/domain/repositories/IAuthRepository";
+import { MockAuthRepository } from "../repositories/MockAuthRepository";
+import { HttpAuthRepository } from "../repositories/HttpAuthRepository";
+
 class ServiceContainer {
   private static simulationRepository: ISimulationRepository | null = null;
   private static workbenchRepository: IWorkbenchRepository | null = null;
   private static complianceRepository: IComplianceRepository | null = null;
   private static briefRepository: IBriefRepository | null = null;
   private static optimizerRepository: IOptimizerRepository | null = null;
+  private static authRepository: IAuthRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -103,6 +108,22 @@ class ServiceContainer {
     return this.optimizerRepository!;
   }
 
+  public static getAuthRepository(): IAuthRepository {
+    if (!this.authRepository) {
+      const useMock =
+        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
+        process.env.NODE_ENV === "development" ||
+        !process.env.NEXT_PUBLIC_BACKEND_URL;
+
+      if (useMock) {
+        this.authRepository = new MockAuthRepository();
+      } else {
+        this.authRepository = new HttpAuthRepository();
+      }
+    }
+    return this.authRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -113,4 +134,6 @@ export const getWorkbenchRepository = () => ServiceContainer.getWorkbenchReposit
 export const getComplianceRepository = () => ServiceContainer.getComplianceRepository();
 export const getBriefRepository = () => ServiceContainer.getBriefRepository();
 export const getOptimizerRepository = () => ServiceContainer.getOptimizerRepository();
+export const getAuthRepository = () => ServiceContainer.getAuthRepository();
+
 

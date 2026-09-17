@@ -116,4 +116,46 @@ export class ApiClient {
       );
     }
   }
+
+  async getWithAuth<TRes>(endpoint: string, accessToken: string): Promise<TRes> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorData: unknown;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = await response.text();
+        }
+        throw new ApiError(
+          `Request to ${endpoint} failed with status ${response.status}`,
+          response.status,
+          errorData
+        );
+      }
+
+      return (await response.json()) as TRes;
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if (err instanceof ApiError) throw err;
+      throw new ApiError(
+        err instanceof Error ? err.message : "Network error",
+        500,
+        err
+      );
+    }
+  }
 }

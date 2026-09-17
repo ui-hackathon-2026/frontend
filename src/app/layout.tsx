@@ -8,6 +8,7 @@ import {
   Geist,
 } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -51,9 +52,9 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Benchling / Formulation Studio — Scientific UI Component Showcase",
+  title: "Paragon Formulation Studio",
   description:
-    "Clean, credible, non-vibe-coded design system tailored for Gen X & Millennial scientists.",
+    "AI-driven cosmetic formulation platform for Paragon Technology and Innovation.",
 };
 
 export default function RootLayout({
@@ -63,13 +64,12 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${plusJakartaSans.variable} ${instrumentSans.variable} ${dmSans.variable} ${outfit.variable} ${inter.variable} ${geist.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-slate-900 selection:bg-blue-100 selection:text-blue-900">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
-

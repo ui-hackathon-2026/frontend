@@ -1,22 +1,24 @@
-"use client";
+﻿"use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
   Menu,
   X,
   FlaskConical,
-  Gauge,
   Sliders,
   Bot,
   Zap,
   ShieldCheck,
   FileSpreadsheet,
   Box,
+  LogOut,
+  LogIn,
 } from "lucide-react";
 import { MegaMenu } from "./MegaMenu";
+import { useAuth } from "@/hooks/useAuth";
 
 interface NavbarProps {
   brandName?: string;
@@ -25,10 +27,32 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  const { user, isAuthenticated, logout } = useAuth();
 
   const toggleMenu = (name: string) => {
     setActiveMenu(activeMenu === name ? null : name);
+  };
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleLogout = async () => {
+    setAvatarDropdownOpen(false);
+    await logout();
+    router.push("/login");
   };
 
   const navFeatures = [
@@ -102,6 +126,53 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
 
           {/* Right Action CTAs */}
           <div className="hidden sm:flex items-center space-x-3">
+            {isAuthenticated && user ? (
+              /* Avatar Dropdown */
+              <div className="relative" ref={avatarRef}>
+                <button
+                  type="button"
+                  onClick={() => setAvatarDropdownOpen((v) => !v)}
+                  className="flex items-center space-x-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[#001299] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {user.avatarInitials}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 max-w-[120px] truncate">
+                    {user.name}
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-400 transition-transform ${avatarDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {avatarDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border border-slate-200 shadow-lg py-2 animate-in fade-in slide-in-from-top-1 z-50">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <p className="text-xs font-bold text-slate-900 truncate">{user.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-2 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Keluar</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Login Button */
+              <Link
+                href="/login"
+                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full text-xs font-semibold text-[#001299] border border-[#001299]/30 hover:bg-blue-50 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Masuk</span>
+              </Link>
+            )}
+
             <Link
               href="/workbench"
               className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-xs transition-all"
@@ -112,7 +183,12 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
           </div>
 
           {/* Mobile Hamburger Button */}
-          <div className="lg:hidden flex items-center">
+          <div className="lg:hidden flex items-center space-x-2">
+            {isAuthenticated && user && (
+              <div className="w-7 h-7 rounded-full bg-[#001299] text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {user.avatarInitials}
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -189,8 +265,38 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
               </Link>
             </div>
           </div>
+
+          {/* Mobile auth */}
+          <div className="border-t border-slate-100 pt-3">
+            {isAuthenticated && user ? (
+              <div className="space-y-1">
+                <div className="px-3 py-2">
+                  <p className="text-xs font-bold text-slate-900">{user.name}</p>
+                  <p className="text-[11px] text-slate-500">{user.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-[#001299] font-semibold hover:bg-blue-50 transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Masuk ke akun</span>
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </header>
   );
 };
+
