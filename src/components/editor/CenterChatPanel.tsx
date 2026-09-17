@@ -1,8 +1,10 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import { useEditor } from "@/contexts/EditorContext";
 import { ActionPlusMenu } from "./ActionPlusMenu";
+import { InlineActionConfigCard } from "./InlineActionConfigCard";
+import { ArtifactType } from "@/domain/models/editor";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import {
   Plus,
@@ -21,7 +23,7 @@ export const CenterChatPanel: React.FC = () => {
   const {
     activeDraft,
     sendMessage,
-    openActionConfig,
+    executeAction,
     applyProposal,
     viewArtifact,
     setArtifactsListModalOpen,
@@ -29,6 +31,7 @@ export const CenterChatPanel: React.FC = () => {
 
   const [inputPrompt, setInputPrompt] = useState("");
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [activeInlineAction, setActiveInlineAction] = useState<ArtifactType | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const messages = activeDraft.messages;
@@ -194,48 +197,59 @@ export const CenterChatPanel: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Bar */}
+      {/* Bottom Input Area or Inline Action Config Card */}
       <div className="p-4 bg-white border-t border-slate-200/80 shrink-0">
-        <form onSubmit={handleSend} className="relative flex items-center gap-2">
-          {/* Action (+) Menu */}
-          <div className="relative">
+        {activeInlineAction ? (
+          <InlineActionConfigCard
+            actionType={activeInlineAction}
+            onClose={() => setActiveInlineAction(null)}
+            onExecute={(type, params) => {
+              setActiveInlineAction(null);
+              executeAction(type, params);
+            }}
+          />
+        ) : (
+          <form onSubmit={handleSend} className="relative flex items-center gap-2">
+            {/* Action (+) Menu */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setPlusMenuOpen((v) => !v)}
+                className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer shrink-0"
+                title="Aksi Komputasi (Pareto, Sentinel, Simulasi 40°C, Similarity)"
+              >
+                <Plus className={`w-4 h-4 transition-transform ${plusMenuOpen ? "rotate-45" : ""}`} />
+              </button>
+
+              <ActionPlusMenu
+                isOpen={plusMenuOpen}
+                onClose={() => setPlusMenuOpen(false)}
+                onSelectAction={(actType) => setActiveInlineAction(actType)}
+              />
+            </div>
+
+            {/* Text input */}
+            <div className="flex-1 relative">
+              <textarea
+                rows={1}
+                value={inputPrompt}
+                onChange={(e) => setInputPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
+                className="w-full text-xs px-4 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] resize-none pr-10"
+              />
+            </div>
+
+            {/* Send Button */}
             <button
-              type="button"
-              onClick={() => setPlusMenuOpen((v) => !v)}
-              className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer shrink-0"
-              title="Aksi Komputasi (Pareto, Sentinel, Simulasi 40°C, Similarity)"
+              type="submit"
+              disabled={!inputPrompt.trim()}
+              className="p-2.5 rounded-2xl bg-[#001299] hover:bg-[#000e7a] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-xs"
             >
-              <Plus className={`w-4 h-4 transition-transform ${plusMenuOpen ? "rotate-45" : ""}`} />
+              <Send className="w-4 h-4" />
             </button>
-
-            <ActionPlusMenu
-              isOpen={plusMenuOpen}
-              onClose={() => setPlusMenuOpen(false)}
-              onSelectAction={(actType) => openActionConfig(actType)}
-            />
-          </div>
-
-          {/* Text input */}
-          <div className="flex-1 relative">
-            <textarea
-              rows={1}
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
-              className="w-full text-xs px-4 py-2.5 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] resize-none pr-10"
-            />
-          </div>
-
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={!inputPrompt.trim()}
-            className="p-2.5 rounded-2xl bg-[#001299] hover:bg-[#000e7a] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 shadow-xs"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

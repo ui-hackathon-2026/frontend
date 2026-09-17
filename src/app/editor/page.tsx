@@ -8,14 +8,10 @@ import { CenterChatPanel } from "@/components/editor/CenterChatPanel";
 import { ArtifactViewerPanel } from "@/components/editor/ArtifactViewerPanel";
 import { KitchenCompositionPanel } from "@/components/editor/KitchenCompositionPanel";
 import { ArtifactsListModal } from "@/components/editor/ArtifactsListModal";
-import { ActionConfigModal } from "@/components/editor/ActionConfigModal";
 
 function EditorStudioInner() {
   const {
     centerViewMode,
-    actionConfigModal,
-    closeActionConfig,
-    executeAction,
   } = useEditor();
 
   return (
@@ -49,12 +45,6 @@ function EditorStudioInner() {
 
       {/* Global Modals */}
       <ArtifactsListModal />
-      <ActionConfigModal
-        isOpen={actionConfigModal.isOpen}
-        actionType={actionConfigModal.actionType}
-        onClose={closeActionConfig}
-        onExecute={executeAction}
-      />
     </div>
   );
 }
