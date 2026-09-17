@@ -1,7 +1,6 @@
-﻿"use client";
+"use client";
 
 import React from "react";
-import { Navbar } from "@/components/Navbar";
 import { EditorProvider, useEditor } from "@/contexts/EditorContext";
 import { LeftWorkspaceDrafts } from "@/components/editor/LeftWorkspaceDrafts";
 import { LeftContextualPanel } from "@/components/editor/LeftContextualPanel";
@@ -20,7 +19,7 @@ function EditorStudioInner() {
   } = useEditor();
 
   return (
-    <div className="flex-1 flex overflow-hidden w-full h-[calc(100vh-72px)] bg-white font-sans">
+    <div className="flex-1 flex overflow-hidden w-full h-full bg-white font-sans">
       {/* 1. LEFT PANEL (Workspace Drafts & Contextual 3D/Library) */}
       <aside className="w-72 sm:w-80 flex flex-col border-r border-slate-200/80 bg-white shrink-0 overflow-hidden">
         {/* Top: Workspace & Draft Formulations (Fork) */}
@@ -63,8 +62,7 @@ function EditorStudioInner() {
 export default function EditorPage() {
   return (
     <EditorProvider>
-      <div className="min-h-screen max-h-screen flex flex-col bg-white overflow-hidden font-sans">
-        <Navbar brandName="Paragon Studio" />
+      <div className="h-screen w-screen flex flex-col bg-white overflow-hidden font-sans">
         <EditorStudioInner />
       </div>
     </EditorProvider>
