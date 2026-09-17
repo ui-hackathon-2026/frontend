@@ -8,6 +8,7 @@ import {
 import { ProjectionAxisMode } from "@/hooks/useParetoOptimizer";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { BarChart3, Eye, ArrowUpDown, Sparkles } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface ParetoFrontierScatterPlotProps {
   points: ParetoTrialPoint[];
@@ -93,6 +94,13 @@ export const ParetoFrontierScatterPlot: React.FC<ParetoFrontierScatterPlotProps>
 
   return (
     <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4 relative">
+      {points.length === 0 ? (
+        <EmptyState
+          title="Belum Ada Titik Optimasi"
+          description="Hasil trial Pareto masih kosong. Jalankan ulang optimasi untuk menghasilkan sebaran titik."
+        />
+      ) : (
+        <>
       {/* Header & View Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div className="space-y-1">
@@ -456,6 +464,8 @@ export const ParetoFrontierScatterPlot: React.FC<ParetoFrontierScatterPlotProps>
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

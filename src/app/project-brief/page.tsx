@@ -7,6 +7,7 @@ import { useProjectBrief } from "@/hooks/useProjectBrief";
 import { BlueprintResultCard } from "@/components/brief/BlueprintResultCard";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { EmptyState } from "@/components/EmptyState";
 import {
   FileText,
   UploadCloud,
@@ -535,6 +536,14 @@ export default function ProjectBriefPage() {
 
           {/* GENERATED BLUEPRINT RESULT */}
           {!isSynthesizing && blueprint && <BlueprintResultCard blueprint={blueprint} />}
+
+          {/* EMPTY STATE: before synthesis */}
+          {!isSynthesizing && !blueprint && !error && (
+            <EmptyState
+              title="Belum Ada Cetak Biru Formula"
+              description="Rancang sasaran visual atau ingest PDF brief, lalu tekan Sintesis untuk menghasilkan arsitektur formula 4-fase."
+            />
+          )}
       </main>
     </div>
   );

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { RagChatMessage } from "@/domain/models/compliance";
 import { Send, Bot, User, Bookmark, Sparkles } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface RagKnowledgeChatProps {
   messages: RagChatMessage[];
@@ -51,7 +52,15 @@ export const RagKnowledgeChat: React.FC<RagKnowledgeChatProps> = ({
 
       {/* Chat Messages Log */}
       <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 text-xs">
-        {messages.map((msg) => {
+        {messages.length === 0 && !isLoading ? (
+          <EmptyState
+            compact
+            title="Belum Ada Riwayat Konsultasi"
+            description="Ajukan pertanyaan regulasi BPOM, Halal, atau TKDN untuk memulai."
+            className="border-dashed"
+          />
+        ) : (
+          messages.map((msg) => {
           const isBot = msg.sender === "assistant";
           return (
             <div
@@ -106,7 +115,8 @@ export const RagKnowledgeChat: React.FC<RagKnowledgeChatProps> = ({
               )}
             </div>
           );
-        })}
+        })
+        )}
 
         {isLoading && (
           <div className="flex items-center gap-2 text-xs text-slate-400 p-2">

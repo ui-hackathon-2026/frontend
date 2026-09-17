@@ -14,6 +14,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface ThermodynamicAuditCardProps {
   thermodynamics: ColloidalThermodynamics;
@@ -139,13 +140,22 @@ export const ThermodynamicAuditCard: React.FC<ThermodynamicAuditCardProps> = ({
             <Check className="w-4 h-4 text-emerald-600" />
             <span>Faktor Pengokoh Kestabilan Koloid</span>
           </div>
-          <ul className="space-y-1.5 text-slate-600 list-disc list-inside">
-            {stabilizingFactors.map((f, idx) => (
-              <li key={idx} className="leading-relaxed">
-                {f}
-              </li>
-            ))}
-          </ul>
+          {stabilizingFactors.length === 0 ? (
+            <EmptyState
+              compact
+              title="Belum Ada Faktor Pengokoh"
+              description="Tidak ada faktor pengokoh yang teridentifikasi untuk formula ini."
+              className="bg-white"
+            />
+          ) : (
+            <ul className="space-y-1.5 text-slate-600 list-disc list-inside">
+              {stabilizingFactors.map((f, idx) => (
+                <li key={idx} className="leading-relaxed">
+                  {f}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Risk Factors or Warning */}

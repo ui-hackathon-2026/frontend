@@ -18,6 +18,7 @@ import {
   Scale,
 } from "lucide-react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { EmptyState } from "@/components/EmptyState";
 
 interface ParetoCandidateComparisonCardProps {
   candidates: ParetoCandidateFormula[];
@@ -30,6 +31,15 @@ export const ParetoCandidateComparisonCard: React.FC<ParetoCandidateComparisonCa
   selectedCandidateId,
   onSelectCandidate,
 }) => {
+  if (!candidates || candidates.length === 0) {
+    return (
+      <EmptyState
+        title="Belum Ada Kandidat Pareto"
+        description="Jalankan optimasi multi-objektif untuk menampilkan Top-3 kandidat formula terbaik."
+      />
+    );
+  }
+
   const activeCandidate =
     candidates.find((c) => c.id === selectedCandidateId) || candidates[0];
 
@@ -201,7 +211,15 @@ export const ParetoCandidateComparisonCard: React.FC<ParetoCandidateComparisonCa
         </div>
 
         <div className="border border-slate-200/80 rounded-2xl overflow-hidden divide-y divide-slate-100 text-xs">
-          {activeCandidate.ingredients.map((ing) => (
+          {activeCandidate.ingredients.length === 0 ? (
+            <EmptyState
+              compact
+              title="Komposisi Kandidat Kosong"
+              description="Kandidat terpilih tidak memiliki rincian komposisi bahan."
+              className="border-0 rounded-none"
+            />
+          ) : (
+            activeCandidate.ingredients.map((ing) => (
             <div
               key={ing.id}
               className="p-3.5 bg-white hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
@@ -241,7 +259,8 @@ export const ParetoCandidateComparisonCard: React.FC<ParetoCandidateComparisonCa
                 </span>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
     </div>

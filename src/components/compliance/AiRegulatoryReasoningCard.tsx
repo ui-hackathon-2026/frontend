@@ -3,6 +3,7 @@
 import React from "react";
 import { LlmRegulatoryReasoning } from "@/domain/models/compliance";
 import { Sparkles, AlertCircle, ArrowUpRight, Leaf, ShieldAlert } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface AiRegulatoryReasoningCardProps {
   reasoning: LlmRegulatoryReasoning;
@@ -38,7 +39,14 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
         </span>
 
         <div className="space-y-2">
-          {reasoning.localSubstitutionRecommendations.map((rec, idx) => (
+          {reasoning.localSubstitutionRecommendations.length === 0 ? (
+            <EmptyState
+              compact
+              title="Tidak Ada Rekomendasi Substitusi"
+              description="Tidak ada bahan impor yang perlu disubstitusi dengan bahan lokal Nusantara."
+            />
+          ) : (
+            reasoning.localSubstitutionRecommendations.map((rec, idx) => (
             <div
               key={idx}
               className="p-3 rounded-2xl bg-emerald-50/40 border border-emerald-200/70 space-y-1.5"
@@ -55,7 +63,8 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed">{rec.rationale}</p>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 
@@ -66,17 +75,25 @@ export const AiRegulatoryReasoningCard: React.FC<AiRegulatoryReasoningCardProps>
           Peringatan Wajib Etiket Kemasan (Perka BPOM)
         </span>
 
-        <ul className="space-y-1.5">
-          {reasoning.mandatoryLabelWarnings.map((warn, idx) => (
-            <li
-              key={idx}
-              className="text-[11px] text-slate-600 flex items-start gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
-              <span>{warn}</span>
-            </li>
-          ))}
-        </ul>
+        {reasoning.mandatoryLabelWarnings.length === 0 ? (
+          <EmptyState
+            compact
+            title="Tidak Ada Peringatan Etiket"
+            description="Tidak ada peringatan wajib kemasan dari Perka BPOM untuk formula ini."
+          />
+        ) : (
+          <ul className="space-y-1.5">
+            {reasoning.mandatoryLabelWarnings.map((warn, idx) => (
+              <li
+                key={idx}
+                className="text-[11px] text-slate-600 flex items-start gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/60"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                <span>{warn}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

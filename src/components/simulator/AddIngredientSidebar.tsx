@@ -9,13 +9,13 @@ import {
   Filter,
   Layers,
   Sparkles,
-  Info,
 } from "lucide-react";
 import {
   COSMETIC_INGREDIENTS_CATALOG,
   CatalogIngredientItem,
 } from "@/data/mock/ingredientsCatalog";
 import { IngredientInput } from "@/domain/models/simulation";
+import { EmptyState } from "@/components/EmptyState";
 
 interface AddIngredientSidebarProps {
   isOpen: boolean;
@@ -278,15 +278,12 @@ export const AddIngredientSidebar: React.FC<AddIngredientSidebarProps> = ({
             </div>
 
             {filteredCatalog.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
-                <Info className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-xs text-slate-600 font-medium">
-                  Tidak ada bahan yang cocok atau semua bahan yang dicari sudah terdaftar di Fase {targetPhase}.
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Coba ganti kata kunci pencarian atau pilih fase tujuan lain.
-                </p>
-              </div>
+              <EmptyState
+                compact
+                title={`Tidak Ada Bahan untuk Fase ${targetPhase}`}
+                description="Tidak ada bahan yang cocok atau semua bahan yang dicari sudah terdaftar di fase ini. Coba ganti kata kunci atau pilih fase tujuan lain."
+                className="border-dashed"
+              />
             ) : (
               filteredCatalog.map((item) => {
                 const isJustAdded = addedIds.has(item.id);

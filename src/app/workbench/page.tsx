@@ -20,6 +20,7 @@ import {
 import { getSimulationRepository } from "@/data/di/container";
 import { PresetFormulaItem } from "@/domain/models/simulation";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { EmptyState } from "@/components/EmptyState";
 
 function WorkbenchContent() {
   const searchParams = useSearchParams();
@@ -158,7 +159,15 @@ function WorkbenchContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {presets.map((preset) => {
+                {presets.length === 0 ? (
+                  <div className="md:col-span-3">
+                    <EmptyState
+                      title="Belum Ada Formula Benchmark"
+                      description="Tidak ada formula acuan yang tersedia. Coba muat ulang halaman atau hubungi tim R&D."
+                    />
+                  </div>
+                ) : (
+                  presets.map((preset) => {
                   const isSelected = selectedPresetId === preset.id;
                   return (
                     <div
@@ -200,7 +209,8 @@ function WorkbenchContent() {
                       </div>
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
 
               {/* Action Bar for Step 1 */}

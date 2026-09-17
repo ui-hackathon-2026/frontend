@@ -11,6 +11,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { AddIngredientSidebar } from "./AddIngredientSidebar";
+import { EmptyState } from "@/components/EmptyState";
 
 interface FormulaEditorPanelProps {
   formulaName: string;
@@ -98,7 +99,14 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
         </div>
 
         <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
-          {sortedIngredients.map((ing, index) => {
+          {sortedIngredients.length === 0 ? (
+            <EmptyState
+              compact
+              title="Komposisi Masih Kosong"
+              description="Belum ada bahan dalam formula. Tambahkan bahan dari katalog untuk mulai merancang komposisi 4-fase."
+            />
+          ) : (
+            sortedIngredients.map((ing, index) => {
             const style = phaseColors[ing.phase] || phaseColors.B;
             const isConfirming = confirmDeleteId === ing.id;
             const maxVal = ing.role === "solvent" ? 90 : 25;
@@ -227,7 +235,8 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
 
         {/* Add Ingredient Button */}

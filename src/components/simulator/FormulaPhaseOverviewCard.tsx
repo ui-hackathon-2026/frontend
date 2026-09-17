@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Scale,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 interface FormulaPhaseOverviewCardProps {
   formulaName: string;
@@ -191,17 +192,26 @@ export const FormulaPhaseOverviewCard: React.FC<FormulaPhaseOverviewCardProps> =
         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
           Distribusi Peran Bahan:
         </span>
-        <div className="flex flex-wrap gap-1.5 pt-0.5">
-          {Object.entries(roleStats).map(([role, count]) => (
-            <span
-              key={role}
-              className="text-xs font-mono bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-lg flex items-center space-x-1.5"
-            >
-              <span className="font-semibold capitalize">{role}:</span>
-              <span className="font-bold text-[#0018a8]">{count}</span>
-            </span>
-          ))}
-        </div>
+        {Object.keys(roleStats).length === 0 ? (
+          <EmptyState
+            compact
+            title="Belum Ada Distribusi Peran"
+            description="Tambahkan bahan untuk melihat distribusi peran emulgator, emolien, dan aktif."
+            className="bg-white"
+          />
+        ) : (
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {Object.entries(roleStats).map(([role, count]) => (
+              <span
+                key={role}
+                className="text-xs font-mono bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-lg flex items-center space-x-1.5"
+              >
+                <span className="font-semibold capitalize">{role}:</span>
+                <span className="font-bold text-[#0018a8]">{count}</span>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
