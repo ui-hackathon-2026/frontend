@@ -15,8 +15,9 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
   return (
     <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-5">
       {/* Top Banner Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        {/* Left: Icon & Formula Name */}
+        <div className="flex items-center space-x-3 min-w-0">
           <div
             className={`w-11 h-11 rounded-2xl flex items-center justify-center border shadow-xs shrink-0 ${
               isPassed
@@ -35,32 +36,44 @@ export const ComplianceSummaryCard: React.FC<ComplianceSummaryCardProps> = ({ re
             )}
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base sm:text-lg font-bold text-[#0a192f] font-heading">
-                {report.formulaName}
-              </h2>
-              <span
-                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border flex items-center gap-1.5 ${
-                  isPassed
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : isWarning
-                    ? "bg-amber-50 text-amber-800 border-amber-200"
-                    : "bg-rose-50 text-rose-800 border-rose-200"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isPassed ? "bg-emerald-500" : isWarning ? "bg-amber-500" : "bg-rose-500"
-                  }`}
-                />
-                <span>{isPassed ? "Lolos Regulasi BPOM & Halal" : isWarning ? "Persetujuan Bersyarat" : "Pelanggaran Regulasi"}</span>
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">{report.summaryVerdict}</p>
+          <div className="min-w-0">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Formula Teruji
+            </span>
+            <h2 className="text-base sm:text-xl font-bold text-[#0a192f] font-heading truncate">
+              {report.formulaName}
+            </h2>
           </div>
         </div>
 
+        {/* Right: Proper Frame Status Badge (Setara & Prominen) */}
+        <div
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border shadow-xs shrink-0 self-start sm:self-center ${
+            isPassed
+              ? "bg-emerald-50/90 border-emerald-200 text-emerald-900"
+              : isWarning
+              ? "bg-amber-50/90 border-amber-200 text-amber-900"
+              : "bg-rose-50/90 border-rose-200 text-rose-900"
+          }`}
+        >
+          <div
+            className={`w-2.5 h-2.5 rounded-full shrink-0 animate-pulse ${
+              isPassed ? "bg-emerald-600" : isWarning ? "bg-amber-600" : "bg-rose-600"
+            }`}
+          />
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] uppercase font-bold tracking-wider opacity-70 leading-none">
+              Status Audit Resmi
+            </span>
+            <span className="text-xs sm:text-sm font-bold font-heading mt-0.5">
+              {isPassed
+                ? "Lolos Regulasi BPOM & Halal"
+                : isWarning
+                ? "Persetujuan Bersyarat"
+                : "Pelanggaran Regulasi"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 3 Core Metric KPI Blocks */}
