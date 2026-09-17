@@ -6,7 +6,6 @@ const DEMO_USER: AuthUser = {
   id: "usr_demo_001",
   name: "Andi Wibowo",
   email: "demo@paragon.co.id",
-  role: "formulator",
   avatarInitials: "AW",
 };
 
@@ -66,7 +65,6 @@ export class MockAuthRepository implements IAuthRepository {
       id: `usr_${Date.now()}`,
       name: payload.name,
       email: payload.email.toLowerCase(),
-      role: "formulator",
       avatarInitials: initials || payload.email[0].toUpperCase(),
     };
 

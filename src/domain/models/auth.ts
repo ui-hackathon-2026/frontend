@@ -4,7 +4,6 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "formulator" | "manager" | "admin";
   avatarInitials: string; // e.g. "AW" from "Andi Wibowo"
 }
 
@@ -23,7 +22,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string; // client-side validation only — not sent to server
+  confirmPassword: string; // client-side validation only ï¿½ not sent to server
 }
 
 export interface AuthSession {
