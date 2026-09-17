@@ -1,4 +1,4 @@
-﻿import { ISimulationRepository } from "@/domain/repositories/ISimulationRepository";
+import { ISimulationRepository } from "@/domain/repositories/ISimulationRepository";
 import { IWorkbenchRepository } from "@/domain/repositories/IWorkbenchRepository";
 import { IComplianceRepository } from "@/domain/repositories/IComplianceRepository";
 import { MockSimulationRepository } from "../repositories/MockSimulationRepository";
@@ -8,10 +8,15 @@ import { HttpWorkbenchRepository } from "../repositories/HttpWorkbenchRepository
 import { MockComplianceRepository } from "../repositories/MockComplianceRepository";
 import { HttpComplianceRepository } from "../repositories/HttpComplianceRepository";
 
+import { IBriefRepository } from "@/domain/repositories/IBriefRepository";
+import { MockBriefRepository } from "../repositories/MockBriefRepository";
+import { HttpBriefRepository } from "../repositories/HttpBriefRepository";
+
 class ServiceContainer {
   private static simulationRepository: ISimulationRepository | null = null;
   private static workbenchRepository: IWorkbenchRepository | null = null;
   private static complianceRepository: IComplianceRepository | null = null;
+  private static briefRepository: IBriefRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -61,6 +66,22 @@ class ServiceContainer {
     return this.complianceRepository!;
   }
 
+  public static getBriefRepository(): IBriefRepository {
+    if (!this.briefRepository) {
+      const useMock =
+        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
+        process.env.NODE_ENV === "development" ||
+        !process.env.NEXT_PUBLIC_BACKEND_URL;
+
+      if (useMock) {
+        this.briefRepository = new MockBriefRepository();
+      } else {
+        this.briefRepository = new HttpBriefRepository();
+      }
+    }
+    return this.briefRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -69,3 +90,5 @@ class ServiceContainer {
 export const getSimulationRepository = () => ServiceContainer.getSimulationRepository();
 export const getWorkbenchRepository = () => ServiceContainer.getWorkbenchRepository();
 export const getComplianceRepository = () => ServiceContainer.getComplianceRepository();
+export const getBriefRepository = () => ServiceContainer.getBriefRepository();
+

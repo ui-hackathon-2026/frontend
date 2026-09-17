@@ -60,7 +60,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
 
                 <li>
                   <Link
-                    href="/copilot"
+                    href="/project-brief"
                     onClick={onClose}
                     className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
                   >
@@ -69,10 +69,10 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div>
                       <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
-                        AI Formulation Co-Pilot
+                        Project Brief Studio
                       </span>
                       <p className="text-xs text-slate-500 leading-snug">
-                        Llama-3.3-70B LPU orchestrator untuk formulasi kosmetik cerdas.
+                        Setup target matriks, ingest brief PDF/chassis &amp; sintesis arsitektur formula terintegrasi AI.
                       </p>
                     </div>
                   </Link>

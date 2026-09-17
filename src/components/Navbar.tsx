@@ -33,8 +33,8 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
   };
 
   const navFeatures = [
+    { label: "Project Brief Studio", href: "/project-brief", icon: Bot },
     { label: "Formulation Canvas", href: "/workbench", icon: Sliders },
-    { label: "Co-Pilot AI", href: "/copilot", icon: Bot },
     { label: "Pareto Optimizer", href: "/optimizer", icon: Zap },
     { label: "Regulatory Sentinel", href: "/compliance", icon: ShieldCheck },
   ];
@@ -152,12 +152,12 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
             </span>
             <div className="space-y-1 pt-1">
               <Link
-                href="/copilot"
+                href="/project-brief"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-slate-800 hover:bg-slate-50"
               >
                 <Bot className="w-4 h-4 text-blue-600" />
-                <span>AI Formulation Co-Pilot</span>
+                <span>Project Brief Studio</span>
               </Link>
               <Link
                 href="/workbench"
