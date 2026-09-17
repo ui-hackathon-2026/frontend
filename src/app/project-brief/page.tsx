@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useProjectBrief } from "@/hooks/useProjectBrief";
-import { PersistentAIChatPanel } from "@/components/brief/PersistentAIChatPanel";
 import { BlueprintResultCard } from "@/components/brief/BlueprintResultCard";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
@@ -30,7 +29,6 @@ import {
 
 export default function ProjectBriefPage() {
   const [activeTab, setActiveTab] = useState<"visual" | "ingest">("visual");
-  const [isChatOpen, setIsChatOpen] = useState<boolean>(true);
 
   const {
     brief,
@@ -46,9 +44,6 @@ export default function ProjectBriefPage() {
     pdfClaims,
     handleParsePdf,
     handleSynthesize,
-    messages,
-    isChatSending,
-    handleSendChat,
     error,
   } = useProjectBrief();
 
@@ -88,9 +83,7 @@ export default function ProjectBriefPage() {
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
       <Navbar brandName="Paragon Studio" />
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Main Work Area (Left ~70%) */}
-        <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
           {/* Header Title */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
             <div className="space-y-1">
@@ -498,19 +491,7 @@ export default function ProjectBriefPage() {
 
           {/* GENERATED BLUEPRINT RESULT */}
           {!isSynthesizing && blueprint && <BlueprintResultCard blueprint={blueprint} />}
-        </main>
-
-        {/* Persistent Side Chat AI Panel (Right ~30%) */}
-        <PersistentAIChatPanel
-          isOpen={isChatOpen}
-          onToggle={() => setIsChatOpen(!isChatOpen)}
-          messages={messages}
-          isSending={isChatSending}
-          onSendMessage={handleSendChat}
-          activeBrief={brief}
-          blueprint={blueprint}
-        />
-      </div>
+      </main>
     </div>
   );
 }
