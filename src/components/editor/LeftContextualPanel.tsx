@@ -237,9 +237,11 @@ export const LeftContextualPanel: React.FC = () => {
         <DelayedInfoTooltip
           content={
             leftPanelMode === "molecule-3d"
-              ? "Menampilkan struktur 3D molekul bahan yang sedang dipilih di Kitchen panel."
+              ? "Menampilkan struktur 3D molekul bahan yang sedang dipilih di Composition panel."
               : "Cari bahan baku kosmetik dan tambahkan ke komposisi formula di panel kanan."
           }
+          position="bottom"
+          align="right"
           delayMs={300}
         />
       </div>
@@ -289,7 +291,7 @@ export const LeftContextualPanel: React.FC = () => {
           {addedNotice && (
             <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-1.5 animate-in fade-in">
               <Check className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="truncate"><strong>{addedNotice}</strong> ditambahkan ke Kitchen!</span>
+              <span className="truncate"><strong>{addedNotice}</strong> ditambahkan ke Composition Panel!</span>
             </div>
           )}
 
@@ -321,7 +323,7 @@ export const LeftContextualPanel: React.FC = () => {
                         ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                         : "bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs"
                     }`}
-                    title={alreadyInFormula ? "Bahan sudah ada di Kitchen" : "Tambah ke Kitchen Panel"}
+                    title={alreadyInFormula ? "Bahan sudah ada di Composition Panel" : "Tambah ke Composition Panel"}
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>

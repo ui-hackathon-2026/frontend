@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from "react";
 import {
   EditorWorkspace,
   DraftFormulation,
@@ -10,8 +18,11 @@ import {
   ArtifactType,
   FormulaModificationProposal,
 } from "@/domain/models/editor";
+import { FormulaItemResponse, FormulaVersionItem } from "@/domain/models/formula";
+import { getFormulaRepository } from "@/data/di/container";
+import { useAuth } from "@/contexts/AuthContext";
 
-const STORAGE_KEY = "ps_editor_workspace_v2";
+const STORAGE_KEY_ACTIVE_ID = "ps_editor_active_formula_id";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -44,64 +55,74 @@ async function apiGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const INITIAL_INGREDIENTS_V1: EditorIngredient[] = [
-  // Fase A (Minyak)
-  { id: "ing-squalane", name: "Plant-Derived Squalane (Olive)", inci: "Squalane", phase: "A", weightPct: 4.5, role: "emollient" },
-  { id: "ing-cct", name: "Caprylic/Capric Triglycerides", inci: "Caprylic/Capric Triglyceride", phase: "A", weightPct: 3.5, role: "emollient" },
-  { id: "ing-tocopherol", name: "Tocopherol Acetate (Vit E)", inci: "Tocopheryl Acetate", phase: "A", weightPct: 0.5, role: "active" },
-
-  // Fase B (Air & Humektan)
-  { id: "ing-water", name: "Demineralized Water", inci: "Aqua", phase: "B", weightPct: 73.0, role: "solvent", isLocked: false },
-  { id: "ing-glycerin", name: "Glycerin USP 99.5%", inci: "Glycerin", phase: "B", weightPct: 4.0, role: "humectant" },
-  { id: "ing-butylene", name: "Butylene Glycol (1,3-BG)", inci: "Butylene Glycol", phase: "B", weightPct: 3.5, role: "humectant" },
-  { id: "ing-carbomer", name: "Carbomer 940 (Polymer)", inci: "Carbomer", phase: "B", weightPct: 0.3, role: "thickener" },
-  { id: "ing-edta", name: "Disodium EDTA", inci: "Disodium EDTA", phase: "B", weightPct: 0.1, role: "chelating" },
-
-  // Fase C (Emulgator)
-  { id: "ing-gms", name: "Glyceryl Stearate & PEG-100", inci: "Glyceryl Stearate", phase: "C", weightPct: 2.8, role: "emulsifier" },
-  { id: "ing-poly3", name: "Polyglyceryl-3 Polyricinoleate", inci: "Polyglyceryl-3 Polyricinoleate", phase: "C", weightPct: 1.8, role: "emulsifier" },
-
-  // Fase D (Aktif & Aditif)
-  { id: "ing-niacinamide", name: "Niacinamide (Vitamin B3)", inci: "Niacinamide", phase: "D", weightPct: 3.0, role: "active" },
-  { id: "ing-panthenol", name: "D-Panthenol (Provitamin B5)", inci: "Panthenol", phase: "D", weightPct: 1.5, role: "active" },
-  { id: "ing-allantoin", name: "Allantoin USP", inci: "Allantoin", phase: "D", weightPct: 0.5, role: "active" },
-  { id: "ing-tea", name: "Triethanolamine 99% (TEA)", inci: "Triethanolamine", phase: "D", weightPct: 0.3, role: "active" },
-  { id: "ing-preservative", name: "Chlorphenesin Preservative", inci: "Chlorphenesin", phase: "D", weightPct: 0.7, role: "preservative" },
-];
-
 const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
   {
     id: "msg-1",
     sender: "assistant",
-    content: "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Kitchen panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
+    content:
+      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Composition panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
     timestamp: "Baru saja",
   },
 ];
 
-const DEFAULT_WORKSPACE: EditorWorkspace = {
-  id: "ws-1",
-  name: "Workspace-1: Tropical Barrier Cream",
-  activeDraftId: "draft-v1",
-  drafts: [
-    {
-      id: "draft-v1",
-      name: "draft-formulation v1",
-      createdAt: "18 Sep, 01:00",
-      ingredients: INITIAL_INGREDIENTS_V1,
-      messages: INITIAL_MESSAGES_V1,
-      artifacts: [],
-    },
-  ],
-};
+function mapDtoToEditorIngredients(dtoIngredients: FormulaItemResponse["ingredients"]): EditorIngredient[] {
+  return dtoIngredients.map((item, idx) => ({
+    id: `ing-${item.phase.toLowerCase()}-${item.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${idx}`,
+    name: item.name || item.inci,
+    inci: item.inci,
+    phase: (item.phase as "A" | "B" | "C" | "D") || "B",
+    weightPct: item.weight_pct,
+    role: inferRole(item.inci),
+    isLocked: item.is_locked,
+  }));
+}
+
+function inferRole(inci: string): EditorIngredient["role"] {
+  const s = inci.toLowerCase();
+  if (s.includes("aqua") || s.includes("water")) return "solvent";
+  if (s.includes("squalane") || s.includes("triglyceride") || s.includes("oil")) return "emollient";
+  if (s.includes("stearate") || s.includes("polyglyceryl") || s.includes("peg-")) return "emulsifier";
+  if (s.includes("carbomer") || s.includes("gum") || s.includes("polymer")) return "thickener";
+  if (s.includes("glycerin") || s.includes("glycol")) return "humectant";
+  if (s.includes("chlorphenesin") || s.includes("phenoxy") || s.includes("benzoate")) return "preservative";
+  if (s.includes("edta")) return "chelating";
+  return "active";
+}
+
+function mapEditorToDtoPhases(ingredients: EditorIngredient[]) {
+  const getPhase = (p: "A" | "B" | "C" | "D") =>
+    ingredients
+      .filter((i) => i.phase === p)
+      .map((i) => ({
+        inci: i.inci,
+        name: i.name,
+        weight_pct: Number(i.weightPct.toFixed(2)),
+        is_locked: !!i.isLocked,
+        is_solvent: i.role === "solvent",
+      }));
+
+  return {
+    phase_a: getPhase("A"),
+    phase_b: getPhase("B"),
+    phase_c: getPhase("C"),
+    phase_d: getPhase("D"),
+  };
+}
 
 interface EditorContextType {
   workspace: EditorWorkspace;
-  activeDraft: DraftFormulation;
+  activeDraft: DraftFormulation | null;
+  activeVersions: FormulaVersionItem[];
+  isLoading: boolean;
+  isSaving: boolean;
   switchDraft: (draftId: string) => void;
-  createDraftFork: () => void;
-  renameDraft: (draftId: string, newName: string) => void;
-  deleteDraft: (draftId: string) => void;
-  // Ingredients (Kitchen Panel)
+  createNewDraft: (name?: string) => Promise<void>;
+  createDraftFork: () => Promise<void>;
+  renameDraft: (draftId: string, newName: string) => Promise<void>;
+  deleteDraft: (draftId: string) => Promise<void>;
+  saveCurrentFormula: () => Promise<void>;
+  restoreVersion: (version: FormulaVersionItem) => Promise<void>;
+  // Ingredients (Composition Panel)
   ingredients: EditorIngredient[];
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;
@@ -135,104 +156,93 @@ interface EditorContextType {
 const EditorContext = createContext<EditorContextType | null>(null);
 
 export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [workspace, setWorkspace] = useState<EditorWorkspace>(DEFAULT_WORKSPACE);
-  const [selectedMoleculeIngredient, setSelectedMoleculeIngredient] = useState<EditorIngredient | null>(INITIAL_INGREDIENTS_V1[0]);
+  const { user } = useAuth();
+  const [drafts, setDrafts] = useState<DraftFormulation[]>([]);
+  const [activeDraftId, setActiveDraftId] = useState<string>("");
+  const [activeVersions, setActiveVersions] = useState<FormulaVersionItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  const [selectedMoleculeIngredient, setSelectedMoleculeIngredient] = useState<EditorIngredient | null>(null);
   const [leftPanelMode, setLeftPanelMode] = useState<"molecule-3d" | "library">("molecule-3d");
   const [centerViewMode, setCenterViewMode] = useState<"chat" | "artifact">("chat");
   const [activeArtifact, setActiveArtifact] = useState<EditorArtifact | null>(null);
   const [artifactsListModalOpen, setArtifactsListModalOpen] = useState(false);
-  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
-  const smilesMapRef = React.useRef<Record<string, string>>({});
   const [actionConfigModal, setActionConfigModal] = useState<{ isOpen: boolean; actionType: ArtifactType | null }>({
     isOpen: false,
     actionType: null,
   });
 
-  // Restore workspace from localStorage, else seed from backend chassis
-  useEffect(() => {
-    let cancelled = false;
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getActiveStorageKey = useCallback(() => {
+    return user ? `${STORAGE_KEY_ACTIVE_ID}_${user.id}` : STORAGE_KEY_ACTIVE_ID;
+  }, [user]);
+
+  // Fetch formulas from backend
+  const loadFormulasFromBackend = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as EditorWorkspace;
-        if (parsed.drafts && parsed.drafts.length > 0) {
-          setWorkspace(parsed);
-          const active = parsed.drafts.find((d) => d.id === parsed.activeDraftId) || parsed.drafts[0];
-          if (active.ingredients.length > 0) {
-            setSelectedMoleculeIngredient(active.ingredients[0]);
+      const repo = getFormulaRepository();
+      const list = await repo.listFormulas(50);
+
+      const mappedDrafts: DraftFormulation[] = list.map((f) => ({
+        id: f.formula_id,
+        name: f.name,
+        createdAt: new Date(f.updated_at).toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        ingredients: mapDtoToEditorIngredients(f.ingredients),
+        messages: INITIAL_MESSAGES_V1,
+        artifacts: [],
+      }));
+
+      setDrafts(mappedDrafts);
+
+      const storageKey = getActiveStorageKey();
+      if (mappedDrafts.length > 0) {
+        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+        const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
+        if (targetActive) {
+          setActiveDraftId(targetActive.id);
+          if (targetActive.ingredients.length > 0) {
+            setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+          } else {
+            setSelectedMoleculeIngredient(null);
           }
-          return;
+          try {
+            const vList = await repo.listVersions(targetActive.id);
+            setActiveVersions(vList);
+          } catch {
+            setActiveVersions([]);
+          }
         }
+      } else {
+        setActiveDraftId("");
+        setSelectedMoleculeIngredient(null);
+        setActiveVersions([]);
       }
-    } catch {
-      // fallback to default
+    } catch (err) {
+      console.error("Gagal memuat formula dari backend:", err);
+    } finally {
+      setIsLoading(false);
     }
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/orchestrator/chassis`, {
-          headers: { Accept: "application/json", ...authHeaders() },
-        });
-        if (!res.ok) return;
-        const list = await res.json();
-        const first = Array.isArray(list) && list.length > 0 ? list[0] : null;
-        const items = first?.ingredients;
-        if (cancelled || !Array.isArray(items) || items.length === 0) return;
-        const roleForPhase: Record<string, EditorIngredient["role"]> = {
-          A: "emollient",
-          B: "solvent",
-          C: "emulsifier",
-          D: "active",
-        };
-        const seeded: EditorIngredient[] = items.map((it: any, idx: number) => ({
-          id: `ing-seed-${idx}`,
-          name: String(it.name || it.inci),
-          inci: String(it.inci),
-          phase: ["A", "B", "C", "D"].includes(it.phase) ? it.phase : "B",
-          weightPct: Number(it.weightPct) || 0,
-          role: roleForPhase[it.phase] || "active",
-        }));
-        setWorkspace((prev) => ({
-          ...prev,
-          drafts: prev.drafts.map((d, i) =>
-            i !== 0 ? d : { ...d, ingredients: seeded }
-          ),
-        }));
-        setSelectedMoleculeIngredient(seeded[0]);
-      } catch {
-        // keep hardcoded defaults offline
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [getActiveStorageKey]);
 
-  // Save workspace to localStorage
-  const saveWorkspace = useCallback((ws: EditorWorkspace) => {
-    setWorkspace(ws);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ws));
-    } catch {
-      // ignore storage full
-    }
-  }, []);
-
-  // Persist every workspace change (covers streaming chat and artifacts)
-  const hydratedRef = React.useRef(false);
   useEffect(() => {
-    if (!hydratedRef.current) {
-      hydratedRef.current = true;
-      return;
-    }
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
-    } catch {
-      // ignore storage full
-    }
-  }, [workspace]);
+    loadFormulasFromBackend();
+  }, [loadFormulasFromBackend]);
 
-  const activeDraft = workspace.drafts.find((d) => d.id === workspace.activeDraftId) || workspace.drafts[0];
-  const ingredients = activeDraft.ingredients;
+  const activeDraft: DraftFormulation | null =
+    drafts.find((d) => d.id === activeDraftId) || (drafts.length > 0 ? drafts[0] : null);
+
+  const ingredients = activeDraft ? activeDraft.ingredients : [];
+
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const smilesMapRef = React.useRef<Record<string, string>>({});
 
   // SMILES lookup from backend catalog (for simulate calls)
   const ensureSmilesMap = useCallback(async () => {
@@ -265,178 +275,403 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, [ingredients, ensureSmilesMap]);
 
   // Switch Draft
-  const switchDraft = useCallback((draftId: string) => {
-    const target = workspace.drafts.find((d) => d.id === draftId);
-    if (!target) return;
-    const updated: EditorWorkspace = {
-      ...workspace,
-      activeDraftId: draftId,
-    };
-    saveWorkspace(updated);
-    if (target.ingredients.length > 0) {
-      setSelectedMoleculeIngredient(target.ingredients[0]);
-    }
-    setCenterViewMode("chat");
-    setActiveArtifact(null);
-  }, [workspace, saveWorkspace]);
-
-  // Create Draft Fork
-  const createDraftFork = useCallback(() => {
-    const newVersionNum = workspace.drafts.length + 1;
-    const newDraftId = `draft-v${newVersionNum}-${Date.now().toString().slice(-4)}`;
-    const newDraftName = `draft-formulation v${newVersionNum}`;
-
-    // Deep copy ingredients from active draft
-    const clonedIngredients = ingredients.map((item) => ({ ...item }));
-
-    const newDraft: DraftFormulation = {
-      id: newDraftId,
-      name: newDraftName,
-      createdAt: "Baru saja",
-      ingredients: clonedIngredients,
-      messages: [
-        {
-          id: `msg-fork-${Date.now()}`,
-          sender: "assistant" as const,
-          content: `Draft baru **${newDraftName}** berhasil difork dari **${activeDraft.name}**. Anda dapat memodifikasi komposisi, menguji simulasi independen, dan berdiskusi dengan AI.`,
-          timestamp: "Baru saja",
-        },
-      ],
-      artifacts: [],
-    };
-
-    const updated: EditorWorkspace = {
-      ...workspace,
-      activeDraftId: newDraftId,
-      drafts: [...workspace.drafts, newDraft],
-    };
-    saveWorkspace(updated);
-    setCenterViewMode("chat");
-    setActiveArtifact(null);
-  }, [workspace, ingredients, activeDraft, saveWorkspace]);
-
-  // Rename Draft
-  const renameDraft = useCallback((draftId: string, newName: string) => {
-    const updatedDrafts = workspace.drafts.map((d) => (d.id === draftId ? { ...d, name: newName } : d));
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [workspace, saveWorkspace]);
-
-  // Delete Draft
-  const deleteDraft = useCallback((draftId: string) => {
-    if (workspace.drafts.length <= 1) return; // Keep at least one
-    const remaining = workspace.drafts.filter((d) => d.id !== draftId);
-    const nextActiveId = workspace.activeDraftId === draftId ? remaining[0].id : workspace.activeDraftId;
-    saveWorkspace({ ...workspace, activeDraftId: nextActiveId, drafts: remaining });
-  }, [workspace, saveWorkspace]);
-
-  // Auto-normalize ingredients when a weight changes
-  const updateIngredientWeight = useCallback((id: string, newWeight: number) => {
-    const clampedWeight = Math.max(0.01, Math.min(99.0, Number(newWeight.toFixed(2))));
-
-    // Calculate adjustment on water or unlocked ingredients
-    const current = ingredients.map((item) => (item.id === id ? { ...item, weightPct: clampedWeight } : item));
-    const targetId = id;
-    
-    // Find unlocked ingredients other than the modified one
-    const otherUnlocked = current.filter((item) => item.id !== targetId && !item.isLocked);
-    const lockedTotal = current.filter((item) => item.isLocked || item.id === targetId).reduce((acc, it) => acc + it.weightPct, 0);
-    const remainingNeeded = Math.max(0, 100 - lockedTotal);
-
-    let normalized = current;
-    if (otherUnlocked.length > 0) {
-      const currentUnlockedSum = otherUnlocked.reduce((acc, it) => acc + it.weightPct, 0);
-      if (currentUnlockedSum > 0) {
-        normalized = current.map((item) => {
-          if (item.id === targetId || item.isLocked) return item;
-          const ratio = item.weightPct / currentUnlockedSum;
-          const adjusted = Math.max(0.01, Number((ratio * remainingNeeded).toFixed(2)));
-          return { ...item, weightPct: adjusted };
-        });
+  const switchDraft = useCallback(
+    async (draftId: string) => {
+      const target = drafts.find((d) => d.id === draftId);
+      if (!target) return;
+      setActiveDraftId(draftId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(getActiveStorageKey(), draftId);
       }
+      if (target.ingredients.length > 0) {
+        setSelectedMoleculeIngredient(target.ingredients[0]);
+      } else {
+        setSelectedMoleculeIngredient(null);
+      }
+      setCenterViewMode("chat");
+      setActiveArtifact(null);
+
+      try {
+        const repo = getFormulaRepository();
+        const vList = await repo.listVersions(draftId);
+        setActiveVersions(vList);
+      } catch {
+        setActiveVersions([]);
+      }
+    },
+    [drafts, getActiveStorageKey]
+  );
+
+  // Save current active draft to backend
+  const saveCurrentFormula = useCallback(async () => {
+    if (!activeDraft) return;
+    setIsSaving(true);
+    try {
+      const repo = getFormulaRepository();
+      const phases = mapEditorToDtoPhases(activeDraft.ingredients);
+      await repo.updateFormula(activeDraft.id, {
+        name: activeDraft.name,
+        category: "skincare",
+        batch_size_g: 500,
+        phases,
+      });
+
+      const vList = await repo.listVersions(activeDraft.id);
+      setActiveVersions(vList);
+    } catch (err) {
+      console.error("Gagal menyimpan formula ke backend:", err);
+    } finally {
+      setIsSaving(false);
     }
+  }, [activeDraft]);
 
-    // Update active draft
-    const updatedDrafts = workspace.drafts.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: normalized } : d));
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
+  // Create Brand New Empty Draft Formula
+  const createNewDraft = useCallback(async (customName?: string) => {
+    setIsSaving(true);
+    try {
+      const repo = getFormulaRepository();
+      const newVersionNum = drafts.length + 1;
+      const newDraftName = customName || `Formula Baru ${newVersionNum}`;
 
-  // Toggle Lock
-  const toggleLockIngredient = useCallback((id: string) => {
-    const updatedIngredients = ingredients.map((it) => (it.id === id ? { ...it, isLocked: !it.isLocked } : it));
-    const updatedDrafts = workspace.drafts.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updatedIngredients } : d));
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
+      // Default minimal balanced chassis (Water 100%) so backend mass-balance validation passes
+      const created = await repo.createFormula({
+        name: newDraftName,
+        category: "skincare",
+        batch_size_g: 500,
+        notes: "Draft baru kosongan",
+        phases: {
+          phase_a: [],
+          phase_b: [
+            {
+              inci: "Aqua",
+              name: "Demineralized Water",
+              weight_pct: 100.0,
+              is_locked: false,
+              is_solvent: true,
+            },
+          ],
+          phase_c: [],
+          phase_d: [],
+        },
+      });
 
-  // Remove Ingredient
-  const removeIngredient = useCallback((id: string) => {
-    if (ingredients.length <= 1) return;
-    const filtered = ingredients.filter((it) => it.id !== id);
-    const updatedDrafts = workspace.drafts.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: filtered } : d));
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
-
-  // Add Ingredient
-  const addIngredient = useCallback((item: Omit<EditorIngredient, "isLocked">) => {
-    const exists = ingredients.some((it) => it.name.toLowerCase() === item.name.toLowerCase());
-    if (exists) return;
-    const newIng: EditorIngredient = { ...item, isLocked: false };
-    const updated = [...ingredients, newIng];
-    const updatedDrafts = workspace.drafts.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d));
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-    setSelectedMoleculeIngredient(newIng);
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
-
-  // Apply Proposal from AI
-  const applyProposal = useCallback((proposal: FormulaModificationProposal) => {
-    const updatedDrafts = workspace.drafts.map((d) => {
-      if (d.id !== activeDraft.id) return d;
-      return {
-        ...d,
-        ingredients: proposal.updatedIngredients,
+      const newDraft: DraftFormulation = {
+        id: created.formula_id,
+        name: created.name,
+        createdAt: "Baru saja",
+        ingredients: mapDtoToEditorIngredients(created.ingredients),
         messages: [
-          ...d.messages,
           {
-            id: `msg-applied-${Date.now()}`,
+            id: `msg-init-${Date.now()}`,
             sender: "assistant" as const,
-            content: `Formula berhasil diperbarui di **Kitchen Panel** sesuai usulan *${proposal.title}*.`,
+            content: `Draft formula baru **${created.name}** telah siap! Silakan tambahkan bahan aktif dan emulgator dari **Library Bahan** di panel kiri atau diskusikan dengan AI.`,
             timestamp: "Baru saja",
           },
         ],
+        artifacts: [],
       };
-    });
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [workspace, activeDraft, saveWorkspace]);
 
-  // Apply candidate recipe (bulk, by INCI match, single renormalization)
-  const applyCandidateRecipe = useCallback((entries: Array<{ inci: string; weightPct: number }>) => {
-    const byInci = new Map(entries.map((e) => [e.inci.toLowerCase(), e.weightPct]));
-    const matched = ingredients.map((it) =>
-      byInci.has(it.inci.toLowerCase())
-        ? { ...it, weightPct: byInci.get(it.inci.toLowerCase()) as number }
-        : it
-    );
-    const total = matched.reduce((acc, it) => acc + it.weightPct, 0);
-    const normalized = total > 0
-      ? matched.map((it) => ({ ...it, weightPct: Number(((it.weightPct / total) * 100).toFixed(2)) }))
-      : matched;
-    const updatedDrafts = workspace.drafts.map((d) =>
-      d.id !== activeDraft.id ? d : { ...d, ingredients: normalized }
-    );
-    saveWorkspace({ ...workspace, drafts: updatedDrafts });
-  }, [ingredients, workspace, activeDraft, saveWorkspace]);
+      setDrafts((prev) => [newDraft, ...prev]);
+      setActiveDraftId(newDraft.id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(getActiveStorageKey(), newDraft.id);
+      }
+      setSelectedMoleculeIngredient(newDraft.ingredients[0] || null);
+      setActiveVersions([]);
+      setCenterViewMode("chat");
+      setActiveArtifact(null);
+    } catch (err) {
+      console.error("Gagal membuat formula baru:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [drafts.length, getActiveStorageKey]);
 
-  // View Artifact
+  // Create Draft Fork (Clones active formula)
+  const createDraftFork = useCallback(async () => {
+    if (!activeDraft) {
+      await createNewDraft();
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const repo = getFormulaRepository();
+      const newVersionNum = drafts.length + 1;
+      const newDraftName = `draft-formulation v${newVersionNum} (Fork)`;
+      const phases = mapEditorToDtoPhases(activeDraft.ingredients);
+
+      const created = await repo.createFormula({
+        name: newDraftName,
+        category: "skincare",
+        batch_size_g: 500,
+        notes: `Difork dari ${activeDraft.name}`,
+        phases,
+      });
+
+      const newDraft: DraftFormulation = {
+        id: created.formula_id,
+        name: created.name,
+        createdAt: "Baru saja",
+        ingredients: mapDtoToEditorIngredients(created.ingredients),
+        messages: [
+          {
+            id: `msg-fork-${Date.now()}`,
+            sender: "assistant" as const,
+            content: `Draft baru **${created.name}** berhasil difork ke cloud backend dari **${activeDraft.name}**. Anda dapat memodifikasi komposisi, menguji simulasi independen, dan melihat audit trail version-nya.`,
+            timestamp: "Baru saja",
+          },
+        ],
+        artifacts: [],
+      };
+
+      setDrafts((prev) => [newDraft, ...prev]);
+      setActiveDraftId(newDraft.id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(getActiveStorageKey(), newDraft.id);
+      }
+      setActiveVersions([]);
+      setCenterViewMode("chat");
+      setActiveArtifact(null);
+    } catch (err) {
+      console.error("Gagal melakukan fork formula:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [activeDraft, drafts.length, createNewDraft, getActiveStorageKey]);
+
+  // Rename Draft in Backend
+  const renameDraft = useCallback(
+    async (draftId: string, newName: string) => {
+      setDrafts((prev) => prev.map((d) => (d.id === draftId ? { ...d, name: newName } : d)));
+      try {
+        const repo = getFormulaRepository();
+        const target = drafts.find((d) => d.id === draftId);
+        if (target) {
+          const phases = mapEditorToDtoPhases(target.ingredients);
+          await repo.updateFormula(draftId, {
+            name: newName,
+            category: "skincare",
+            batch_size_g: 500,
+            phases,
+          });
+        }
+      } catch (err) {
+        console.error("Gagal rename formula:", err);
+      }
+    },
+    [drafts]
+  );
+
+  // Delete Draft in Backend
+  const deleteDraft = useCallback(
+    async (draftId: string) => {
+      try {
+        const repo = getFormulaRepository();
+        await repo.deleteFormula(draftId);
+        const remaining = drafts.filter((d) => d.id !== draftId);
+        setDrafts(remaining);
+        if (activeDraftId === draftId) {
+          if (remaining.length > 0) {
+            const next = remaining[0];
+            setActiveDraftId(next.id);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(getActiveStorageKey(), next.id);
+            }
+            setSelectedMoleculeIngredient(next.ingredients[0] || null);
+            const vList = await repo.listVersions(next.id);
+            setActiveVersions(vList);
+          } else {
+            setActiveDraftId("");
+            setSelectedMoleculeIngredient(null);
+            setActiveVersions([]);
+            if (typeof window !== "undefined") {
+              localStorage.removeItem(getActiveStorageKey());
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Gagal menghapus formula:", err);
+      }
+    },
+    [drafts, activeDraftId, getActiveStorageKey]
+  );
+
+  // Restore snapshot version
+  const restoreVersion = useCallback(
+    async (v: FormulaVersionItem) => {
+      if (!activeDraft) return;
+      setIsSaving(true);
+      try {
+        const repo = getFormulaRepository();
+        const ingredientsDto = v.snapshot.ingredients.map((i) => ({
+          inci: i.inci,
+          name: i.name,
+          weight_pct: i.weight_pct,
+          phase: (i.phase as "A" | "B" | "C" | "D") || "B",
+          is_locked: i.is_locked,
+          is_solvent: i.inci.toLowerCase().includes("aqua"),
+        }));
+        const phases = {
+          phase_a: ingredientsDto.filter((i) => i.phase === "A"),
+          phase_b: ingredientsDto.filter((i) => i.phase === "B"),
+          phase_c: ingredientsDto.filter((i) => i.phase === "C"),
+          phase_d: ingredientsDto.filter((i) => i.phase === "D"),
+        };
+        const updated = await repo.updateFormula(activeDraft.id, {
+          name: `${activeDraft.name} (v${v.version} Restored)`,
+          category: v.snapshot.category ?? "skincare",
+          batch_size_g: v.snapshot.batch_size_g ?? 500,
+          phases,
+        });
+
+        const restoredIngredients = mapDtoToEditorIngredients(updated.ingredients);
+        setDrafts((prev) =>
+          prev.map((d) => (d.id === activeDraft.id ? { ...d, name: updated.name, ingredients: restoredIngredients } : d))
+        );
+        const vList = await repo.listVersions(activeDraft.id);
+        setActiveVersions(vList);
+      } catch (err) {
+        console.error("Gagal me-restore versi formula:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [activeDraft]
+  );
+
+  // Auto-normalize ingredients when a weight changes + debounced backend autosave
+  const updateIngredientWeight = useCallback(
+    (id: string, newWeight: number) => {
+      if (!activeDraft) return;
+      const clampedWeight = Math.max(0.01, Math.min(99.0, Number(newWeight.toFixed(2))));
+      const current = ingredients.map((item) => (item.id === id ? { ...item, weightPct: clampedWeight } : item));
+      const targetId = id;
+
+      const otherUnlocked = current.filter((item) => item.id !== targetId && !item.isLocked);
+      const lockedTotal = current
+        .filter((item) => item.isLocked || item.id === targetId)
+        .reduce((acc, it) => acc + it.weightPct, 0);
+      const remainingNeeded = Math.max(0, 100 - lockedTotal);
+
+      let normalized = current;
+      if (otherUnlocked.length > 0) {
+        const currentUnlockedSum = otherUnlocked.reduce((acc, it) => acc + it.weightPct, 0);
+        if (currentUnlockedSum > 0) {
+          normalized = current.map((item) => {
+            if (item.id === targetId || item.isLocked) return item;
+            const ratio = item.weightPct / currentUnlockedSum;
+            const adjusted = Math.max(0.01, Number((ratio * remainingNeeded).toFixed(2)));
+            return { ...item, weightPct: adjusted };
+          });
+        }
+      }
+
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: normalized } : d))
+      );
+
+      // Debounce autosave to backend (1.5 seconds)
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(async () => {
+        try {
+          setIsSaving(true);
+          const repo = getFormulaRepository();
+          const phases = mapEditorToDtoPhases(normalized);
+          await repo.updateFormula(activeDraft.id, {
+            name: activeDraft.name,
+            category: "skincare",
+            batch_size_g: 500,
+            phases,
+          });
+          const vList = await repo.listVersions(activeDraft.id);
+          setActiveVersions(vList);
+        } catch (e) {
+          console.error("Autosave gagal:", e);
+        } finally {
+          setIsSaving(false);
+        }
+      }, 1500);
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Toggle Lock
+  const toggleLockIngredient = useCallback(
+    (id: string) => {
+      if (!activeDraft) return;
+      const updatedIngredients = ingredients.map((it) => (it.id === id ? { ...it, isLocked: !it.isLocked } : it));
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updatedIngredients } : d))
+      );
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Remove Ingredient
+  const removeIngredient = useCallback(
+    (id: string) => {
+      if (!activeDraft || ingredients.length <= 1) return;
+      const filtered = ingredients.filter((it) => it.id !== id);
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: filtered } : d))
+      );
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Add Ingredient
+  const addIngredient = useCallback(
+    (item: Omit<EditorIngredient, "isLocked">) => {
+      if (!activeDraft) return;
+      const exists = ingredients.some((it) => it.name.toLowerCase() === item.name.toLowerCase());
+      if (exists) return;
+      const newIng: EditorIngredient = { ...item, isLocked: false };
+      const updated = [...ingredients, newIng];
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d))
+      );
+      setSelectedMoleculeIngredient(newIng);
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Apply Proposal from AI
+  const applyProposal = useCallback(
+    (proposal: FormulaModificationProposal) => {
+      if (!activeDraft) return;
+      setDrafts((prev) =>
+        prev.map((d) => {
+          if (d.id !== activeDraft.id) return d;
+          return {
+            ...d,
+            ingredients: proposal.updatedIngredients,
+            messages: [
+              ...d.messages,
+              {
+                id: `sys-applied-${Date.now()}`,
+                sender: "assistant" as const,
+                content: `Perubahan formula berhasil diterapkan ke Composition Panel! Komposisi kini telah disesuaikan dan di-sinkronkan ke cloud.`,
+                timestamp: "Baru saja",
+              },
+            ],
+          };
+        })
+      );
+      saveCurrentFormula();
+    },
+    [activeDraft, saveCurrentFormula]
+  );
+
+  // Artifact & Modal Controls
   const viewArtifact = useCallback((art: EditorArtifact) => {
     setActiveArtifact(art);
     setCenterViewMode("artifact");
-    setArtifactsListModalOpen(false);
   }, []);
 
   const closeArtifactView = useCallback(() => {
     setCenterViewMode("chat");
   }, []);
 
-  // Action Config Modal
   const openActionConfig = useCallback((type: ArtifactType) => {
     setActionConfigModal({ isOpen: true, actionType: type });
   }, []);
@@ -445,342 +680,363 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setActionConfigModal({ isOpen: false, actionType: null });
   }, []);
 
-  // Execute Action & Generate Artifact (real backend engines)
-  const executeAction = useCallback(async (type: ArtifactType, configParams?: any) => {
-    closeActionConfig();
-
-    const timestamp = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-    const simIngredients = await toSimulateIngredients();
-
-    const pushArtifact = (
-      title: string,
-      subtitle: string,
-      dataPayload: any,
-      chatText: string
-    ) => {
-      const newArtifact: EditorArtifact = {
-        id: `art-${type}-${Date.now()}`,
-        type,
-        title,
-        subtitle,
-        createdAt: timestamp,
-        data: dataPayload,
-      };
-      const newChatMsg: EditorChatMessage = {
-        id: `msg-${Date.now()}`,
-        sender: "assistant" as const,
-        content: chatText,
-        timestamp,
-        linkedArtifactId: newArtifact.id,
-      };
-      setWorkspace((prev) => ({
-        ...prev,
-        drafts: prev.drafts.map((d) =>
-          d.id !== activeDraft.id
-            ? d
-            : {
-                ...d,
-                artifacts: [newArtifact, ...d.artifacts],
-                messages: [...d.messages, newChatMsg],
-              }
-        ),
-      }));
-      setActiveArtifact(newArtifact);
-      setCenterViewMode("artifact");
-    };
-
-    const pushError = (label: string) => {
-      const newChatMsg: EditorChatMessage = {
-        id: `msg-${Date.now()}`,
-        sender: "assistant" as const,
-        content: `${label} gagal dijalankan: backend tidak tersedia. Coba lagi nanti.`,
-        timestamp,
-      };
-      setWorkspace((prev) => ({
-        ...prev,
-        drafts: prev.drafts.map((d) =>
-          d.id !== activeDraft.id ? d : { ...d, messages: [...d.messages, newChatMsg] }
-        ),
-      }));
-    };
-
-    try {
-      if (type === "pareto") {
-        const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
-          constraints: {
-            minStabilityPct: configParams?.minStability ?? 85,
-            maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
-            minTkdnPct: configParams?.targetTkdn ?? 40,
-            targetViscosityMpaS: 5200,
-          },
-          trialsCount: 500,
-        });
-        const candidates = (res.topCandidates || []).map((c: any) => ({
-          id: c.id,
-          title: c.title,
-          stability: `${c.metrics.stabilityPct}%`,
-          cogs: `Rp ${Number(c.metrics.cogsIdrPerKg).toLocaleString("id-ID")}`,
-          tkdn: `${c.metrics.tkdnPct}%`,
-          badge: c.badgeLabel,
-          desc: c.tradeOffSummary,
-          recipe: c.ingredients,
-        }));
-        pushArtifact(
-          "Hasil Optimasi Multi-Objektif Pareto NSGA-II",
-          `${res.trialsEvaluated} iterasi evaluasi simpleks massa ∑w = 100%`,
-          {
-            config: configParams || {},
-            candidates,
-            trialsEvaluated: res.trialsEvaluated,
-            executionTimeMs: res.executionTimeMs,
-            nonDominatedCount: res.nonDominatedCount,
-          },
-          `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`
-        );
-      } else if (type === "sentinel") {
-        const res: any = await apiPost("/api/v1/compliance/audit", {
-          formula_name: activeDraft.name,
-          ingredients: simIngredients,
-        });
-        const violations = (res.ingredients_audit || []).filter((a: any) => a.status !== "PASSED").length;
-        pushArtifact(
-          "Laporan Audit Regulasi BPOM & Halal HAS 23000",
-          "Skrining Perka BPOM No. 25/2025 & sertifikasi Halal bahan",
-          {
-            status: res.overall_status,
-            bpomScore: `${res.compliance_score != null ? Math.round(res.compliance_score * 100) : 0}%`,
-            halalScore: res.halal_status,
-            tkdnScore: `${res.total_tkdn_pct}%`,
-            checkedRules: (res.ingredients_audit || []).length,
-            violations,
-          },
-          `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan. Report kepatuhan telah dibuka.`
-        );
-      } else if (type === "simulation") {
-        const res: any = await apiPost("/api/v1/simulate/stability", {
-          formula_name: activeDraft.name,
-          temperature_c: configParams?.tempCelsius ?? 40,
-          duration_days: configParams?.durationDays ?? 90,
-          ingredients: simIngredients,
-        });
-        pushArtifact(
-          "Hasil Simulasi Fisikokimia Kestabilan 40°C",
-          "Inkubator Iklim Tropis Zona IVb (40°C / 75% RH / 90 Hari)",
-          {
-            probStability: Math.round((res.stability_score_40c_90days || 0) * 1000) / 10,
-            viscosityMpaS: Math.round(res.dynamic_viscosity_mpas || 0),
-            dropletDlsNm: Math.round((res.mean_droplet_size_nm || 0) * 10) / 10,
-            gibbsDeltaG: res.thermodynamics?.gibbs_free_energy_kj_mol ?? null,
-            verdict: res.verdict,
-          },
-          `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}).`
-        );
-      } else if (type === "similarity") {
-        const payload = {
-          ingredients: simIngredients.map((it: any) => ({
-            inci: it.inci,
-            weight_pct: it.weight_pct,
-          })),
-        };
-        const [internal, external] = await Promise.all([
-          apiPost<any>("/api/v1/similarity/check", payload),
-          apiPost<any>("/api/v1/similarity/external", payload),
-        ]);
-        pushArtifact(
-          "Analisis Kemiripan Formula & Patent Novelty",
-          "Paragon Cross-Brand Knowledge Base vs komposisi produk beredar",
-          {
-            internal: {
-              matches: (internal.matches || []).map((m: any) => ({
-                name: m.name,
-                formula_id: m.formula_id,
-                jaccard: m.jaccard,
-                cosine: m.cosine,
-                chassis_overlap_pct: m.chassis_overlap_pct,
-              })),
-            },
-            external: {
-              noveltyScore: Math.round((external.novelty_score || 0) * 100),
-              matches: (external.top_matches || []).map((m: any) => ({
-                brand: m.brand,
-                productName: m.product_name,
-                url: m.url,
-                similarity: Math.round(m.similarity * 1000) / 10,
-                shared: m.shared_ingredients,
-              })),
-            },
-          },
-          `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%.`
-        );
-      }
-    } catch (err) {
-      console.error(err);
-      pushError(
-        type === "pareto" ? "Optimasi Pareto"
-        : type === "sentinel" ? "Audit regulasi"
-        : type === "simulation" ? "Simulasi kestabilan"
-        : "Analisis similaritas"
+  // Apply candidate recipe (bulk, by INCI match, single renormalization + persist)
+  const applyCandidateRecipe = useCallback(
+    async (entries: Array<{ inci: string; weightPct: number }>) => {
+      if (!activeDraft) return;
+      const byInci = new Map(entries.map((e) => [e.inci.toLowerCase(), e.weightPct]));
+      const matched = ingredients.map((it) =>
+        byInci.has(it.inci.toLowerCase())
+          ? { ...it, weightPct: byInci.get(it.inci.toLowerCase()) as number }
+          : it
       );
-    }
-  }, [activeDraft, toSimulateIngredients, closeActionConfig]);
-
-  // Send Chat Message (real backend SSE stream)
-  const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim()) return;
-    const timestamp = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-
-    const userMsg: EditorChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: "user" as const,
-      content: text,
-      timestamp,
-    };
-
-    const assistantId = `ai-${Date.now()}`;
-    let streamed = "";
-    const pushUserAndPlaceholder = (prev: EditorWorkspace): EditorWorkspace => ({
-      ...prev,
-      drafts: prev.drafts.map((d) =>
-        d.id !== activeDraft.id
-          ? d
-          : {
-              ...d,
-              messages: [
-                ...d.messages,
-                userMsg,
-                { id: assistantId, sender: "assistant" as const, content: "", timestamp },
-              ],
-            }
-      ),
-    });
-    const appendToken = (prev: EditorWorkspace, token: string): EditorWorkspace => ({
-      ...prev,
-      drafts: prev.drafts.map((d) =>
-        d.id !== activeDraft.id
-          ? d
-          : {
-              ...d,
-              messages: d.messages.map((m) =>
-                m.id === assistantId ? { ...m, content: m.content + token } : m
-              ),
-            }
-      ),
-    });
-
-    setWorkspace(pushUserAndPlaceholder);
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
-          message: text,
-          session_id: chatSessionId,
-          canvas: {
-            formula_name: activeDraft.name,
-            ingredients: ingredients.map((it) => ({
-              inci: it.inci,
-              weight_pct: it.weightPct,
-              phase: it.phase,
-            })),
-          },
-        }),
-      });
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data:")) continue;
-          const data = trimmed.slice(5).trim();
-          if (data === "[DONE]") continue;
-          let evt: any;
-          try {
-            evt = JSON.parse(data);
-          } catch {
-            continue;
-          }
-          if (evt.type === "token" && typeof evt.token === "string") {
-            streamed += evt.token;
-            setWorkspace((prev) => appendToken(prev, evt.token));
-          } else if (evt.type === "meta" && typeof evt.session_id === "string") {
-            setChatSessionId(evt.session_id);
-          } else if (evt.type === "error") {
-            throw new Error(typeof evt.detail === "string" ? evt.detail : "AI error");
-          }
-        }
-      }
-      if (!streamed) throw new Error("empty reply");
-    } catch (err) {
-      console.error(err);
-      const fallback =
-        streamed || "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
-      setWorkspace((prev) => ({
-        ...prev,
-        drafts: prev.drafts.map((d) =>
-          d.id !== activeDraft.id
-            ? d
-            : {
-                ...d,
-                messages: d.messages.map((m) =>
-                  m.id === assistantId ? { ...m, content: fallback } : m
-                ),
-              }
-        ),
-      }));
-      streamed = fallback;
-    } finally {
+      const total = matched.reduce((acc, it) => acc + it.weightPct, 0);
+      const normalized =
+        total > 0
+          ? matched.map((it) => ({
+              ...it,
+              weightPct: Number(((it.weightPct / total) * 100).toFixed(2)),
+            }))
+          : matched;
+      setDrafts((prev) =>
+        prev.map((d) => (d.id !== activeDraft.id ? d : { ...d, ingredients: normalized }))
+      );
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as EditorWorkspace;
-          localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({
-              ...parsed,
-              drafts: parsed.drafts.map((d) =>
-                d.id !== activeDraft.id
-                  ? d
-                  : {
-                      ...d,
-                      messages: [
-                        ...d.messages.filter(
-                          (m) => m.id !== userMsg.id && m.id !== assistantId
-                        ),
-                        userMsg,
-                        {
-                          id: assistantId,
-                          sender: "assistant" as const,
-                          content: streamed,
-                          timestamp,
-                        },
-                      ],
-                    }
-              ),
-            })
+        const repo = getFormulaRepository();
+        await repo.updateFormula(activeDraft.id, {
+          name: activeDraft.name,
+          category: "skincare",
+          batch_size_g: 500,
+          phases: mapEditorToDtoPhases(normalized),
+        });
+      } catch (err) {
+        console.error("Gagal menyimpan hasil apply:", err);
+      }
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Execute Action Menu (+) — real backend engines
+  const executeAction = useCallback(
+    async (type: ArtifactType, configParams?: any) => {
+      if (!activeDraft) return;
+      closeActionConfig();
+
+      const timestamp = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const simIngredients = await toSimulateIngredients();
+
+      const pushArtifact = (
+        title: string,
+        subtitle: string,
+        dataPayload: any,
+        chatText: string
+      ) => {
+        const newArtifact: EditorArtifact = {
+          id: `art-${type}-${Date.now().toString().slice(-4)}`,
+          type,
+          title,
+          subtitle,
+          createdAt: timestamp,
+          data: dataPayload,
+        };
+        const newChatMsg: EditorChatMessage = {
+          id: `msg-art-${Date.now()}`,
+          sender: "assistant" as const,
+          content: chatText,
+          timestamp,
+          linkedArtifactId: newArtifact.id,
+        };
+        setDrafts((prev) =>
+          prev.map((d) => {
+            if (d.id !== activeDraft.id) return d;
+            return {
+              ...d,
+              artifacts: [newArtifact, ...d.artifacts],
+              messages: [...d.messages, newChatMsg],
+            };
+          })
+        );
+        viewArtifact(newArtifact);
+      };
+
+      const pushError = (label: string) => {
+        const newChatMsg: EditorChatMessage = {
+          id: `msg-${Date.now()}`,
+          sender: "assistant" as const,
+          content: `${label} gagal dijalankan: backend tidak tersedia. Coba lagi nanti.`,
+          timestamp,
+        };
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== activeDraft.id ? d : { ...d, messages: [...d.messages, newChatMsg] }
+          )
+        );
+      };
+
+      try {
+        if (type === "pareto") {
+          const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
+            constraints: {
+              minStabilityPct: configParams?.minStability ?? 85,
+              maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
+              minTkdnPct: configParams?.targetTkdn ?? 40,
+              targetViscosityMpaS: 5200,
+            },
+            trialsCount: 500,
+          });
+          const candidates = (res.topCandidates || []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            stability: `${c.metrics.stabilityPct}%`,
+            cogs: `Rp ${Number(c.metrics.cogsIdrPerKg).toLocaleString("id-ID")}`,
+            tkdn: `${c.metrics.tkdnPct}%`,
+            badge: c.badgeLabel,
+            desc: c.tradeOffSummary,
+            recipe: Object.fromEntries(
+              (c.ingredients || []).map((i: any) => [i.inci, i.weightPct])
+            ),
+          }));
+          pushArtifact(
+            "Pareto Frontier Multi-Objective Optimization",
+            `${res.trialsEvaluated} iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN`,
+            {
+              candidates,
+              trialsEvaluated: res.trialsEvaluated,
+              executionTimeMs: res.executionTimeMs,
+              nonDominatedCount: res.nonDominatedCount,
+            },
+            `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`
+          );
+        } else if (type === "sentinel") {
+          const res: any = await apiPost("/api/v1/compliance/audit", {
+            formula_name: activeDraft.name,
+            ingredients: simIngredients,
+          });
+          const violations = (res.ingredients_audit || []).filter(
+            (a: any) => a.status !== "PASSED"
+          ).length;
+          pushArtifact(
+            "Regulatory Compliance & Halal Audit",
+            "BPOM Annex III/V • Halal Assurance System HAS-23000",
+            {
+              status: res.overall_status,
+              bpomScore: `${Math.round((res.compliance_score || 0) * 100)}%`,
+              halalScore: res.halal_status,
+              tkdnScore: `${res.total_tkdn_pct}%`,
+              checkedRules: (res.ingredients_audit || []).length,
+              violations,
+            },
+            `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan.`
+          );
+        } else if (type === "simulation") {
+          const res: any = await apiPost("/api/v1/simulate/stability", {
+            formula_name: activeDraft.name,
+            temperature_c: configParams?.temperature ?? 40,
+            duration_days: configParams?.durationDays ?? 90,
+            ingredients: simIngredients,
+          });
+          pushArtifact(
+            "Tropical Stability Report (40°C / 75% RH)",
+            "Simulasi kestabilan dipercepat 90 hari • LightGBM Model",
+            {
+              probStability: Math.round((res.stability_score_40c_90days || 0) * 1000) / 10,
+              viscosityMpaS: Math.round(res.dynamic_viscosity_mpas || 0),
+              dropletDlsNm: Math.round((res.mean_droplet_size_nm || 0) * 10) / 10,
+              gibbsDeltaG: res.thermodynamics?.gibbs_free_energy_kj_mol ?? null,
+              verdict: res.verdict,
+            },
+            `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}).`
+          );
+        } else {
+          const payload = {
+            ingredients: simIngredients.map((it: any) => ({
+              inci: it.inci,
+              weight_pct: it.weight_pct,
+            })),
+          };
+          const [internal, external] = await Promise.all([
+            apiPost<any>("/api/v1/similarity/check", payload),
+            apiPost<any>("/api/v1/similarity/external", payload),
+          ]);
+          pushArtifact(
+            "Benchmark Chemical Similarity Radar",
+            "Cosine similarity & Morgan Fingerprints",
+            {
+              internal: {
+                matches: (internal.matches || []).map((m: any) => ({
+                  name: m.name,
+                  formula_id: m.formula_id,
+                  jaccard: m.jaccard,
+                  cosine: m.cosine,
+                  chassis_overlap_pct: m.chassis_overlap_pct,
+                })),
+              },
+              external: {
+                novelty_score: external.novelty_score,
+                top_matches: (external.top_matches || []).map((m: any) => ({
+                  brand: m.brand,
+                  product_name: m.product_name,
+                  url: m.url,
+                  similarity: m.similarity,
+                  shared_ingredients: m.shared_ingredients,
+                })),
+              },
+            },
+            `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%.`
           );
         }
-      } catch {
-        // persistence best-effort
+      } catch (err) {
+        console.error(err);
+        pushError(
+          type === "pareto"
+            ? "Optimasi Pareto"
+            : type === "sentinel"
+              ? "Audit regulasi"
+              : type === "simulation"
+                ? "Simulasi kestabilan"
+                : "Analisis similaritas"
+        );
       }
-    }
-  }, [activeDraft, ingredients, chatSessionId]);
+    },
+    [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
+  );
+
+  // Chat message send (real backend SSE stream)
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!activeDraft) return;
+      const draftId = activeDraft.id;
+      const draftName = activeDraft.name;
+      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const userMsg: EditorChatMessage = {
+        id: `user-${Date.now()}`,
+        sender: "user" as const,
+        content: text,
+        timestamp,
+      };
+      const assistantId = `ai-${Date.now()}`;
+      let streamed = "";
+      setDrafts((prev) =>
+        prev.map((d) =>
+          d.id !== draftId
+            ? d
+            : {
+                ...d,
+                messages: [
+                  ...d.messages,
+                  userMsg,
+                  { id: assistantId, sender: "assistant" as const, content: "", timestamp },
+                ],
+              }
+        )
+      );
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            message: text,
+            session_id: chatSessionId,
+            canvas: {
+              formula_name: draftName,
+              ingredients: ingredients.map((it) => ({
+                inci: it.inci,
+                weight_pct: it.weightPct,
+                phase: it.phase,
+              })),
+            },
+          }),
+        });
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const data = trimmed.slice(5).trim();
+            if (data === "[DONE]") continue;
+            let evt: any;
+            try {
+              evt = JSON.parse(data);
+            } catch {
+              continue;
+            }
+            if (evt.type === "token" && typeof evt.token === "string") {
+              streamed += evt.token;
+              const token = evt.token;
+              setDrafts((prev) =>
+                prev.map((d) =>
+                  d.id !== draftId
+                    ? d
+                    : {
+                        ...d,
+                        messages: d.messages.map((m) =>
+                          m.id === assistantId ? { ...m, content: m.content + token } : m
+                        ),
+                      }
+                )
+              );
+            } else if (evt.type === "meta" && typeof evt.session_id === "string") {
+              setChatSessionId(evt.session_id);
+            } else if (evt.type === "error") {
+              throw new Error(typeof evt.detail === "string" ? evt.detail : "AI error");
+            }
+          }
+        }
+        if (!streamed) throw new Error("empty reply");
+      } catch (err) {
+        console.error(err);
+        const fallback =
+          streamed || "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== draftId
+              ? d
+              : {
+                  ...d,
+                  messages: d.messages.map((m) =>
+                    m.id === assistantId ? { ...m, content: fallback } : m
+                  ),
+                }
+          )
+        );
+      }
+    },
+    [activeDraft, ingredients, chatSessionId]
+  );
+
+  const workspace: EditorWorkspace = {
+    id: "ws-paragon",
+    name: "Paragon R&D Studio: Tropical Skincare",
+    activeDraftId: activeDraft ? activeDraft.id : "",
+    drafts,
+  };
 
   return (
     <EditorContext.Provider
       value={{
         workspace,
         activeDraft,
+        activeVersions,
+        isLoading,
+        isSaving,
         switchDraft,
+        createNewDraft,
         createDraftFork,
         renameDraft,
         deleteDraft,
+        saveCurrentFormula,
+        restoreVersion,
         ingredients,
         updateIngredientWeight,
         toggleLockIngredient,

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, {
   createContext,
@@ -55,9 +55,21 @@ function writeStorage(user: AuthUser, tokens: AuthTokens) {
 }
 
 function clearStorage() {
-  [KEY_USER, KEY_ACCESS, KEY_REFRESH, KEY_EXPIRES].forEach((k) =>
+  [KEY_USER, KEY_ACCESS, KEY_REFRESH, KEY_EXPIRES, "ps_editor_active_formula_id"].forEach((k) =>
     localStorage.removeItem(k)
   );
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("ps_editor_active_formula_id")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // ignore
+  }
 }
 
 // ─── Provider ─────────────────────────────────────────────────────────────────

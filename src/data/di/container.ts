@@ -17,6 +17,9 @@ import { MockOptimizerRepository } from "../repositories/MockOptimizerRepository
 import { HttpOptimizerRepository } from "../repositories/HttpOptimizerRepository";
 
 import { IAuthRepository } from "@/domain/repositories/IAuthRepository";
+import { IFormulaRepository } from "@/domain/repositories/IFormulaRepository";
+import { MockFormulaRepository } from "../repositories/MockFormulaRepository";
+import { HttpFormulaRepository } from "../repositories/HttpFormulaRepository";
 import { MockAuthRepository } from "../repositories/MockAuthRepository";
 import { HttpAuthRepository } from "../repositories/HttpAuthRepository";
 
@@ -36,6 +39,7 @@ class ServiceContainer {
   private static briefRepository: IBriefRepository | null = null;
   private static optimizerRepository: IOptimizerRepository | null = null;
   private static authRepository: IAuthRepository | null = null;
+  private static formulaRepository: IFormulaRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -115,6 +119,19 @@ class ServiceContainer {
     return this.authRepository!;
   }
 
+  public static getFormulaRepository(): IFormulaRepository {
+    if (!this.formulaRepository) {
+      const useMock = shouldUseMockApi();
+
+      if (useMock) {
+        this.formulaRepository = new MockFormulaRepository();
+      } else {
+        this.formulaRepository = new HttpFormulaRepository();
+      }
+    }
+    return this.formulaRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -126,5 +143,6 @@ export const getComplianceRepository = () => ServiceContainer.getComplianceRepos
 export const getBriefRepository = () => ServiceContainer.getBriefRepository();
 export const getOptimizerRepository = () => ServiceContainer.getOptimizerRepository();
 export const getAuthRepository = () => ServiceContainer.getAuthRepository();
+export const getFormulaRepository = () => ServiceContainer.getFormulaRepository();
 
 

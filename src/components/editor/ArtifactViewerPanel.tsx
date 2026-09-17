@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useEditor } from "@/contexts/EditorContext";
@@ -105,6 +105,8 @@ export const ArtifactViewerPanel: React.FC = () => {
 
         <DelayedInfoTooltip
           content="Artifact adalah dokumen hasil analisis komputasi. Anda dapat meninjau report atau menerapkannya ke formula."
+          position="bottom"
+          align="right"
           delayMs={300}
         />
       </div>
@@ -193,7 +195,7 @@ export const ArtifactViewerPanel: React.FC = () => {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
                 >
                   <Sliders className="w-3.5 h-3.5" />
-                  <span>Terapkan Kandidat {selectedCandidate} ke Kitchen Panel</span>
+                  <span>Terapkan Kandidat {selectedCandidate} ke Composition Panel</span>
                 </button>
               </div>
             </div>

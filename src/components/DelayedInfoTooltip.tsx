@@ -10,6 +10,8 @@ export interface DelayedInfoTooltipProps {
   delayMs?: number;
   /** Tooltip position relative to trigger */
   position?: "top" | "bottom" | "left" | "right";
+  /** Horizontal alignment: 'auto' checks viewport & parent container boundaries, 'right' aligns to right edge of trigger */
+  align?: "auto" | "left" | "right" | "center";
   /** Optional custom trigger. Defaults to a small Info icon. */
   children?: React.ReactNode;
   /** Size class for default Info icon */
@@ -22,11 +24,15 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
   content,
   delayMs = 300,
   position = "top",
+  align = "auto",
   children,
   iconSizeClass = "w-3.5 h-3.5",
   className = "",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [computedPosition, setComputedPosition] = useState(position);
+  const [alignMode, setAlignMode] = useState<"center" | "left" | "right">("center");
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const clearTimer = () => {
@@ -39,6 +45,46 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
   const handleMouseEnter = () => {
     clearTimer();
     timerRef.current = setTimeout(() => {
+      if (containerRef.current && typeof window !== "undefined") {
+        const rect = containerRef.current.getBoundingClientRect();
+
+        // Smart vertical flip: if close to top viewport boundary, flip to bottom
+        let activePos = position;
+        if (position === "top" && rect.top < 120) {
+          activePos = "bottom";
+        } else if (position === "bottom" && window.innerHeight - rect.bottom < 120) {
+          activePos = "top";
+        }
+        setComputedPosition(activePos);
+
+        // Smart horizontal alignment: avoid clipping off viewport or parent container edges
+        if (align !== "auto") {
+          setAlignMode(align);
+        } else {
+          const boundaryParent =
+            containerRef.current.closest(
+              "main, aside, header, nav, [class*='overflow-hidden'], [class*='overflow-x-hidden']"
+            ) || containerRef.current.parentElement;
+
+          const parentRight = boundaryParent
+            ? boundaryParent.getBoundingClientRect().right
+            : window.innerWidth;
+          const parentLeft = boundaryParent
+            ? boundaryParent.getBoundingClientRect().left
+            : 0;
+
+          const distToRight = Math.min(window.innerWidth - rect.right, parentRight - rect.right);
+          const distToLeft = Math.min(rect.left, rect.left - parentLeft);
+
+          if (distToRight < 240) {
+            setAlignMode("right");
+          } else if (distToLeft < 240) {
+            setAlignMode("left");
+          } else {
+            setAlignMode("center");
+          }
+        }
+      }
       setIsVisible(true);
     }, delayMs);
   };
@@ -55,16 +101,27 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
     };
   }, []);
 
-  // Position classes
-  const positionClasses = {
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
+  // Compute position classes
+  const getPositionClasses = () => {
+    if (computedPosition === "bottom") {
+      if (alignMode === "right") return "top-full right-0 mt-2";
+      if (alignMode === "left") return "top-full left-0 mt-2";
+      return "top-full left-1/2 -translate-x-1/2 mt-2";
+    }
+    if (computedPosition === "top") {
+      if (alignMode === "right") return "bottom-full right-0 mb-2";
+      if (alignMode === "left") return "bottom-full left-0 mb-2";
+      return "bottom-full left-1/2 -translate-x-1/2 mb-2";
+    }
+    if (computedPosition === "left") {
+      return "right-full top-1/2 -translate-y-1/2 mr-2";
+    }
+    return "left-full top-1/2 -translate-y-1/2 ml-2";
   };
 
   return (
     <div
+      ref={containerRef}
       className={`relative inline-flex items-center ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -81,11 +138,11 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
         </span>
       )}
 
-      {/* Tooltip Popup (only reveals after delayMs of continuous hover) */}
+      {/* Tooltip Popup (reveals with delayMs and smart boundary-safe placement) */}
       {isVisible && (
         <div
           role="tooltip"
-          className={`absolute z-50 pointer-events-none whitespace-nowrap px-3 py-1.5 rounded-xl bg-slate-900/95 text-white text-xs font-mono shadow-lg border border-slate-700/60 backdrop-blur-xs animate-in fade-in zoom-in-95 duration-150 ${positionClasses[position]}`}
+          className={`absolute z-50 pointer-events-none max-w-xs w-max whitespace-normal text-left px-3 py-2 rounded-xl bg-slate-900/95 text-white text-xs font-sans leading-relaxed shadow-xl border border-slate-700/60 backdrop-blur-xs animate-in fade-in zoom-in-95 duration-150 ${getPositionClasses()}`}
         >
           {content}
         </div>
