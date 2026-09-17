@@ -3,13 +3,11 @@
 import React from "react";
 import { Navbar } from "@/components/Navbar";
 import { useParetoOptimizer } from "@/hooks/useParetoOptimizer";
-import { OptimizationMetricsBar } from "@/components/optimizer/OptimizationMetricsBar";
 import { ParetoObjectivesCard } from "@/components/optimizer/ParetoObjectivesCard";
 import { ParetoFrontierScatterPlot } from "@/components/optimizer/ParetoFrontierScatterPlot";
 import { ParetoCandidateComparisonCard } from "@/components/optimizer/ParetoCandidateComparisonCard";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
-import { Zap } from "lucide-react";
 
 export default function OptimizerPage() {
   const {
@@ -58,17 +56,6 @@ export default function OptimizerPage() {
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
             {error}
           </div>
-        )}
-
-        {/* Performance Metrics Bar */}
-        {result && (
-          <OptimizationMetricsBar
-            trialsEvaluated={result.trialsEvaluated}
-            executionTimeMs={result.executionTimeMs}
-            nonDominatedCount={result.nonDominatedCount}
-            hypervolumeScore={result.hypervolumeScore}
-            isOptimizing={isOptimizing}
-          />
         )}
 
         {/* Constraints & Objectives Card */}
