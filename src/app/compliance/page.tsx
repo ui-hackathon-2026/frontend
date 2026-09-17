@@ -1,36 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useCompliance } from "@/hooks/useCompliance";
 import { ComplianceSummaryCard } from "@/components/compliance/ComplianceSummaryCard";
 import { IngredientAuditTable } from "@/components/compliance/IngredientAuditTable";
 import { AiRegulatoryReasoningCard } from "@/components/compliance/AiRegulatoryReasoningCard";
-import { RagKnowledgeChat } from "@/components/compliance/RagKnowledgeChat";
 import {
   ShieldCheck,
-  FileSearch,
-  MessageSquare,
   ArrowRight,
-  RotateCcw,
-  Sparkles,
-  Layers,
-  ChevronRight,
 } from "lucide-react";
 
 export default function CompliancePage() {
-  const [activeTab, setActiveTab] = useState<"AUDIT" | "RAG_CHAT">("AUDIT");
-
   const {
     presets,
     selectedPresetId,
     selectPresetAndAudit,
     report,
     isLoadingAudit,
-    chatMessages,
-    isLoadingChat,
-    sendRagQuery,
   } = useCompliance();
 
   return (
@@ -39,44 +27,14 @@ export default function CompliancePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-8 w-full py-6 space-y-6">
         {/* Top Header Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <div className="border-b border-slate-200/80 pb-4">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
-                Enterprise BPOM, Halal HAS 23000 &amp; TKDN Sentinel
-              </h1>
-            </div>
-            <p className="text-slate-500 text-xs sm:text-sm">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
+              Enterprise BPOM, Halal HAS 23000 &amp; TKDN Sentinel
+            </h1>
+            <p className="text-slate-500 text-xs sm:text-sm max-w-4xl leading-relaxed">
               Audit forensik regulasi otomatis: penarikan pasal hukum Perka BPOM No. 17/2022 via Vector RAG, verifikasi titik kritis halal, dan rekomendasi substitusi bahan hayati lokal.
             </p>
-          </div>
-
-          {/* Switch View Tabs */}
-          <div className="flex items-center p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
-            <button
-              type="button"
-              onClick={() => setActiveTab("AUDIT")}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === "AUDIT"
-                  ? "bg-white text-[#0a192f] shadow-xs font-bold"
-                  : "text-slate-600 hover:text-slate-900 font-medium"
-              }`}
-            >
-              <FileSearch className="w-3.5 h-3.5" />
-              <span>Laporan Audit Formula</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("RAG_CHAT")}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                activeTab === "RAG_CHAT"
-                  ? "bg-white text-[#0a192f] shadow-xs font-bold"
-                  : "text-slate-600 hover:text-slate-900 font-medium"
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Tanya Regulasi RAG</span>
-            </button>
           </div>
         </div>
 
@@ -119,8 +77,8 @@ export default function CompliancePage() {
           </div>
         )}
 
-        {/* TAB 1: FULL AUDIT REPORT */}
-        {!isLoadingAudit && report && activeTab === "AUDIT" && (
+        {/* FULL AUDIT REPORT */}
+        {!isLoadingAudit && report && (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* 1. Summary Card */}
             <ComplianceSummaryCard report={report} />
@@ -158,17 +116,6 @@ export default function CompliancePage() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* TAB 2: INTERACTIVE RAG CHAT CONSOLE */}
-        {activeTab === "RAG_CHAT" && (
-          <div className="max-w-3xl mx-auto animate-in fade-in duration-200">
-            <RagKnowledgeChat
-              messages={chatMessages}
-              isLoading={isLoadingChat}
-              onSendMessage={sendRagQuery}
-            />
           </div>
         )}
       </main>
