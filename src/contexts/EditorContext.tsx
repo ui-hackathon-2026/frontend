@@ -28,7 +28,7 @@ const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
     id: "msg-1",
     sender: "assistant",
     content:
-      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Composition panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
+      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Kitchen panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
     timestamp: "Baru saja",
   },
 ];
@@ -79,17 +79,18 @@ function mapEditorToDtoPhases(ingredients: EditorIngredient[]) {
 
 interface EditorContextType {
   workspace: EditorWorkspace;
-  activeDraft: DraftFormulation;
+  activeDraft: DraftFormulation | null;
   activeVersions: FormulaVersionItem[];
   isLoading: boolean;
   isSaving: boolean;
   switchDraft: (draftId: string) => void;
+  createNewDraft: (name?: string) => Promise<void>;
   createDraftFork: () => Promise<void>;
   renameDraft: (draftId: string, newName: string) => Promise<void>;
   deleteDraft: (draftId: string) => Promise<void>;
   saveCurrentFormula: () => Promise<void>;
   restoreVersion: (version: FormulaVersionItem) => Promise<void>;
-  // Ingredients (Composition Panel)
+  // Ingredients (Kitchen Panel)
   ingredients: EditorIngredient[];
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;
@@ -140,49 +141,12 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch initial formulas from backend
+  // Fetch formulas from backend
   const loadFormulasFromBackend = useCallback(async () => {
     setIsLoading(true);
     try {
       const repo = getFormulaRepository();
-      let list = await repo.listFormulas(50);
-
-      // If backend has no formulas yet, create seed formula in backend
-      if (list.length === 0) {
-        const seedPayload = {
-          name: "Tropical Barrier Cream v1",
-          category: "skincare",
-          batch_size_g: 500,
-          notes: "Formula baku barrier cream stabilitas tropis Paragon",
-          phases: {
-            phase_a: [
-              { inci: "Squalane", name: "Plant-Derived Squalane (Olive)", weight_pct: 4.5, is_locked: false },
-              { inci: "Caprylic/Capric Triglyceride", name: "Caprylic/Capric Triglycerides", weight_pct: 3.5, is_locked: false },
-              { inci: "Tocopheryl Acetate", name: "Tocopherol Acetate (Vit E)", weight_pct: 0.5, is_locked: false },
-            ],
-            phase_b: [
-              { inci: "Aqua", name: "Demineralized Water", weight_pct: 73.0, is_locked: false, is_solvent: true },
-              { inci: "Glycerin", name: "Glycerin USP 99.5%", weight_pct: 4.0, is_locked: false },
-              { inci: "Butylene Glycol", name: "Butylene Glycol (1,3-BG)", weight_pct: 3.5, is_locked: false },
-              { inci: "Carbomer", name: "Carbomer 940 (Polymer)", weight_pct: 0.3, is_locked: false },
-              { inci: "Disodium EDTA", name: "Disodium EDTA", weight_pct: 0.1, is_locked: false },
-            ],
-            phase_c: [
-              { inci: "Glyceryl Stearate", name: "Glyceryl Stearate & PEG-100", weight_pct: 2.8, is_locked: false },
-              { inci: "Polyglyceryl-3 Polyricinoleate", name: "Polyglyceryl-3 Polyricinoleate", weight_pct: 1.8, is_locked: false },
-            ],
-            phase_d: [
-              { inci: "Niacinamide", name: "Niacinamide (Vitamin B3)", weight_pct: 3.0, is_locked: false },
-              { inci: "Panthenol", name: "D-Panthenol (Provitamin B5)", weight_pct: 1.5, is_locked: false },
-              { inci: "Allantoin", name: "Allantoin USP", weight_pct: 0.5, is_locked: false },
-              { inci: "Triethanolamine", name: "Triethanolamine 99% (TEA)", weight_pct: 0.3, is_locked: false },
-              { inci: "Chlorphenesin", name: "Chlorphenesin Preservative", weight_pct: 0.7, is_locked: false },
-            ],
-          },
-        };
-        const created = await repo.createFormula(seedPayload);
-        list = [created];
-      }
+      const list = await repo.listFormulas(50);
 
       const mappedDrafts: DraftFormulation[] = list.map((f) => ({
         id: f.formula_id,
@@ -200,21 +164,25 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       setDrafts(mappedDrafts);
 
-      // Select active formula (prioritize localStorage key or first)
-      const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_ACTIVE_ID) : null;
-      const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
-      if (targetActive) {
-        setActiveDraftId(targetActive.id);
-        if (targetActive.ingredients.length > 0) {
-          setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+      if (mappedDrafts.length > 0) {
+        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_ACTIVE_ID) : null;
+        const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
+        if (targetActive) {
+          setActiveDraftId(targetActive.id);
+          if (targetActive.ingredients.length > 0) {
+            setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+          }
+          try {
+            const vList = await repo.listVersions(targetActive.id);
+            setActiveVersions(vList);
+          } catch {
+            setActiveVersions([]);
+          }
         }
-        // Load versions
-        try {
-          const vList = await repo.listVersions(targetActive.id);
-          setActiveVersions(vList);
-        } catch {
-          setActiveVersions([]);
-        }
+      } else {
+        setActiveDraftId("");
+        setSelectedMoleculeIngredient(null);
+        setActiveVersions([]);
       }
     } catch (err) {
       console.error("Gagal memuat formula dari backend:", err);
@@ -227,18 +195,10 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     loadFormulasFromBackend();
   }, [loadFormulasFromBackend]);
 
-  const activeDraft: DraftFormulation =
-    drafts.find((d) => d.id === activeDraftId) ||
-    drafts[0] || {
-      id: "loading",
-      name: "Memuat formula...",
-      createdAt: "",
-      ingredients: [],
-      messages: [],
-      artifacts: [],
-    };
+  const activeDraft: DraftFormulation | null =
+    drafts.find((d) => d.id === activeDraftId) || (drafts.length > 0 ? drafts[0] : null);
 
-  const ingredients = activeDraft.ingredients;
+  const ingredients = activeDraft ? activeDraft.ingredients : [];
 
   // Switch Draft
   const switchDraft = useCallback(
@@ -251,6 +211,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
       if (target.ingredients.length > 0) {
         setSelectedMoleculeIngredient(target.ingredients[0]);
+      } else {
+        setSelectedMoleculeIngredient(null);
       }
       setCenterViewMode("chat");
       setActiveArtifact(null);
@@ -268,19 +230,18 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Save current active draft to backend
   const saveCurrentFormula = useCallback(async () => {
-    if (!activeDraft || activeDraft.id === "loading") return;
+    if (!activeDraft) return;
     setIsSaving(true);
     try {
       const repo = getFormulaRepository();
       const phases = mapEditorToDtoPhases(activeDraft.ingredients);
-      const res = await repo.updateFormula(activeDraft.id, {
+      await repo.updateFormula(activeDraft.id, {
         name: activeDraft.name,
         category: "skincare",
         batch_size_g: 500,
         phases,
       });
 
-      // Update version list
       const vList = await repo.listVersions(activeDraft.id);
       setActiveVersions(vList);
     } catch (err) {
@@ -290,9 +251,74 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [activeDraft]);
 
-  // Create Draft Fork (Clones active formula directly into backend Neon)
+  // Create Brand New Empty Draft Formula
+  const createNewDraft = useCallback(async (customName?: string) => {
+    setIsSaving(true);
+    try {
+      const repo = getFormulaRepository();
+      const newVersionNum = drafts.length + 1;
+      const newDraftName = customName || `Formula Baru ${newVersionNum}`;
+
+      // Default minimal balanced chassis (Water 100%) so backend mass-balance validation passes
+      const created = await repo.createFormula({
+        name: newDraftName,
+        category: "skincare",
+        batch_size_g: 500,
+        notes: "Draft baru kosongan",
+        phases: {
+          phase_a: [],
+          phase_b: [
+            {
+              inci: "Aqua",
+              name: "Demineralized Water",
+              weight_pct: 100.0,
+              is_locked: false,
+              is_solvent: true,
+            },
+          ],
+          phase_c: [],
+          phase_d: [],
+        },
+      });
+
+      const newDraft: DraftFormulation = {
+        id: created.formula_id,
+        name: created.name,
+        createdAt: "Baru saja",
+        ingredients: mapDtoToEditorIngredients(created.ingredients),
+        messages: [
+          {
+            id: `msg-init-${Date.now()}`,
+            sender: "assistant" as const,
+            content: `Draft formula baru **${created.name}** telah siap! Silakan tambahkan bahan aktif dan emulgator dari **Library Bahan** di panel kiri atau diskusikan dengan AI.`,
+            timestamp: "Baru saja",
+          },
+        ],
+        artifacts: [],
+      };
+
+      setDrafts((prev) => [newDraft, ...prev]);
+      setActiveDraftId(newDraft.id);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY_ACTIVE_ID, newDraft.id);
+      }
+      setSelectedMoleculeIngredient(newDraft.ingredients[0] || null);
+      setActiveVersions([]);
+      setCenterViewMode("chat");
+      setActiveArtifact(null);
+    } catch (err) {
+      console.error("Gagal membuat formula baru:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [drafts.length]);
+
+  // Create Draft Fork (Clones active formula)
   const createDraftFork = useCallback(async () => {
-    if (!activeDraft || activeDraft.id === "loading") return;
+    if (!activeDraft) {
+      await createNewDraft();
+      return;
+    }
     setIsSaving(true);
     try {
       const repo = getFormulaRepository();
@@ -337,7 +363,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsSaving(false);
     }
-  }, [activeDraft, drafts.length]);
+  }, [activeDraft, drafts.length, createNewDraft]);
 
   // Rename Draft in Backend
   const renameDraft = useCallback(
@@ -365,23 +391,29 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Delete Draft in Backend
   const deleteDraft = useCallback(
     async (draftId: string) => {
-      if (drafts.length <= 1) return;
       try {
         const repo = getFormulaRepository();
         await repo.deleteFormula(draftId);
         const remaining = drafts.filter((d) => d.id !== draftId);
         setDrafts(remaining);
         if (activeDraftId === draftId) {
-          const next = remaining[0];
-          setActiveDraftId(next.id);
-          if (typeof window !== "undefined") {
-            localStorage.setItem(STORAGE_KEY_ACTIVE_ID, next.id);
+          if (remaining.length > 0) {
+            const next = remaining[0];
+            setActiveDraftId(next.id);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(STORAGE_KEY_ACTIVE_ID, next.id);
+            }
+            setSelectedMoleculeIngredient(next.ingredients[0] || null);
+            const vList = await repo.listVersions(next.id);
+            setActiveVersions(vList);
+          } else {
+            setActiveDraftId("");
+            setSelectedMoleculeIngredient(null);
+            setActiveVersions([]);
+            if (typeof window !== "undefined") {
+              localStorage.removeItem(STORAGE_KEY_ACTIVE_ID);
+            }
           }
-          if (next.ingredients.length > 0) {
-            setSelectedMoleculeIngredient(next.ingredients[0]);
-          }
-          const vList = await repo.listVersions(next.id);
-          setActiveVersions(vList);
         }
       } catch (err) {
         console.error("Gagal menghapus formula:", err);
@@ -393,7 +425,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Restore snapshot version
   const restoreVersion = useCallback(
     async (v: FormulaVersionItem) => {
-      if (!activeDraft || activeDraft.id === "loading") return;
+      if (!activeDraft) return;
       setIsSaving(true);
       try {
         const repo = getFormulaRepository();
@@ -436,6 +468,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Auto-normalize ingredients when a weight changes + debounced backend autosave
   const updateIngredientWeight = useCallback(
     (id: string, newWeight: number) => {
+      if (!activeDraft) return;
       const clampedWeight = Math.max(0.01, Math.min(99.0, Number(newWeight.toFixed(2))));
       const current = ingredients.map((item) => (item.id === id ? { ...item, weightPct: clampedWeight } : item));
       const targetId = id;
@@ -491,29 +524,31 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Toggle Lock
   const toggleLockIngredient = useCallback(
     (id: string) => {
+      if (!activeDraft) return;
       const updatedIngredients = ingredients.map((it) => (it.id === id ? { ...it, isLocked: !it.isLocked } : it));
       setDrafts((prev) =>
         prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updatedIngredients } : d))
       );
     },
-    [ingredients, activeDraft.id]
+    [ingredients, activeDraft]
   );
 
   // Remove Ingredient
   const removeIngredient = useCallback(
     (id: string) => {
-      if (ingredients.length <= 1) return;
+      if (!activeDraft || ingredients.length <= 1) return;
       const filtered = ingredients.filter((it) => it.id !== id);
       setDrafts((prev) =>
         prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: filtered } : d))
       );
     },
-    [ingredients, activeDraft.id]
+    [ingredients, activeDraft]
   );
 
   // Add Ingredient
   const addIngredient = useCallback(
     (item: Omit<EditorIngredient, "isLocked">) => {
+      if (!activeDraft) return;
       const exists = ingredients.some((it) => it.name.toLowerCase() === item.name.toLowerCase());
       if (exists) return;
       const newIng: EditorIngredient = { ...item, isLocked: false };
@@ -523,12 +558,13 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       );
       setSelectedMoleculeIngredient(newIng);
     },
-    [ingredients, activeDraft.id]
+    [ingredients, activeDraft]
   );
 
   // Apply Proposal from AI
   const applyProposal = useCallback(
     (proposal: FormulaModificationProposal) => {
+      if (!activeDraft) return;
       setDrafts((prev) =>
         prev.map((d) => {
           if (d.id !== activeDraft.id) return d;
@@ -549,7 +585,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       );
       saveCurrentFormula();
     },
-    [activeDraft.id, saveCurrentFormula]
+    [activeDraft, saveCurrentFormula]
   );
 
   // Artifact & Modal Controls
@@ -573,6 +609,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Execute Action Menu (+)
   const executeAction = useCallback(
     (type: ArtifactType, configParams?: any) => {
+      if (!activeDraft) return;
       closeActionConfig();
 
       const newArtId = `art-${type}-${Date.now().toString().slice(-4)}`;
@@ -665,12 +702,13 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       viewArtifact(newArtifact);
     },
-    [activeDraft.id, closeActionConfig, ingredients.length, viewArtifact]
+    [activeDraft, closeActionConfig, ingredients.length, viewArtifact]
   );
 
   // Chat message send
   const sendMessage = useCallback(
     (text: string) => {
+      if (!activeDraft) return;
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const userMsg: EditorChatMessage = {
         id: `user-${Date.now()}`,
@@ -725,7 +763,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const workspace: EditorWorkspace = {
     id: "ws-paragon",
     name: "Paragon R&D Studio: Tropical Skincare",
-    activeDraftId: activeDraft.id,
+    activeDraftId: activeDraft ? activeDraft.id : "",
     drafts,
   };
 
@@ -738,6 +776,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         isLoading,
         isSaving,
         switchDraft,
+        createNewDraft,
         createDraftFork,
         renameDraft,
         deleteDraft,
