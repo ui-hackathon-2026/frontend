@@ -106,25 +106,54 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
       const originX = width / 2;
       const originY = height / 2;
 
-      // Background clear
-      ctx.fillStyle = "#070d18";
+      // 1. Deep scientific radial gradient background (replaces flat black)
+      const bgGrad = ctx.createRadialGradient(originX, originY, 20, originX, originY, Math.max(width, height) * 0.7);
+      bgGrad.addColorStop(0, "#0f1f3d"); // illuminated center
+      bgGrad.addColorStop(1, "#060a14"); // deep dark vignette edges
+      ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Subtle subtle background grid / coordinate axes
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      // 2. Visible Blueprint Scientific Technical Grid
+      const gridSize = 24; // fine technical grid
+      const majorStep = 4; // major grid every 96px
+
+      // Minor grid lines
       ctx.lineWidth = 1;
-      const gridSize = 40;
-      for (let x = 0; x < width; x += gridSize) {
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+      for (let x = 0; x <= width; x += gridSize) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, height);
         ctx.stroke();
       }
-      for (let y = 0; y < height; y += gridSize) {
+      for (let y = 0; y <= height; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(width, y);
         ctx.stroke();
+      }
+
+      // Major grid lines
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.18)";
+      for (let x = 0; x <= width; x += gridSize * majorStep) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= height; y += gridSize * majorStep) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Grid intersection coordinate crosshairs/points
+      ctx.fillStyle = "rgba(56, 189, 248, 0.4)";
+      for (let x = 0; x <= width; x += gridSize * majorStep) {
+        for (let y = 0; y <= height; y += gridSize * majorStep) {
+          ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+        }
       }
 
       const atoms = getTransformedAtoms();
