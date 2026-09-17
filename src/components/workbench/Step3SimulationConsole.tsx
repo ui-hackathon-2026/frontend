@@ -135,19 +135,6 @@ export const Step3SimulationConsole: React.FC<Step3SimulationConsoleProps> = ({
         {/* Left Column (5 Cols): Fixed 40 deg C / 90 Days Standard + Model Selector + Run CTA */}
         <div className="lg:col-span-5 space-y-6">
           <div className="p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
-            {/* Header */}
-            <div className="border-b border-slate-100 pb-3">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Tahap 3 dari 3
-              </span>
-              <h2 className="text-lg font-bold text-[#0a192f] font-heading mt-0.5">
-                Simulasi Kestabilan In-Silico
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Kondisi baku uji dipercepat iklim tropis zona IVb sesuai Pedoman Uji Stabilitas BPOM.
-              </p>
-            </div>
-
             {/* 1. Fixed Conditions Card (40 deg C & 90 Hari) */}
             <div className="space-y-3">
               <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
