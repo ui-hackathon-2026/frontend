@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useEditor } from "@/contexts/EditorContext";
@@ -115,8 +115,12 @@ export const LeftContextualPanel: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex-1 min-h-[220px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
-            <Molecule3DViewer molecule={targetMolecule} />
+          <div className="flex-1 min-h-[220px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex flex-col">
+            <Molecule3DViewer
+              molecule={targetMolecule}
+              className="h-full flex-1"
+              canvasHeight="h-full min-h-[220px]"
+            />
           </div>
         </div>
       )}

@@ -8,6 +8,8 @@ export type RenderMode = "ball-and-stick" | "space-filling" | "wireframe";
 
 interface Molecule3DViewerProps {
   molecule: MoleculeItem;
+  className?: string;
+  canvasHeight?: string;
 }
 
 // CPK Color standard and Van der Waals radius (in Ångströms)
@@ -22,7 +24,11 @@ const ELEMENT_PROPERTIES: Record<ElementType, { color: string; radius: number; n
   Na: { color: "#8b5cf6", radius: 2.27, name: "Sodium" },
 };
 
-export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) => {
+export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
+  molecule,
+  className = "w-full",
+  canvasHeight = "h-[420px] sm:h-[480px]",
+}) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [renderMode, setRenderMode] = useState<RenderMode>("ball-and-stick");
@@ -30,11 +36,23 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
   const [autoRotate, setAutoRotate] = useState(true);
   const [hoveredAtom, setHoveredAtom] = useState<Atom3D | null>(null);
 
+  // Compute ideal zoomed-out perspective based on molecule bounding volume
+  const computeIdealZoom = useCallback(() => {
+    if (!molecule || molecule.atoms.length === 0) return 14;
+    const maxBound = Math.max(...molecule.atoms.map((a) => Math.hypot(a.x, a.y, a.z)), 4);
+    // Generously zoomed out (9-15) so entire molecule is centered cleanly above bottom HUD
+    return Math.min(15, Math.max(9, Math.round(55 / maxBound)));
+  }, [molecule]);
+
   // 3D camera state
   const rotationRef = useRef({ x: 0.3, y: 0.5 });
-  const zoomRef = useRef(38);
+  const zoomRef = useRef(computeIdealZoom());
   const isDraggingRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    zoomRef.current = computeIdealZoom();
+  }, [molecule, computeIdealZoom]);
 
   // Calculate molecule center to center coordinates around (0, 0, 0)
   const getTransformedAtoms = useCallback(() => {
@@ -325,17 +343,17 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
   // Wheel to zoom
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const zoomDelta = e.deltaY * -0.05;
-    zoomRef.current = Math.max(15, Math.min(100, zoomRef.current + zoomDelta));
+    const zoomDelta = e.deltaY * -0.04;
+    zoomRef.current = Math.max(8, Math.min(80, zoomRef.current + zoomDelta));
   };
 
   const resetCamera = () => {
     rotationRef.current = { x: 0.3, y: 0.5 };
-    zoomRef.current = 38;
+    zoomRef.current = computeIdealZoom();
   };
 
   return (
-    <div className="relative w-full rounded-3xl bg-[#070d18] border border-slate-800/80 shadow-md overflow-hidden flex flex-col font-sans">
+    <div className={`relative rounded-3xl bg-[#070d18] border border-slate-800/80 shadow-md overflow-hidden flex flex-col font-sans ${className}`}>
       {/* Top Controls Overlay - Ultra Compact */}
       <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
         {/* Left: Render Mode Selector (Ball & Stick vs CPK) */}
@@ -408,7 +426,7 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
       </div>
 
       {/* Main 3D Canvas */}
-      <div className="relative w-full h-[420px] sm:h-[480px] cursor-grab active:cursor-grabbing">
+      <div className={`relative w-full ${canvasHeight} flex-1 cursor-grab active:cursor-grabbing`}>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -419,9 +437,9 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           className="w-full h-full block"
         />
 
-        {/* Hovered Atom Compact HUD - Sleek single-line at bottom */}
+        {/* Hovered Atom Compact HUD - Sleek single-line raised at bottom-20 and offset from overlay */}
         {hoveredAtom && (
-          <div className="absolute bottom-2.5 left-2.5 right-2.5 z-20 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-white/15 text-white text-[10.5px] font-mono shadow-md flex items-center justify-between gap-2 pointer-events-none animate-in fade-in duration-100">
+          <div className="absolute bottom-20 left-12 right-3 z-30 px-3 py-1.5 rounded-xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/40 text-white text-[10.5px] font-mono shadow-xl flex items-center justify-between gap-2 pointer-events-none animate-in fade-in duration-100">
             <div className="flex items-center gap-1.5 truncate">
               <span
                 className="w-2 h-2 rounded-full shrink-0"
@@ -447,9 +465,9 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           </div>
         )}
 
-        {/* Color Legend HUD - Compact at bottom right (hidden when atom is hovered) */}
+        {/* Color Legend HUD - Raised at bottom-20 right (hidden when atom is hovered) */}
         {!hoveredAtom && (
-          <div className="absolute bottom-2.5 right-2.5 z-10 px-2 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-white text-[10px] flex items-center gap-2 pointer-events-none">
+          <div className="absolute bottom-20 right-3 z-20 px-2.5 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white text-[10px] flex items-center gap-2 pointer-events-none">
             {showEspOverlay ? (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
