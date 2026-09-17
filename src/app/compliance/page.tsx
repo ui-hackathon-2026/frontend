@@ -138,10 +138,10 @@ export default function CompliancePage() {
                   </div>
 
                   <Link
-                    href="/simulator"
+                    href="/workbench?step=3"
                     className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-white text-[#001299] hover:bg-blue-50 text-xs font-bold transition-all"
                   >
-                    <span>Buka Stability Simulator</span>
+                    <span>Uji Kestabilan 40°C</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>

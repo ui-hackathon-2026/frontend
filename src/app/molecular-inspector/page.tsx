@@ -40,10 +40,10 @@ export default function MolecularInspectorPage() {
 
           <div className="pt-4 flex flex-wrap items-center gap-3">
             <Link
-              href="/simulator"
+              href="/workbench?step=3"
               className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-xs transition-all"
             >
-              <span>Uji Stability Simulator Fisikokimia</span>
+              <span>Uji Simulasi Kestabilan 40°C</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

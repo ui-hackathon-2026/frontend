@@ -33,7 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
   };
 
   const navFeatures = [
-    { label: "Stability Simulator", href: "/simulator", icon: Gauge },
+    { label: "Stability 40°C (In-Silico)", href: "/workbench?step=3", icon: Gauge },
     { label: "Formulation Canvas", href: "/workbench", icon: Sliders },
     { label: "Co-Pilot AI", href: "/copilot", icon: Bot },
     { label: "Pareto Optimizer", href: "/optimizer", icon: Zap },
@@ -116,7 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
           {/* Right Action CTAs */}
           <div className="hidden sm:flex items-center space-x-3">
             <Link
-              href="/simulator"
+              href="/workbench?step=3"
               className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-xs transition-all"
             >
               <Gauge className="w-3.5 h-3.5" />
@@ -153,13 +153,13 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
             </span>
             <div className="space-y-1 pt-1">
               <Link
-                href="/simulator"
+                href="/workbench?step=3"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold text-[#0018a8] bg-blue-50/70"
               >
                 <div className="flex items-center space-x-2">
                   <Gauge className="w-4 h-4 text-emerald-600" />
-                  <span>Stability &amp; PhysChem Simulator</span>
+                  <span>Simulasi 40°C (In-Silico)</span>
                 </div>
               </Link>
               <Link

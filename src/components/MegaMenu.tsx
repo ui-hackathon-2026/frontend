@@ -40,7 +40,7 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
               <ul className="space-y-3 text-sm">
                 <li>
                   <Link
-                    href="/simulator"
+                    href="/workbench?step=3"
                     onClick={onClose}
                     className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
                   >
@@ -49,10 +49,10 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div>
                       <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
-                        Stability &amp; PhysChem Simulator
+                        Simulasi Kestabilan 40°C (In-Silico)
                       </span>
                       <p className="text-xs text-slate-500 leading-snug">
-                        Simulasi kestabilan emulsi 40°C 90 hari dipercepat dengan model in-silico prediktif.
+                        Simulasi kestabilan emulsi 40°C 90 hari dipercepat terintegrasi pada Formulation Canvas.
                       </p>
                     </div>
                   </Link>
@@ -232,11 +232,11 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                   </p>
                   <div className="pt-1">
                     <Link
-                      href="/simulator"
+                      href="/workbench?step=3"
                       onClick={onClose}
                       className="text-[#0018a8] font-semibold inline-flex items-center space-x-1 hover:underline text-[11px]"
                     >
-                      <span>Buka Stability Simulator</span>
+                      <span>Buka Simulasi Kestabilan 40°C</span>
                       <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>

@@ -16,9 +16,9 @@ export default function HomePage() {
   const features = [
     {
       id: "simulator",
-      name: "Stability & PhysChem Simulator",
-      href: "/simulator",
-      desc: "Simulasi kestabilan emulsi 40°C 90 hari dipercepat dengan model fisika-kimia in-silico.",
+      name: "Simulasi Kestabilan 40°C",
+      href: "/workbench?step=3",
+      desc: "Simulasi kestabilan emulsi 40°C 90 hari dipercepat dengan model in-silico prediktif.",
       icon: Gauge,
       badge: "In-Silico ML",
       badgeColor: "bg-emerald-100 text-emerald-800",
@@ -98,11 +98,11 @@ export default function HomePage() {
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link
-              href="/simulator"
+              href="/workbench?step=3"
               className="inline-flex items-center space-x-2 px-6 py-3 rounded-full text-sm font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-sm transition-all"
             >
               <Gauge className="w-4 h-4" />
-              <span>Buka Stability &amp; PhysChem Simulator</span>
+              <span>Buka Simulasi Kestabilan 40°C</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
