@@ -19,6 +19,7 @@ import {
   FormulaModificationProposal,
 } from "@/domain/models/editor";
 import { FormulaItemResponse, FormulaVersionItem } from "@/domain/models/formula";
+import { PresetFormulaItem } from "@/domain/models/simulation";
 import { getFormulaRepository } from "@/data/di/container";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,10 +27,10 @@ const STORAGE_KEY_ACTIVE_ID = "ps_editor_active_formula_id";
 
 const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
   {
-    id: "msg-1",
+    id: "msg-welcome-v1",
     sender: "assistant",
     content:
-      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Composition panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
+      "Halo Formulator Paragon! Selamat datang di **Studio Formulasi AI**.\n\nApa target formulasi atau riset sediaan yang ingin Anda kembangkan hari ini? Silakan pilih salah satu acuan benchmark dari **Workbench** berikut untuk langsung memuat komposisi awal, atau mulai racik bahan secara mandiri melalui Library Bahan:",
     timestamp: "Baru saja",
   },
 ];
@@ -91,6 +92,7 @@ interface EditorContextType {
   deleteDraft: (draftId: string) => Promise<void>;
   saveCurrentFormula: () => Promise<void>;
   restoreVersion: (version: FormulaVersionItem) => Promise<void>;
+  applyPresetBenchmark: (preset: PresetFormulaItem) => Promise<void>;
   // Ingredients (Composition Panel)
   ingredients: EditorIngredient[];
   updateIngredientWeight: (id: string, weight: number) => void;
@@ -260,7 +262,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [activeDraft]);
 
-  // Create Brand New Empty Draft Formula
+  // Create Brand New Pristine Empty Draft Formula
   const createNewDraft = useCallback(async (customName?: string) => {
     setIsSaving(true);
     try {
@@ -268,7 +270,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const newVersionNum = drafts.length + 1;
       const newDraftName = customName || `Formula Baru ${newVersionNum}`;
 
-      // Default minimal balanced chassis (Water 100%) so backend mass-balance validation passes
+      // Default pristine empty draft with 0 ingredients
       const created = await repo.createFormula({
         name: newDraftName,
         category: "skincare",
@@ -276,15 +278,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         notes: "Draft baru kosongan",
         phases: {
           phase_a: [],
-          phase_b: [
-            {
-              inci: "Aqua",
-              name: "Demineralized Water",
-              weight_pct: 100.0,
-              is_locked: false,
-              is_solvent: true,
-            },
-          ],
+          phase_b: [],
           phase_c: [],
           phase_d: [],
         },
@@ -294,15 +288,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         id: created.formula_id,
         name: created.name,
         createdAt: "Baru saja",
-        ingredients: mapDtoToEditorIngredients(created.ingredients),
-        messages: [
-          {
-            id: `msg-init-${Date.now()}`,
-            sender: "assistant" as const,
-            content: `Draft formula baru **${created.name}** telah siap! Silakan tambahkan bahan aktif dan emulgator dari **Library Bahan** di panel kiri atau diskusikan dengan AI.`,
-            timestamp: "Baru saja",
-          },
-        ],
+        ingredients: [],
+        messages: INITIAL_MESSAGES_V1,
         artifacts: [],
       };
 
@@ -311,7 +298,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (typeof window !== "undefined") {
         localStorage.setItem(getActiveStorageKey(), newDraft.id);
       }
-      setSelectedMoleculeIngredient(newDraft.ingredients[0] || null);
+      setSelectedMoleculeIngredient(null);
       setActiveVersions([]);
       setCenterViewMode("chat");
       setActiveArtifact(null);
@@ -321,6 +308,81 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setIsSaving(false);
     }
   }, [drafts.length, getActiveStorageKey]);
+
+  // Apply Benchmark Preset from Workbench
+  const applyPresetBenchmark = useCallback(
+    async (preset: PresetFormulaItem) => {
+      if (!activeDraft) return;
+      setIsSaving(true);
+      try {
+        const repo = getFormulaRepository();
+        const mappedIngredients: EditorIngredient[] = preset.request.ingredients.map(
+          (item, idx) => ({
+            id: `ing-${item.phase.toLowerCase()}-${item.inci
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "-")}-${idx}`,
+            name: item.name || item.inci,
+            inci: item.inci,
+            phase: (item.phase as "A" | "B" | "C" | "D") || "B",
+            weightPct: item.weightPct,
+            role: item.role || inferRole(item.inci),
+            isLocked: false,
+          })
+        );
+
+        const phases = mapEditorToDtoPhases(mappedIngredients);
+        await repo.updateFormula(activeDraft.id, {
+          name: preset.name,
+          category: preset.category,
+          batch_size_g: 500,
+          phases,
+        });
+
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-preset-${Date.now()}`,
+          sender: "user",
+          content: `Saya memilih acuan benchmark: "${preset.name}".`,
+          timestamp: "Baru saja",
+        };
+
+        const assistantMsg: EditorChatMessage = {
+          id: `msg-asst-preset-${Date.now() + 1}`,
+          sender: "assistant",
+          content: `Bagus! Komposisi acuan benchmark **${preset.name}** (${preset.request.ingredients.length} bahan) telah dimuat ke kanvas 4-Fase dengan total 100.0%.\n\nKarakteristik acuan:\n- **Kategori**: ${preset.category}\n- **Catatan R&D**: ${preset.description}\n\nKomposisi siap dikembangkan! Anda dapat menyesuaikan konsentrasi bahan di Composition Panel kanan, menginspeksi konformasi molekul 3D, atau menguji stabilitas 40°C melalui menu **(+)**.`,
+          timestamp: "Baru saja",
+        };
+
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id === activeDraft.id
+              ? {
+                  ...d,
+                  name: preset.name,
+                  ingredients: mappedIngredients,
+                  messages: [...d.messages, userMsg, assistantMsg],
+                }
+              : d
+          )
+        );
+
+        if (mappedIngredients.length > 0) {
+          setSelectedMoleculeIngredient(mappedIngredients[0]);
+        }
+
+        try {
+          const vList = await repo.listVersions(activeDraft.id);
+          setActiveVersions(vList);
+        } catch {
+          // ignore
+        }
+      } catch (err) {
+        console.error("Gagal memuat preset benchmark:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [activeDraft]
+  );
 
   // Create Draft Fork (Clones active formula)
   const createDraftFork = useCallback(async () => {
@@ -791,6 +853,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         deleteDraft,
         saveCurrentFormula,
         restoreVersion,
+        applyPresetBenchmark,
         ingredients,
         updateIngredientWeight,
         toggleLockIngredient,

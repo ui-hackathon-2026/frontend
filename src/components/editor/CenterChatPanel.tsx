@@ -18,6 +18,8 @@ import {
   ArrowRight,
   Zap,
 } from "lucide-react";
+import { getSimulationRepository } from "@/data/di/container";
+import { PresetFormulaItem } from "@/domain/models/simulation";
 
 export const CenterChatPanel: React.FC = () => {
   const {

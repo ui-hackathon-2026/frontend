@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import Image from "next/image";
 import { useEditor } from "@/contexts/EditorContext";
 import { EditorIngredient } from "@/domain/models/editor";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
@@ -15,7 +16,6 @@ import {
   Plus,
   Droplets,
   Atom,
-  FlaskConical,
 } from "lucide-react";
 
 export const KitchenCompositionPanel: React.FC = () => {
@@ -28,7 +28,6 @@ export const KitchenCompositionPanel: React.FC = () => {
     selectedMoleculeIngredient,
     setSelectedMoleculeIngredient,
     setLeftPanelMode,
-    createNewDraft,
   } = useEditor();
 
   // Group by Phase
@@ -110,7 +109,7 @@ export const KitchenCompositionPanel: React.FC = () => {
               Total Formula
             </span>
             <div className="flex items-center gap-1 font-mono font-extrabold text-xs">
-              <span className={Math.abs(totalWeight - 100) < 0.1 && ingredients.length > 0 ? "text-emerald-700" : "text-amber-600"}>
+              <span className={ingredients.length === 0 ? "text-slate-400" : Math.abs(totalWeight - 100) < 0.1 ? "text-emerald-700" : "text-amber-600"}>
                 {totalWeight.toFixed(1)}%
               </span>
               {Math.abs(totalWeight - 100) < 0.1 && ingredients.length > 0 && (
@@ -136,23 +135,20 @@ export const KitchenCompositionPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
         {!activeDraft || ingredients.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#001299] flex items-center justify-center border border-blue-100 mb-1">
-              <FlaskConical className="w-6 h-6" />
+            <div className="relative w-40 h-36 mb-1">
+              <Image
+                src="/images/landing/No%20Content.png"
+                alt="Belum Ada Komposisi"
+                fill
+                sizes="160px"
+                className="object-contain"
+                priority={false}
+              />
             </div>
-            <h3 className="text-sm font-bold text-slate-900">Belum Ada Komposisi</h3>
+            <h3 className="text-sm font-bold text-[#0a192f] font-heading">Belum Ada Komposisi</h3>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
               Pilih bahan baku dari panel <strong>Library Bahan</strong> di kiri atau buat formula baru untuk menyusun sediaan kosmetik Anda.
             </p>
-            {!activeDraft && (
-              <button
-                type="button"
-                onClick={() => createNewDraft()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white transition-colors cursor-pointer shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Mulai Formula Baru</span>
-              </button>
-            )}
           </div>
         ) : (
           (["A", "B", "C", "D"] as const).map((phaseKey) => {
