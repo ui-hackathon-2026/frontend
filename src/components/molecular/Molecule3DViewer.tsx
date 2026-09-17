@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { MoleculeItem, Atom3D, ElementType } from "@/domain/models/molecule";
@@ -309,12 +309,12 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
     <div className="relative w-full rounded-3xl bg-[#070d18] border border-slate-800/80 shadow-md overflow-hidden flex flex-col font-sans">
       {/* Top Controls Overlay */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Left: Render Mode Selector */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-white/10 pointer-events-auto">
+        {/* Left: Render Mode Selector (Ball & Stick vs CPK) */}
+        <div className="flex items-center gap-1 p-1 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-white/10 pointer-events-auto w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setRenderMode("ball-and-stick")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
               renderMode === "ball-and-stick"
                 ? "bg-[#001299] text-white shadow-xs"
                 : "text-slate-400 hover:text-white"
@@ -325,24 +325,13 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           <button
             type="button"
             onClick={() => setRenderMode("space-filling")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
               renderMode === "space-filling"
                 ? "bg-[#001299] text-white shadow-xs"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             Van der Waals (CPK)
-          </button>
-          <button
-            type="button"
-            onClick={() => setRenderMode("wireframe")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              renderMode === "wireframe"
-                ? "bg-[#001299] text-white shadow-xs"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Wireframe
           </button>
         </div>
 
