@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ProjectBriefInput,
   FormulationBlueprint,
@@ -46,6 +46,7 @@ export function useProjectBrief() {
     },
   ]);
   const [isChatSending, setIsChatSending] = useState<boolean>(false);
+  const chatSessionIdRef = useRef<string | null>(null);
 
   const repository = getBriefRepository();
 
@@ -144,13 +145,47 @@ export function useProjectBrief() {
         }),
       };
       setMessages((prev) => [...prev, userMsg]);
+      const assistantId = "asst-" + Date.now();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: assistantId,
+          sender: "assistant",
+          content: "",
+          timestamp: new Date().toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
       setIsChatSending(true);
 
       try {
-        const reply = await repository.sendChatMessage(text, { brief, blueprint });
-        setMessages((prev) => [...prev, reply]);
+        await repository.sendChatMessage(
+          text,
+          { brief, blueprint },
+          {
+            sessionId: chatSessionIdRef.current ?? undefined,
+            onToken: (token) =>
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: m.content + token } : m
+                )
+              ),
+            onSession: (id) => {
+              chatSessionIdRef.current = id;
+            },
+          }
+        );
       } catch (err) {
         console.error(err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti." }
+              : m
+          )
+        );
       } finally {
         setIsChatSending(false);
       }

@@ -32,13 +32,22 @@ export interface IBriefRepository {
   getHeroIngredientsCatalog(): Promise<HeroIngredientSelection[]>;
 
   /**
-   * Send question or instruction to the Persistent AI Side Chat Assistant
+   * Send question or instruction to the Persistent AI Side Chat Assistant.
+   * When `stream` handlers are provided, tokens arrive incrementally and
+   * the resolved message contains the full accumulated reply.
    */
   sendChatMessage(
     message: string,
     activeContext: {
       brief: ProjectBriefInput;
       blueprint?: FormulationBlueprint | null;
-    }
+    },
+    stream?: ChatStreamHandlers
   ): Promise<ChatMessage>;
+}
+
+export interface ChatStreamHandlers {
+  sessionId?: string;
+  onToken?: (token: string) => void;
+  onSession?: (sessionId: string) => void;
 }

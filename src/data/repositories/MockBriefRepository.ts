@@ -1,4 +1,4 @@
-﻿import { IBriefRepository } from "@/domain/repositories/IBriefRepository";
+﻿import { IBriefRepository, ChatStreamHandlers } from "@/domain/repositories/IBriefRepository";
 import {
   ProjectBriefInput,
   FormulationBlueprint,
@@ -266,7 +266,8 @@ export class MockBriefRepository implements IBriefRepository {
     activeContext: {
       brief: ProjectBriefInput;
       blueprint?: FormulationBlueprint | null;
-    }
+    },
+    stream?: ChatStreamHandlers
   ): Promise<ChatMessage> {
     await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -308,6 +309,13 @@ export class MockBriefRepository implements IBriefRepository {
         " (" +
         activeContext.brief.brand +
         ") telah dianalisis. Rasio fase A/B/C/D sudah memenuhi standar formulasi emulsi Paragon. Anda dapat langsung menekan tombol 'Sintesis Arsitektur Formula' atau bertanya rekomendasi bahan tambahan.";
+    }
+
+    if (stream?.onToken) {
+      for (const word of reply.split(" ")) {
+        stream.onToken(word + " ");
+        await new Promise((resolve) => setTimeout(resolve, 15));
+      }
     }
 
     return {
