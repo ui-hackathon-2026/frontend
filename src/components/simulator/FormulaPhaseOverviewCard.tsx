@@ -5,18 +5,21 @@ import { IngredientInput } from "@/domain/models/simulation";
 import {
   CheckCircle2,
   AlertTriangle,
+  Scale,
 } from "lucide-react";
 
 interface FormulaPhaseOverviewCardProps {
   formulaName: string;
   ingredients: IngredientInput[];
   totalWeight: number;
+  onNormalize?: () => void;
 }
 
 export const FormulaPhaseOverviewCard: React.FC<FormulaPhaseOverviewCardProps> = ({
   formulaName,
   ingredients,
   totalWeight,
+  onNormalize,
 }) => {
   const isBalanced = Math.abs(totalWeight - 100.0) <= 0.1;
 
@@ -115,7 +118,26 @@ export const FormulaPhaseOverviewCard: React.FC<FormulaPhaseOverviewCardProps> =
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
           <span>Rasio Fase Emulsi</span>
-          <span className="font-mono text-slate-400">Total: {totalWeight.toFixed(1)}%</span>
+          <div className="flex items-center space-x-2">
+            <span
+              className={`font-mono ${
+                !isBalanced ? "text-amber-600 font-bold" : "text-slate-400"
+              }`}
+            >
+              Total: {totalWeight.toFixed(1)}%
+            </span>
+            {!isBalanced && onNormalize && (
+              <button
+                type="button"
+                onClick={onNormalize}
+                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs transition-all cursor-pointer"
+                title="Normalisasi bobot seluruh bahan secara proporsional sesuai rasio saat ini menjadi tepat 100.0%"
+              >
+                <Scale className="w-3 h-3 text-amber-700" />
+                <span>Normalisasi 100%</span>
+              </button>
+            )}
+          </div>
         </div>
         <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
           {(["A", "B", "C", "D"] as const).map((phase) => {

@@ -32,6 +32,7 @@ export default function WorkbenchPage() {
     updateIngredientWeight,
     addIngredient,
     removeIngredient,
+    normalizeComposition,
   } = useWorkbench();
 
   // Load benchmark presets on mount
@@ -261,6 +262,7 @@ export default function WorkbenchPage() {
                   formulaName={formulaName}
                   ingredients={ingredients}
                   totalWeight={totalWeightPct}
+                  onNormalize={normalizeComposition}
                 />
               </div>
             </div>

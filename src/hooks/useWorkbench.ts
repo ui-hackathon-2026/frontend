@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
@@ -373,6 +373,44 @@ export function useWorkbench() {
     });
   }, []);
 
+  // Normalize composition proportionally to 100.0% based on current ingredient ratios
+  const normalizeComposition = useCallback(() => {
+    setIngredients((prev) => {
+      const currentSum = prev.reduce((acc, i) => acc + i.weightPct, 0);
+      if (currentSum <= 0 || Math.abs(currentSum - 100.0) <= 0.05) return prev;
+
+      // Proportional scaling rounded to 2 decimal places
+      const scaled = prev.map((item) => ({
+        ...item,
+        weightPct: Math.round(((item.weightPct / currentSum) * 100) * 100) / 100,
+      }));
+
+      // Calculate any rounding residual (e.g. 99.98% or 100.02%)
+      const scaledSum = Math.round(scaled.reduce((acc, i) => acc + i.weightPct, 0) * 100) / 100;
+      const residual = Math.round((100.0 - scaledSum) * 100) / 100;
+
+      if (residual !== 0) {
+        // Adjust solvent or largest component to ensure exact 100.00% balance
+        let targetIdx = scaled.findIndex((i) => i.role === "solvent" && i.phase === "B");
+        if (targetIdx === -1) {
+          let maxVal = -1;
+          scaled.forEach((item, idx) => {
+            if (item.weightPct > maxVal) {
+              maxVal = item.weightPct;
+              targetIdx = idx;
+            }
+          });
+        }
+        if (targetIdx !== -1) {
+          scaled[targetIdx].weightPct =
+            Math.round((scaled[targetIdx].weightPct + residual) * 100) / 100;
+        }
+      }
+
+      return scaled;
+    });
+  }, []);
+
   // Add ingredient
   const addIngredient = useCallback((newIng: WorkbenchIngredient) => {
     setIngredients((prev) => [...prev, newIng]);
@@ -435,6 +473,7 @@ export function useWorkbench() {
     updateIngredientWeight,
     toggleLock,
     autoBalanceSolvent,
+    normalizeComposition,
     addIngredient,
     removeIngredient,
     saveFormula,
