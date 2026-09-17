@@ -20,6 +20,15 @@ import { IAuthRepository } from "@/domain/repositories/IAuthRepository";
 import { MockAuthRepository } from "../repositories/MockAuthRepository";
 import { HttpAuthRepository } from "../repositories/HttpAuthRepository";
 
+function shouldUseMockApi(): boolean {
+  if (process.env.NEXT_PUBLIC_USE_MOCK_API === "false") return false;
+  return (
+    process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
+    process.env.NODE_ENV === "development" ||
+    !process.env.NEXT_PUBLIC_BACKEND_URL
+  );
+}
+
 class ServiceContainer {
   private static simulationRepository: ISimulationRepository | null = null;
   private static workbenchRepository: IWorkbenchRepository | null = null;
@@ -30,10 +39,7 @@ class ServiceContainer {
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.simulationRepository = new MockSimulationRepository();
@@ -46,10 +52,7 @@ class ServiceContainer {
 
   public static getWorkbenchRepository(): IWorkbenchRepository {
     if (!this.workbenchRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.workbenchRepository = new MockWorkbenchRepository();
@@ -62,10 +65,7 @@ class ServiceContainer {
 
   public static getComplianceRepository(): IComplianceRepository {
     if (!this.complianceRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.complianceRepository = new MockComplianceRepository();
@@ -78,10 +78,7 @@ class ServiceContainer {
 
   public static getBriefRepository(): IBriefRepository {
     if (!this.briefRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.briefRepository = new MockBriefRepository();
@@ -94,10 +91,7 @@ class ServiceContainer {
 
   public static getOptimizerRepository(): IOptimizerRepository {
     if (!this.optimizerRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.optimizerRepository = new MockOptimizerRepository();
@@ -110,10 +104,7 @@ class ServiceContainer {
 
   public static getAuthRepository(): IAuthRepository {
     if (!this.authRepository) {
-      const useMock =
-        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
-        process.env.NODE_ENV === "development" ||
-        !process.env.NEXT_PUBLIC_BACKEND_URL;
+      const useMock = shouldUseMockApi();
 
       if (useMock) {
         this.authRepository = new MockAuthRepository();
