@@ -45,9 +45,6 @@ export default function OptimizerPage() {
                 position="right"
               />
             </div>
-            <p className="text-xs text-slate-500">
-              Penapisan masif ruang kombinasi formula kosmetik bebas halusinasi berbasis hukum termodinamika koloid
-            </p>
           </div>
         </div>
 
