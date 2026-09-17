@@ -437,9 +437,9 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
           className="w-full h-full block"
         />
 
-        {/* Hovered Atom Compact HUD - Sleek single-line raised at bottom-20 and offset from overlay */}
+        {/* Hovered Atom Compact HUD - Positioned cleanly at bottom */}
         {hoveredAtom && (
-          <div className="absolute bottom-20 left-12 right-3 z-30 px-3 py-1.5 rounded-xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/40 text-white text-[10.5px] font-mono shadow-xl flex items-center justify-between gap-2 pointer-events-none animate-in fade-in duration-100">
+          <div className="absolute bottom-3 left-12 right-3 z-30 px-2.5 py-1 rounded-xl bg-slate-950/95 backdrop-blur-md border border-cyan-500/40 text-white text-[10.5px] font-mono shadow-xl flex items-center justify-between gap-2 pointer-events-none animate-in fade-in duration-100">
             <div className="flex items-center gap-1.5 truncate">
               <span
                 className="w-2 h-2 rounded-full shrink-0"
@@ -465,9 +465,9 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
           </div>
         )}
 
-        {/* Color Legend HUD - Raised at bottom-20 right (hidden when atom is hovered) */}
+        {/* Color Legend HUD (CONH) - Positioned cleanly at bottom right */}
         {!hoveredAtom && (
-          <div className="absolute bottom-20 right-3 z-20 px-2.5 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white text-[10px] flex items-center gap-2 pointer-events-none">
+          <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white text-[10px] flex items-center gap-2 pointer-events-none">
             {showEspOverlay ? (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
