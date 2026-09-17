@@ -94,6 +94,7 @@ export const LeftContextualPanel: React.FC = () => {
               ? "Menampilkan struktur 3D molekul bahan yang sedang dipilih di Composition panel."
               : "Cari bahan baku kosmetik dan tambahkan ke komposisi formula di panel kanan."
           }
+          position="bottom"
           delayMs={300}
         />
       </div>

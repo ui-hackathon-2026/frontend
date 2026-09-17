@@ -89,6 +89,7 @@ export const CenterChatPanel: React.FC = () => {
 
           <DelayedInfoTooltip
             content="Klik untuk melihat dokumen dan hasil analitik yang telah dibuat pada draft ini."
+            position="bottom"
             delayMs={300}
           />
         </div>
