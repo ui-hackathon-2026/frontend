@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { MoleculeItem, Atom3D, ElementType } from "@/domain/models/molecule";
-import { RotateCw, ZoomIn, ZoomOut, Maximize2, Layers, Eye, RefreshCw, Zap } from "lucide-react";
+import { RotateCw, ZoomIn, ZoomOut, Layers, Eye, RefreshCw, Zap } from "lucide-react";
 
 export type RenderMode = "ball-and-stick" | "space-filling" | "wireframe";
 
@@ -347,11 +347,6 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
     zoomRef.current = Math.max(8, Math.min(80, zoomRef.current + zoomDelta));
   };
 
-  const resetCamera = () => {
-    rotationRef.current = { x: 0.3, y: 0.5 };
-    zoomRef.current = computeIdealZoom();
-  };
-
   return (
     <div className={`relative rounded-3xl bg-[#070d18] border border-slate-800/80 shadow-md overflow-hidden flex flex-col font-sans ${className}`}>
       {/* Top Controls Overlay - Ultra Compact */}
@@ -411,16 +406,6 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({
             title="Auto-rotate 360°"
           >
             <RefreshCw className={`w-3 h-3 ${autoRotate ? "animate-spin text-blue-400" : ""}`} />
-          </button>
-
-          {/* Reset Camera */}
-          <button
-            type="button"
-            onClick={resetCamera}
-            className="p-1 rounded-lg bg-slate-900/85 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
-            title="Reset Sudut Pandang"
-          >
-            <Maximize2 className="w-3 h-3" />
           </button>
         </div>
       </div>
