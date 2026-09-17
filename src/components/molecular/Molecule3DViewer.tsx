@@ -336,14 +336,14 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
 
   return (
     <div className="relative w-full rounded-3xl bg-[#070d18] border border-slate-800/80 shadow-md overflow-hidden flex flex-col font-sans">
-      {/* Top Controls Overlay */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+      {/* Top Controls Overlay - Ultra Compact */}
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
         {/* Left: Render Mode Selector (Ball & Stick vs CPK) */}
-        <div className="flex items-center gap-1 p-1 bg-slate-900/80 backdrop-blur-md rounded-2xl border border-white/10 pointer-events-auto w-full sm:w-auto">
+        <div className="flex items-center gap-0.5 p-0.5 bg-slate-900/85 backdrop-blur-md rounded-xl border border-white/10 pointer-events-auto w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setRenderMode("ball-and-stick")}
-            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-2 py-1 rounded-lg text-[10.5px] font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
               renderMode === "ball-and-stick"
                 ? "bg-[#001299] text-white shadow-xs"
                 : "text-slate-400 hover:text-white"
@@ -354,7 +354,7 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           <button
             type="button"
             onClick={() => setRenderMode("space-filling")}
-            className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-2 py-1 rounded-lg text-[10.5px] font-semibold whitespace-nowrap text-center transition-all cursor-pointer ${
               renderMode === "space-filling"
                 ? "bg-[#001299] text-white shadow-xs"
                 : "text-slate-400 hover:text-white"
@@ -365,19 +365,19 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
         </div>
 
         {/* Right: ESP & Viewport Controls */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-1 pointer-events-auto">
           {/* ESP Overlay Toggle */}
           <button
             type="button"
             onClick={() => setShowEspOverlay((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10.5px] font-semibold transition-all border cursor-pointer ${
               showEspOverlay
                 ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                : "bg-slate-900/80 text-slate-300 border-white/10 hover:bg-slate-800"
+                : "bg-slate-900/85 text-slate-300 border-white/10 hover:bg-slate-800"
             }`}
             title="Tampilkan peta muatan parsial elektrostatik (polar vs non-polar)"
           >
-            <Zap className="w-3.5 h-3.5" />
+            <Zap className="w-3 h-3" />
             <span>ESP Polaritas</span>
           </button>
 
@@ -385,24 +385,24 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           <button
             type="button"
             onClick={() => setAutoRotate((v) => !v)}
-            className={`p-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
+            className={`p-1 rounded-lg text-[10.5px] font-semibold transition-all border cursor-pointer ${
               autoRotate
                 ? "bg-blue-500/20 text-blue-300 border-blue-500/40"
-                : "bg-slate-900/80 text-slate-400 border-white/10 hover:text-white"
+                : "bg-slate-900/85 text-slate-400 border-white/10 hover:text-white"
             }`}
             title="Auto-rotate 360°"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${autoRotate ? "animate-spin text-blue-400" : ""}`} />
+            <RefreshCw className={`w-3 h-3 ${autoRotate ? "animate-spin text-blue-400" : ""}`} />
           </button>
 
           {/* Reset Camera */}
           <button
             type="button"
             onClick={resetCamera}
-            className="p-2 rounded-xl bg-slate-900/80 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
+            className="p-1 rounded-lg bg-slate-900/85 border border-white/10 text-slate-300 hover:text-white transition-all cursor-pointer"
             title="Reset Sudut Pandang"
           >
-            <Maximize2 className="w-3.5 h-3.5" />
+            <Maximize2 className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -419,20 +419,27 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           className="w-full h-full block"
         />
 
-        {/* Hovered Atom Tooltip HUD */}
+        {/* Hovered Atom Compact HUD - Sleek single-line at bottom */}
         {hoveredAtom && (
-          <div className="absolute bottom-4 left-4 z-10 px-3 py-2 rounded-xl bg-slate-900/90 backdrop-blur-md border border-white/15 text-white text-xs font-mono shadow-lg">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ELEMENT_PROPERTIES[hoveredAtom.element]?.color || "#fff" }} />
-              <span className="font-bold">{ELEMENT_PROPERTIES[hoveredAtom.element]?.name || hoveredAtom.element}</span>
-              <span className="text-slate-400">({hoveredAtom.element}#{hoveredAtom.id})</span>
+          <div className="absolute bottom-2.5 left-2.5 right-2.5 z-20 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-white/15 text-white text-[10.5px] font-mono shadow-md flex items-center justify-between gap-2 pointer-events-none animate-in fade-in duration-100">
+            <div className="flex items-center gap-1.5 truncate">
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: ELEMENT_PROPERTIES[hoveredAtom.element]?.color || "#fff" }}
+              />
+              <span className="font-bold text-white truncate">
+                {ELEMENT_PROPERTIES[hoveredAtom.element]?.name || hoveredAtom.element}
+              </span>
+              <span className="text-slate-400 text-[10px]">
+                ({hoveredAtom.element}#{hoveredAtom.id})
+              </span>
             </div>
-            <div className="mt-1 text-[11px] text-slate-300 space-x-2">
-              <span>x: {hoveredAtom.x.toFixed(2)}Å</span>
-              <span>y: {hoveredAtom.y.toFixed(2)}Å</span>
-              <span>z: {hoveredAtom.z.toFixed(2)}Å</span>
+            <div className="flex items-center gap-2 text-[10px] text-slate-300 shrink-0">
+              <span className="text-slate-400 font-mono">
+                ({hoveredAtom.x.toFixed(1)}, {hoveredAtom.y.toFixed(1)}, {hoveredAtom.z.toFixed(1)})Å
+              </span>
               {hoveredAtom.charge !== undefined && (
-                <span className={hoveredAtom.charge > 0 ? "text-blue-400" : "text-rose-400"}>
+                <span className={`font-semibold ${hoveredAtom.charge > 0 ? "text-blue-400" : "text-rose-400"}`}>
                   q: {hoveredAtom.charge > 0 ? `+${hoveredAtom.charge.toFixed(2)}` : hoveredAtom.charge.toFixed(2)}e⁻
                 </span>
               )}
@@ -440,44 +447,46 @@ export const Molecule3DViewer: React.FC<Molecule3DViewerProps> = ({ molecule }) 
           </div>
         )}
 
-        {/* Color Legend HUD */}
-        <div className="absolute bottom-4 right-4 z-10 p-2.5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-white text-[11px] flex items-center gap-3">
-          {showEspOverlay ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                <span className="text-slate-300">Gugus Negatif (O/N)</span>
+        {/* Color Legend HUD - Compact at bottom right (hidden when atom is hovered) */}
+        {!hoveredAtom && (
+          <div className="absolute bottom-2.5 right-2.5 z-10 px-2 py-1 rounded-xl bg-slate-900/80 backdrop-blur-md border border-white/10 text-white text-[10px] flex items-center gap-2 pointer-events-none">
+            {showEspOverlay ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span className="text-slate-300 text-[9.5px]">Negatif (O/N)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-slate-300 text-[9.5px]">Positif (H)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  <span className="text-slate-300 text-[9.5px]">Netral</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                <span className="text-slate-300">Gugus Positif (H-donor)</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#475569]" />
+                  <span className="text-slate-400 text-[10px]">C</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
+                  <span className="text-slate-400 text-[10px]">O</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+                  <span className="text-slate-400 text-[10px]">N</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#f8fafc]" />
+                  <span className="text-slate-400 text-[10px]">H</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                <span className="text-slate-300">Lipofilik Netral</span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#475569]" />
-                <span className="text-slate-400">C</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                <span className="text-slate-400">O</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#3b82f6]" />
-                <span className="text-slate-400">N</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#f8fafc]" />
-                <span className="text-slate-400">H</span>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
