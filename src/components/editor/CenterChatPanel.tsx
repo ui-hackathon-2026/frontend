@@ -57,13 +57,6 @@ export const CenterChatPanel: React.FC = () => {
     setInputPrompt("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e);
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col h-full bg-white font-sans relative">
       {/* Top Header Bar */}
@@ -306,12 +299,12 @@ export const CenterChatPanel: React.FC = () => {
       <div className="p-4 border-t border-slate-200/80 bg-white shrink-0">
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
           {/* Action (+) Button */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               disabled={!activeDraft}
               onClick={() => setPlusMenuOpen(!plusMenuOpen)}
-              className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-600 hover:text-[#001299] hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-600 hover:text-[#001299] hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
               title="Aksi Komputasi Formula: Simulasi 40°C, Pareto NSGA-II, BPOM Sentinel"
             >
               <Plus className="w-4 h-4" />
@@ -329,25 +322,25 @@ export const CenterChatPanel: React.FC = () => {
           </div>
 
           {/* Text Input Area */}
-          <div className="flex-1 relative">
-            <textarea
-              rows={1}
+          <div className="flex-1 relative flex items-center">
+            <input
+              type="text"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
               disabled={!activeDraft}
               placeholder={
                 activeDraft
                   ? "Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
                   : "Buat formula terlebih dahulu untuk memulai obrolan..."
               }
-              className="w-full py-2.5 pl-4 pr-12 text-xs bg-slate-50 border border-slate-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-11 pl-4 pr-12 text-xs bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-normal"
             />
 
             <button
               type="submit"
               disabled={!inputPrompt.trim() || !activeDraft}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-[#001299] text-white hover:bg-[#000e7a] disabled:opacity-40 disabled:hover:bg-[#001299] transition-all cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-[#001299] text-white hover:bg-[#000e7a] disabled:opacity-40 disabled:hover:bg-[#001299] transition-all cursor-pointer flex items-center justify-center shrink-0"
+              aria-label="Kirim Pesan"
             >
               <Send className="w-3.5 h-3.5" />
             </button>
