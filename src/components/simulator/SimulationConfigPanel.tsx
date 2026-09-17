@@ -124,34 +124,6 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
             Konfigurasi Simulasi Stabilitas
           </h2>
         </div>
-
-        {/* Selected Formula Mini-Card */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-          <div className="min-w-0 pr-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Formula yang Diuji:
-            </span>
-            <p className="font-bold text-slate-900 truncate">{formulaName}</p>
-          </div>
-          <div className="flex items-center space-x-3 shrink-0 text-right">
-            <div>
-              <span className="text-[10px] text-slate-400 block">Komponen</span>
-              <span className="font-mono font-bold text-slate-800">
-                {ingredientsCount} Bahan
-              </span>
-            </div>
-            <div className="pl-3 border-l border-slate-200">
-              <span className="text-[10px] text-slate-400 block">Total Bobot</span>
-              <span
-                className={`font-mono font-bold ${
-                  isBalanced ? "text-emerald-700" : "text-amber-700"
-                }`}
-              >
-                {totalWeight.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* 1. Incubator Temperature Selection */}
