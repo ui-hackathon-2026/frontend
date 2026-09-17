@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getSimulationRepository } from "@/data/di/container";
 import { PresetFormulaItem } from "@/domain/models/simulation";
+import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 
 export default function WorkbenchPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -209,7 +210,16 @@ export default function WorkbenchPage() {
                   <FlaskConical className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-[#0a192f] block">{formulaName}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-[#0a192f] block">{formulaName}</span>
+                    <DelayedInfoTooltip
+                      content={`Σ Total: ${totalWeightPct.toFixed(1)}% ${
+                        Math.abs(totalWeightPct - 100.0) <= 0.1 ? "(Balanced)" : "(Unbalanced)"
+                      }`}
+                      delayMs={1000}
+                      position="right"
+                    />
+                  </div>
                   <span className="text-[11px] text-slate-500">Kategori: {category}</span>
                 </div>
               </div>

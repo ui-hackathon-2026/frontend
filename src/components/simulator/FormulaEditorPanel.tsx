@@ -84,24 +84,11 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
 
   return (
     <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3.5">
-      {/* Formula Header */}
-      <div className="border-b border-slate-100 pb-2.5 space-y-0.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-            Formula Parameter Controls
-          </span>
-
-          {/* Total Weight Indicator - Revealed on 1-second hover */}
-          <DelayedInfoTooltip
-            content={`Σ Total: ${totalWeight.toFixed(1)}% ${isBalanced ? "(Balanced)" : "(Unbalanced)"}`}
-            delayMs={1000}
-            position="left"
-          />
-        </div>
-
-        <h2 className="text-lg font-bold text-[#0a192f] font-heading truncate">
-          {formulaName}
-        </h2>
+      {/* Formula Parameter Controls Header */}
+      <div className="border-b border-slate-100 pb-2">
+        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+          Formula Parameter Controls
+        </span>
       </div>
 
       {/* Interactive Ingredient List */}
