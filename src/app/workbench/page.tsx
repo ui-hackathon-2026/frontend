@@ -4,355 +4,256 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { useWorkbench } from "@/hooks/useWorkbench";
-import { WorkbenchIngredientRow } from "@/components/workbench/WorkbenchIngredientRow";
-import { WorkbenchPhaseTabs } from "@/components/workbench/WorkbenchPhaseTabs";
-import { WorkbenchRadarCard } from "@/components/workbench/WorkbenchRadarCard";
-import { AddIngredientSidebar } from "@/components/simulator/AddIngredientSidebar";
+import { FormulaEditorPanel } from "@/components/simulator/FormulaEditorPanel";
+import { FormulaPhaseOverviewCard } from "@/components/simulator/FormulaPhaseOverviewCard";
 import {
   Sliders,
-  Sparkles,
-  Plus,
-  RefreshCw,
-  Save,
   CheckCircle2,
-  AlertTriangle,
   ArrowRight,
-  Layers,
-  FlaskConical,
+  ChevronRight,
   RotateCcw,
-  Gauge,
-  Info,
+  FlaskConical,
 } from "lucide-react";
-import { FormulationPhase } from "@/domain/models/workbench";
+import { getSimulationRepository } from "@/data/di/container";
+import { PresetFormulaItem } from "@/domain/models/simulation";
 
 export default function WorkbenchPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [presets, setPresets] = useState<PresetFormulaItem[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
 
   const {
     formulaName,
     setFormulaName,
     category,
-    setCategory,
-    batchSizeG,
-    setBatchSizeG,
     ingredients,
     totalWeightPct,
-    isBalanced,
-    phaseSummaries,
-    calculatedMoments,
     updateIngredientWeight,
-    toggleLock,
-    autoBalanceSolvent,
     addIngredient,
     removeIngredient,
-    saveFormula,
-    isSaving,
-    saveSuccess,
-    activePhaseFilter,
-    setActivePhaseFilter,
   } = useWorkbench();
 
-  // Filter ingredients according to active phase tab
-  const filteredIngredients = useMemo(() => {
-    if (activePhaseFilter === "ALL") {
-      const order: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
-      return [...ingredients].sort((a, b) => {
-        const oA = order[a.phase] ?? 99;
-        const oB = order[b.phase] ?? 99;
-        if (oA !== oB) return oA - oB;
-        return a.name.localeCompare(b.name);
-      });
-    }
-    return ingredients.filter((i) => i.phase === activePhaseFilter);
-  }, [ingredients, activePhaseFilter]);
+  // Load benchmark presets on mount
+  React.useEffect(() => {
+    const simRepo = getSimulationRepository();
+    simRepo.getPresetFormulas().then((data) => {
+      setPresets(data);
+      if (data.length > 0 && !selectedPresetId) {
+        setSelectedPresetId(data[0].id);
+      }
+    });
+  }, [selectedPresetId]);
 
-  // Phase color mappings
-  const phaseColors: Record<FormulationPhase, { badge: string; border: string }> = {
-    A: { badge: "bg-amber-100 text-amber-800", border: "border-l-amber-400" },
-    B: { badge: "bg-blue-100 text-blue-800", border: "border-l-blue-400" },
-    C: { badge: "bg-purple-100 text-purple-800", border: "border-l-purple-400" },
-    D: { badge: "bg-emerald-100 text-emerald-800", border: "border-l-emerald-400" },
-  };
+  const selectedPreset = presets.find((p) => p.id === selectedPresetId);
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
       <Navbar brandName="Paragon Studio" />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 py-6 w-full space-y-6">
-        {/* Step Wizard Header */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 w-full py-6 space-y-6">
+        {/* Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
           <div className="space-y-1">
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
-              Interactive 4-Phase Formulation Canvas
+              Next-Gen Interactive Formulation Canvas
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm">
-              Meja kerja formulator kosmetik dengan auto-balancing solvent dan live sensitivity radar.
+              Meja kerja digital presisi 4-fase: Pilih formula benchmark awal atau rancang komposisi bahan secara langsung.
             </p>
           </div>
 
           {/* Stepper Tabs */}
-          <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
+          <div className="flex items-center space-x-2 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
                 currentStep === 1
-                  ? "bg-white text-[#0a192f] shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#0a192f] shadow-xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              1. Komposisi 4-Fase
+              <span
+                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  currentStep === 1 ? "bg-[#001299] text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                1
+              </span>
+              <span>Pilih Benchmark</span>
             </button>
+
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
                 currentStep === 2
-                  ? "bg-white text-[#0a192f] shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#0a192f] shadow-xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              2. Radar Fisikokimia
+              <span
+                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  currentStep === 2 ? "bg-[#001299] text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                2
+              </span>
+              <span>Komposisi 4-Fase</span>
             </button>
           </div>
         </div>
 
-        {/* Global Formula Header Info & Balance Bar */}
-        <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Title & Category Input */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#001299] flex items-center justify-center shrink-0 border border-blue-100">
-                <FlaskConical className="w-5 h-5" />
-              </div>
-              <div className="min-w-0 space-y-0.5">
-                <input
-                  type="text"
-                  value={formulaName}
-                  onChange={(e) => setFormulaName(e.target.value)}
-                  className="font-bold text-base sm:text-lg text-[#0a192f] bg-transparent border-b border-dashed border-slate-300 focus:border-blue-600 focus:outline-none w-full max-w-md truncate"
-                />
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>Kategori: <strong>{category}</strong></span>
-                  <span>•</span>
-                  <span>Batch: <strong>{batchSizeG}g</strong></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Balance Status & Actions */}
-            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-              <button
-                type="button"
-                onClick={autoBalanceSolvent}
-                title="Sesuaikan pelarut Aqua agar total tepat 100.00%"
-                className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-[#001299] hover:bg-blue-100 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Auto-Balance Aqua</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={saveFormula}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-              >
-                {saveSuccess ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Tersimpan</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-3.5 h-3.5" />
-                    <span>{isSaving ? "Menyimpan..." : "Simpan Formula"}</span>
-                  </>
-                )}
-              </button>
-
-              <Link
-                href="/simulator"
-                className="px-3.5 py-1.5 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
-              >
-                <span>Uji di Simulator</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Simple Clean Mass Equilibrium Progress Bar */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-                <span>Simpleks Massa Formula:</span>
-                <span className={`font-mono ${isBalanced ? "text-emerald-700" : "text-amber-700"}`}>
-                  {totalWeightPct.toFixed(2)}% / 100.00%
-                </span>
-              </span>
-              <span className="text-[11px] text-slate-400">
-                {isBalanced ? "Seimbang (Siap Diuji)" : "Belum 100% (Gunakan Auto-Balance)"}
-              </span>
-            </div>
-
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
-              <div
-                className="h-full bg-amber-400 transition-all"
-                style={{ width: `${Math.min(100, phaseSummaries.A.totalWeightPct)}%` }}
-                title={`Fase A: ${phaseSummaries.A.totalWeightPct}%`}
-              />
-              <div
-                className="h-full bg-blue-400 transition-all"
-                style={{ width: `${Math.min(100, phaseSummaries.B.totalWeightPct)}%` }}
-                title={`Fase B: ${phaseSummaries.B.totalWeightPct}%`}
-              />
-              <div
-                className="h-full bg-purple-400 transition-all"
-                style={{ width: `${Math.min(100, phaseSummaries.C.totalWeightPct)}%` }}
-                title={`Fase C: ${phaseSummaries.C.totalWeightPct}%`}
-              />
-              <div
-                className="h-full bg-emerald-400 transition-all"
-                style={{ width: `${Math.min(100, phaseSummaries.D.totalWeightPct)}%` }}
-                title={`Fase D: ${phaseSummaries.D.totalWeightPct}%`}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* STEP 1: Interactive Composition Editor */}
+        {/* STEP 1: PILIH FORMULA BENCHMARK */}
         {currentStep === 1 && (
-          <div className="space-y-4">
-            {/* Phase Selector Tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <WorkbenchPhaseTabs
-                summaries={phaseSummaries}
-                activePhase={activePhaseFilter}
-                onSelectPhase={setActivePhaseFilter}
-              />
-
-              <button
-                type="button"
-                onClick={() => setIsSidebarOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-center shrink-0 shadow-xs"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Bahan Lab</span>
-              </button>
-            </div>
-
-            {/* Ingredients Table / List */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Daftar Bahan ({filteredIngredients.length} item)
-                </span>
-                <span className="text-[11px] text-slate-400">
-                  Gunakan slider atau ketik persentase presisi
-                </span>
-              </div>
-
-              <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
-                {filteredIngredients.map((item) => (
-                  <WorkbenchIngredientRow
-                    key={item.id}
-                    ingredient={item}
-                    onUpdateWeight={updateIngredientWeight}
-                    onToggleLock={toggleLock}
-                    onRemove={removeIngredient}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom Step Switcher */}
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs text-slate-500">
-                Formula tersusun dalam 4 fase baku kosmetik.
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentStep(2)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-all flex items-center gap-1.5"
-              >
-                <span>Lihat Analisis Radar Fisikokimia</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: Sensitivity Radar & Advanced Physicochemical */}
-        {currentStep === 2 && (
-          <div className="space-y-6">
-            <WorkbenchRadarCard
-              metrics={calculatedMoments.radar}
-              sorRatio={calculatedMoments.sorRatio}
-              deltaHlb={calculatedMoments.deltaHlb}
-              systemHlb={calculatedMoments.systemHlb}
-              requiredHlb={calculatedMoments.requiredHlb}
-              estimatedCogsPerKgIdr={calculatedMoments.estimatedCogsPerKgIdr}
-              averageTkdnPct={calculatedMoments.averageTkdnPct}
-            />
-
-            {/* Phase Breakdown Summary Card */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {Object.values(phaseSummaries).map((p) => (
-                <div
-                  key={p.phase}
-                  className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-800">{p.label}</span>
-                    <span className="text-xs font-mono font-bold text-[#0a192f]">
-                      {p.totalWeightPct.toFixed(1)}%
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500">{p.name}</p>
-                  <div className="text-[10px] text-slate-400">
-                    {p.itemCount} bahan terdaftar
-                  </div>
+          <section className="space-y-6 animate-in fade-in duration-200">
+            <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                    Tahap 1 dari 2
+                  </span>
+                  <h2 className="text-xl font-bold text-[#0a192f] font-heading">
+                    Pilih Formula Benchmark Teruji
+                  </h2>
                 </div>
-              ))}
-            </div>
+                <span className="text-xs text-slate-500">
+                  Pilih salah satu formula acuan di bawah untuk memuat komposisi ke kanvas
+                </span>
+              </div>
 
-            {/* Navigation CTA */}
-            <div className="flex items-center justify-between pt-2">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all"
-              >
-                Kembali ke Komposisi 4-Fase
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {presets.map((preset) => {
+                  const isSelected = selectedPresetId === preset.id;
+                  return (
+                    <div
+                      key={preset.id}
+                      onClick={() => {
+                        setSelectedPresetId(preset.id);
+                        setFormulaName(preset.name);
+                      }}
+                      className={`text-left p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                        isSelected
+                          ? "border-[#001299] bg-blue-50/40 ring-2 ring-[#001299]/20 shadow-xs"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-[#001299] bg-blue-100/70 px-2 py-0.5 rounded-md">
+                            {preset.category}
+                          </span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-[#001299]" />}
+                        </div>
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">
+                          {preset.name}
+                        </h3>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          {preset.description}
+                        </p>
+                      </div>
 
-              <Link
-                href="/simulator"
-                className="px-5 py-2.5 rounded-xl bg-[#001299] text-white text-xs font-semibold hover:bg-[#000e7a] transition-all flex items-center gap-2 shadow-xs"
-              >
-                <span>Mulai Simulasi Uji Oven 40°C</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{preset.request.ingredients.length} Komponen Bahan</span>
+                        <span
+                          className={`font-semibold ${
+                            isSelected ? "text-[#001299]" : "text-slate-400"
+                          }`}
+                        >
+                          {isSelected ? "Terpilih" : "Klik untuk Memilih"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action Bar for Step 1 */}
+              {selectedPreset && (
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Formula Terpilih:
+                    </span>
+                    <h4 className="text-sm font-bold text-[#0a192f]">
+                      {selectedPreset.name}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Basis sediaan: {selectedPreset.category} • {selectedPreset.request.ingredients.length} Bahan Baku Lab
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-semibold text-sm bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>Lanjut ke Komposisi 4-Fase</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Modal / Drawer Tambah Bahan */}
-        <AddIngredientSidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          currentIngredients={ingredients}
-          onAddIngredient={(newIng) => {
-            addIngredient({
-              ...newIng,
-              isLocked: false,
-              costPerKgIdr: 75000,
-              tkdnPct: 40,
-            });
-            setIsSidebarOpen(false);
-          }}
-        />
+        {/* STEP 2: KOMPOSISI FORMULA & DISTRIBUSI FASE */}
+        {currentStep === 2 && (
+          <section className="space-y-6 animate-in fade-in duration-200">
+            {/* Top Sub-header with back button */}
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#001299] flex items-center justify-center border border-blue-100">
+                  <FlaskConical className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-[#0a192f] block">{formulaName}</span>
+                  <span className="text-[11px] text-slate-500">Kategori: {category}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="text-xs font-semibold text-slate-600 hover:text-[#001299] flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Ganti Benchmark</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column (5 Cols): Formula Parameter Controls */}
+              <div className="lg:col-span-5 space-y-6">
+                <FormulaEditorPanel
+                  formulaName={formulaName}
+                  ingredients={ingredients}
+                  totalWeight={totalWeightPct}
+                  onUpdateWeight={updateIngredientWeight}
+                  onAddIngredient={addIngredient}
+                  onRemoveIngredient={removeIngredient}
+                  onProceedToConfig={() => {
+                    // Navigate to Simulator to perform in-silico test
+                    window.location.href = "/simulator";
+                  }}
+                />
+              </div>
+
+              {/* Right Column (7 Cols): Phase Distribution Overview */}
+              <div className="lg:col-span-7 space-y-6">
+                <FormulaPhaseOverviewCard
+                  formulaName={formulaName}
+                  ingredients={ingredients}
+                  totalWeight={totalWeightPct}
+                />
+              </div>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
