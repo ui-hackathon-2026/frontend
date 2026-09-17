@@ -141,4 +141,63 @@ h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
   }
 }
 
+/* ==========================================================================
+   PARAGON ENTERPRISE RANGE SLIDER STYLING
+   ========================================================================== */
+.paragon-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.paragon-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #001299;
+  box-shadow: 0 2px 6px rgba(0, 18, 153, 0.28), 0 0 0 1px rgba(0, 18, 153, 0.08);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.paragon-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 10px rgba(0, 18, 153, 0.38), 0 0 0 4px rgba(0, 18, 153, 0.12);
+}
+
+.paragon-range-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 18, 153, 0.4), 0 0 0 6px rgba(0, 18, 153, 0.16);
+}
+
+.paragon-range-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid #001299;
+  box-shadow: 0 2px 6px rgba(0, 18, 153, 0.28);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.paragon-range-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 10px rgba(0, 18, 153, 0.38), 0 0 0 4px rgba(0, 18, 153, 0.12);
+}
+
+.paragon-range-slider::-moz-range-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.05);
+}
+
 

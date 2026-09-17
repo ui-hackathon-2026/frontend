@@ -227,58 +227,102 @@ export default function ProjectBriefPage() {
                 </div>
 
                 {/* Sensory & Viscosity Controls */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-2 border-t border-slate-100">
+                  {/* Viscosity Slider */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Target Viskositas Aliran
                       </label>
-                      <span className="text-xs font-mono font-bold text-[#001299]">
+                      <span className="text-xs font-mono font-bold text-[#001299] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
                         {brief.targetViscosityMpaS.toLocaleString("id-ID")} mPa·s
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min="1500"
-                      max="15000"
-                      step="250"
-                      value={brief.targetViscosityMpaS}
-                      onChange={(e) =>
-                        updateBriefField("targetViscosityMpaS", parseInt(e.target.value))
-                      }
-                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#001299]"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>1.500 (Serum)</span>
-                      <span>5.500 (Gel-Cream)</span>
-                      <span>15.000 (Thick Cream)</span>
+
+                    <div className="py-1">
+                      <input
+                        type="range"
+                        min="1500"
+                        max="15000"
+                        step="250"
+                        value={brief.targetViscosityMpaS}
+                        onChange={(e) =>
+                          updateBriefField("targetViscosityMpaS", parseInt(e.target.value))
+                        }
+                        className="paragon-range-slider"
+                        style={{
+                          background: `linear-gradient(to right, #001299 0%, #001299 ${Math.round(
+                            ((brief.targetViscosityMpaS - 1500) / (15000 - 1500)) * 100
+                          )}%, #e2e8f0 ${Math.round(
+                            ((brief.targetViscosityMpaS - 1500) / (15000 - 1500)) * 100
+                          )}%, #e2e8f0 100%)`,
+                        }}
+                      />
+                    </div>
+
+                    {/* 2-Liner Readable Indicators */}
+                    <div className="flex justify-between pt-0.5">
+                      <div className="text-left">
+                        <span className="block text-xs font-mono font-bold text-slate-800">1.500</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Serum</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-xs font-mono font-bold text-slate-800">5.500</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Gel-Cream</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-xs font-mono font-bold text-slate-800">15.000</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Thick Cream</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* COGS Ceiling Slider */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                         Batas Plafon Biaya Bahan (COGS)
                       </label>
-                      <span className="text-xs font-mono font-bold text-[#001299]">
+                      <span className="text-xs font-mono font-bold text-[#001299] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
                         Rp {brief.maxCogsIdrPerKg.toLocaleString("id-ID")} / kg
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min="20000"
-                      max="85000"
-                      step="1000"
-                      value={brief.maxCogsIdrPerKg}
-                      onChange={(e) =>
-                        updateBriefField("maxCogsIdrPerKg", parseInt(e.target.value))
-                      }
-                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#001299]"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>Rp 20.000 (Mass Emina)</span>
-                      <span>Rp 45.000 (Prestige Wardah)</span>
-                      <span>Rp 85.000 (Pro Make Over)</span>
+
+                    <div className="py-1">
+                      <input
+                        type="range"
+                        min="20000"
+                        max="85000"
+                        step="1000"
+                        value={brief.maxCogsIdrPerKg}
+                        onChange={(e) =>
+                          updateBriefField("maxCogsIdrPerKg", parseInt(e.target.value))
+                        }
+                        className="paragon-range-slider"
+                        style={{
+                          background: `linear-gradient(to right, #001299 0%, #001299 ${Math.round(
+                            ((brief.maxCogsIdrPerKg - 20000) / (85000 - 20000)) * 100
+                          )}%, #e2e8f0 ${Math.round(
+                            ((brief.maxCogsIdrPerKg - 20000) / (85000 - 20000)) * 100
+                          )}%, #e2e8f0 100%)`,
+                        }}
+                      />
+                    </div>
+
+                    {/* 2-Liner Readable Indicators */}
+                    <div className="flex justify-between pt-0.5">
+                      <div className="text-left">
+                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 20.000</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Mass (Emina)</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 45.000</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Prestige (Wardah)</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 85.000</span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Pro (Make Over)</span>
+                      </div>
                     </div>
                   </div>
                 </div>
