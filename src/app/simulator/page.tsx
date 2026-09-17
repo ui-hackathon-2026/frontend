@@ -9,6 +9,8 @@ import { DropletDistributionChart } from "@/components/simulator/DropletDistribu
 import { RheologyViscosityCard } from "@/components/simulator/RheologyViscosityCard";
 import { ThermodynamicAuditCard } from "@/components/simulator/ThermodynamicAuditCard";
 import { FormulaEditorPanel } from "@/components/simulator/FormulaEditorPanel";
+import { FormulaPhaseOverviewCard } from "@/components/simulator/FormulaPhaseOverviewCard";
+import { SimulationConfigPanel } from "@/components/simulator/SimulationConfigPanel";
 import {
   Gauge,
   Sliders,
@@ -24,7 +26,7 @@ import {
 } from "lucide-react";
 
 export default function SimulatorPage() {
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   const {
     presets,
@@ -32,6 +34,8 @@ export default function SimulatorPage() {
     selectPreset,
     currentRequest,
     updateIngredientWeight,
+    addIngredient,
+    removeIngredient,
     updateTemperature,
     updateDuration,
     updateEngine,
@@ -76,9 +80,10 @@ export default function SimulatorPage() {
           </p>
         </section>
 
-        {/* 2-Step Progress Indicator */}
+        {/* 3-Step Progress Indicator */}
         <section className="p-2 sm:p-3 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4 text-xs sm:text-sm font-medium">
+            {/* Step 1 */}
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
@@ -102,6 +107,7 @@ export default function SimulatorPage() {
 
             <ChevronRight className="w-4 h-4 text-slate-300" />
 
+            {/* Step 2 */}
             <button
               type="button"
               onClick={() => {
@@ -122,13 +128,39 @@ export default function SimulatorPage() {
               >
                 2
               </span>
-              <span>Simulation Console</span>
+              <span>Komposisi Formula</span>
             </button>
 
-            {currentStep === 2 && currentRequest && (
-              <div className="hidden md:flex items-center space-x-2 pl-3 border-l border-slate-200">
+            <ChevronRight className="w-4 h-4 text-slate-300" />
+
+            {/* Step 3 */}
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedPresetId) setCurrentStep(3);
+              }}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                currentStep === 3
+                  ? "bg-blue-50 text-[#0018a8] font-bold"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                  currentStep === 3
+                    ? "bg-[#0018a8] text-white"
+                    : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                3
+              </span>
+              <span>Konfigurasi &amp; Simulasi</span>
+            </button>
+
+            {(currentStep === 2 || currentStep === 3) && currentRequest && (
+              <div className="hidden lg:flex items-center space-x-2 pl-3 border-l border-slate-200">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formula:</span>
-                <span className="text-xs font-mono font-semibold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200/80 max-w-[280px] truncate">
+                <span className="text-xs font-mono font-semibold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-md border border-slate-200/80 max-w-[240px] truncate">
                   {currentRequest.formulaName}
                 </span>
               </div>
@@ -142,7 +174,18 @@ export default function SimulatorPage() {
               className="text-xs font-semibold text-slate-700 hover:text-[#0018a8] flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-              <span>Ganti Formula Benchmark</span>
+              <span>Ganti Benchmark</span>
+            </button>
+          )}
+
+          {currentStep === 3 && (
+            <button
+              type="button"
+              onClick={() => setCurrentStep(2)}
+              className="text-xs font-semibold text-slate-700 hover:text-[#0018a8] flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Ubah Komposisi Bahan</span>
             </button>
           )}
         </section>
@@ -240,7 +283,7 @@ export default function SimulatorPage() {
                     onClick={() => setCurrentStep(2)}
                     className="inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl font-semibold text-sm bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
                   >
-                    <span>Lanjut ke Simulation Console</span>
+                    <span>Lanjut ke Komposisi Formula</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -249,10 +292,9 @@ export default function SimulatorPage() {
           </section>
         )}
 
-        {/* STEP 2: SIMULATION CONSOLE */}
+        {/* STEP 2: FORMULA COMPOSITION & PHASE OVERVIEW */}
         {currentStep === 2 && (
           <section className="space-y-6 animate-in fade-in duration-200">
-            {/* Main Work Area: 2-Column Responsive Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column (5 Cols): Formula Parameter Controls */}
               <div className="lg:col-span-5 space-y-6">
@@ -260,16 +302,54 @@ export default function SimulatorPage() {
                   <FormulaEditorPanel
                     formulaName={currentRequest.formulaName}
                     ingredients={currentRequest.ingredients}
+                    totalWeight={totalWeight}
+                    onUpdateWeight={updateIngredientWeight}
+                    onAddIngredient={addIngredient}
+                    onRemoveIngredient={removeIngredient}
+                    onProceedToConfig={() => setCurrentStep(3)}
+                  />
+                ) : (
+                  <div className="p-8 rounded-3xl bg-white border border-slate-200 text-center text-slate-400">
+                    Memuat data formula...
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column (7 Cols): Phase Distribution & Readiness Overview */}
+              <div className="lg:col-span-7 space-y-6">
+                {currentRequest && (
+                  <FormulaPhaseOverviewCard
+                    formulaName={currentRequest.formulaName}
+                    ingredients={currentRequest.ingredients}
+                    totalWeight={totalWeight}
+                  />
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* STEP 3: SIMULATION CONFIGURATION & LIVE RESULTS */}
+        {currentStep === 3 && (
+          <section className="space-y-6 animate-in fade-in duration-200">
+            {/* Main Work Area: 2-Column Responsive Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column (5 Cols): 3-Config Panel */}
+              <div className="lg:col-span-5 space-y-6">
+                {currentRequest ? (
+                  <SimulationConfigPanel
+                    formulaName={currentRequest.formulaName}
+                    ingredientsCount={currentRequest.ingredients.length}
+                    totalWeight={totalWeight}
                     temperatureC={currentRequest.temperatureC}
                     durationDays={currentRequest.durationDays}
                     engine={currentRequest.engine}
-                    totalWeight={totalWeight}
                     isLoading={isLoading}
-                    onUpdateWeight={updateIngredientWeight}
                     onUpdateTemperature={updateTemperature}
                     onUpdateDuration={updateDuration}
                     onUpdateEngine={updateEngine}
                     onRunSimulation={runSimulation}
+                    onBackToFormula={() => setCurrentStep(2)}
                   />
                 ) : (
                   <div className="p-8 rounded-3xl bg-white border border-slate-200 text-center text-slate-400">
@@ -371,7 +451,7 @@ export default function SimulatorPage() {
                     Chamber Uji In-Silico Siap
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Pilih formula benchmark di atas atau sesuaikan proporsi bahan di panel kiri, kemudian tekan tombol{" "}
+                    Atur suhu inkubator, durasi, dan mesin AI di panel kiri, kemudian tekan tombol{" "}
                     <strong className="text-[#0018a8] font-semibold">&quot;Simulate 40°C Stability&quot;</strong>{" "}
                     untuk menjalankan prediksi fisikokimia secara in-silico.
                   </p>

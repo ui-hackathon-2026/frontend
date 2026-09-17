@@ -1,52 +1,79 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   IngredientInput,
-  SimulationEngineType,
 } from "@/domain/models/simulation";
 import {
   Sliders,
-  Play,
-  RotateCcw,
-  Thermometer,
-  Calendar,
-  Cpu,
-  Layers,
-  Info,
+  Plus,
+  Trash2,
+  ArrowRight,
 } from "lucide-react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { AddIngredientSidebar } from "./AddIngredientSidebar";
 
 interface FormulaEditorPanelProps {
   formulaName: string;
   ingredients: IngredientInput[];
-  temperatureC: number;
-  durationDays: number;
-  engine: SimulationEngineType;
   totalWeight: number;
-  isLoading: boolean;
   onUpdateWeight: (id: string, weight: number) => void;
-  onUpdateTemperature: (temp: number) => void;
-  onUpdateDuration: (days: number) => void;
-  onUpdateEngine: (engine: SimulationEngineType) => void;
-  onRunSimulation: () => void;
+  onAddIngredient: (ingredient: IngredientInput) => void;
+  onRemoveIngredient: (id: string) => void;
+  onProceedToConfig: () => void;
 }
 
 export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
   formulaName,
   ingredients,
-  temperatureC,
-  durationDays,
-  engine,
   totalWeight,
-  isLoading,
   onUpdateWeight,
-  onUpdateTemperature,
-  onUpdateDuration,
-  onUpdateEngine,
-  onRunSimulation,
+  onAddIngredient,
+  onRemoveIngredient,
+  onProceedToConfig,
 }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const isBalanced = Math.abs(totalWeight - 100.0) <= 0.1;
+
+  // Silent Magnetic Snap to 100% when close
+  const handleWeightChange = (id: string, rawVal: number) => {
+    const ing = ingredients.find((i) => i.id === id);
+    if (!ing) return;
+    const maxVal = ing.role === "solvent" ? 90 : 25;
+    const clamped = Math.max(0, Math.min(maxVal, Math.round(rawVal * 100) / 100));
+
+    // Calculate sum of all other ingredients
+    const otherTotal = ingredients.reduce(
+      (sum, item) => (item.id === id ? sum : sum + item.weightPct),
+      0
+    );
+    const snapWeight = Math.round((100.0 - otherTotal) * 100) / 100;
+
+    let finalWeight = clamped;
+
+    // Silently snap if candidate weight is within ±0.45% of 100.0% equilibrium
+    if (
+      snapWeight >= 0 &&
+      snapWeight <= maxVal &&
+      Math.abs(clamped - snapWeight) <= 0.45
+    ) {
+      finalWeight = snapWeight;
+    }
+
+    onUpdateWeight(id, finalWeight);
+  };
+
+  // Sort ingredients strictly by Phase order (A -> B -> C -> D)
+  const sortedIngredients = useMemo(() => {
+    const phaseOrder: Record<string, number> = { A: 1, B: 2, C: 3, D: 4 };
+    return [...ingredients].sort((a, b) => {
+      const orderA = phaseOrder[a.phase] ?? 99;
+      const orderB = phaseOrder[b.phase] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [ingredients]);
 
   const phaseColors: Record<string, { badge: string; border: string }> = {
     A: { badge: "bg-amber-100 text-amber-800", border: "border-l-amber-400" },
@@ -56,164 +83,159 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
   };
 
   return (
-    <div className="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
+    <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3.5">
       {/* Formula Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-        <div>
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+      <div className="border-b border-slate-100 pb-2.5 space-y-0.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
             Formula Parameter Controls
           </span>
-          <h2 className="text-xl font-bold text-[#0a192f] font-heading mt-0.5">
-            {formulaName}
-          </h2>
-        </div>
 
-        {/* Total Weight Indicator - Revealed on 1-second hover */}
-        <div className="flex items-center">
+          {/* Total Weight Indicator - Revealed on 1-second hover */}
           <DelayedInfoTooltip
             content={`Σ Total: ${totalWeight.toFixed(1)}% ${isBalanced ? "(Balanced)" : "(Unbalanced)"}`}
             delayMs={1000}
             position="left"
           />
         </div>
-      </div>
 
-      {/* Environmental & Engine Conditions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#f8fafc] border border-slate-200/80 text-xs">
-        {/* Temperature Toggle */}
-        <div className="space-y-1.5">
-          <label className="flex items-center space-x-1.5 font-bold text-slate-700">
-            <Thermometer className="w-3.5 h-3.5 text-blue-600" />
-            <span>Incubator Temp:</span>
-          </label>
-          <div className="flex rounded-xl bg-white border border-slate-200 p-0.5">
-            {[25, 40, 50].map((temp) => (
-              <button
-                key={temp}
-                type="button"
-                onClick={() => onUpdateTemperature(temp)}
-                className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                  temperatureC === temp
-                    ? "bg-[#0018a8] text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {temp}°C
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Duration Days */}
-        <div className="space-y-1.5">
-          <label className="flex items-center space-x-1.5 font-bold text-slate-700">
-            <Calendar className="w-3.5 h-3.5 text-blue-600" />
-            <span>Simulated Period:</span>
-          </label>
-          <div className="flex rounded-xl bg-white border border-slate-200 p-0.5">
-            {[30, 60, 90].map((days) => (
-              <button
-                key={days}
-                type="button"
-                onClick={() => onUpdateDuration(days)}
-                className={`flex-1 py-1 text-xs font-semibold rounded-lg transition-all ${
-                  durationDays === days
-                    ? "bg-[#0018a8] text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                {days} Hari
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Engine Type */}
-        <div className="space-y-1.5">
-          <label className="flex items-center space-x-1.5 font-bold text-slate-700">
-            <Cpu className="w-3.5 h-3.5 text-blue-600" />
-            <span>AI Model Engine:</span>
-          </label>
-          <div className="flex rounded-xl bg-white border border-slate-200 p-0.5">
-            <button
-              type="button"
-              onClick={() => onUpdateEngine("LIGHTGBM_GPU")}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition-all ${
-                engine === "LIGHTGBM_GPU"
-                  ? "bg-[#0018a8] text-white shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              LightGBM (&lt;1ms)
-            </button>
-            <button
-              type="button"
-              onClick={() => onUpdateEngine("DEEP_COLLOID_GNN")}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-lg transition-all ${
-                engine === "DEEP_COLLOID_GNN"
-                  ? "bg-[#0018a8] text-white shadow-2xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Colloid GNN
-            </button>
-          </div>
-        </div>
+        <h2 className="text-lg font-bold text-[#0a192f] font-heading truncate">
+          {formulaName}
+        </h2>
       </div>
 
       {/* Interactive Ingredient List */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           <span>Komposisi Bahan Aktif &amp; Eksipien</span>
           <span>Bobot (%)</span>
         </div>
 
-        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-          {ingredients.map((ing) => {
+        <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1">
+          {sortedIngredients.map((ing, index) => {
             const style = phaseColors[ing.phase] || phaseColors.B;
+            const isConfirming = confirmDeleteId === ing.id;
+            const maxVal = ing.role === "solvent" ? 90 : 25;
+
             return (
               <div
                 key={ing.id}
-                className={`p-3 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 transition-all border-l-4 ${style.border} space-y-2`}
+                className={`p-2 sm:p-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-all border-l-4 ${style.border} space-y-1`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2 min-w-0 flex-1">
                     <span
-                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md ${style.badge}`}
+                      className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 leading-none ${style.badge}`}
                     >
                       Fase {ing.phase}
                     </span>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 leading-tight">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-slate-900 leading-tight truncate">
                         {ing.name}
                       </h4>
-                      <p className="text-[10px] font-mono text-slate-400">
+                      <p className="text-[10px] font-mono text-slate-400 truncate">
                         {ing.inci}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-mono font-bold text-slate-800 w-12 text-right">
-                      {ing.weightPct.toFixed(1)}%
-                    </span>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    {/* Precise Number Input Field */}
+                    <div className="flex items-center bg-slate-50 border border-slate-200/90 rounded-lg px-1.5 py-0.5 focus-within:ring-1.5 focus-within:ring-[#0018a8] focus-within:border-[#0018a8] focus-within:bg-white transition-all shadow-2xs">
+                      <input
+                        type="number"
+                        min="0"
+                        max={maxVal}
+                        step="0.05"
+                        value={ing.weightPct}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          handleWeightChange(ing.id, isNaN(val) ? 0 : val);
+                        }}
+                        className="w-12 text-xs font-mono font-bold text-slate-900 text-right bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[10px] font-mono text-slate-400 pl-0.5">%</span>
+                    </div>
+
+                    {/* Reddish Trash Button with Confirmation Popover */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmDeleteId(isConfirming ? null : ing.id)
+                        }
+                        title={`Hapus ${ing.name}`}
+                        className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                          isConfirming
+                            ? "bg-rose-600 text-white border-rose-600 ring-2 ring-rose-200 shadow-xs"
+                            : "text-rose-500 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 border-rose-200/80 shadow-2xs"
+                        }`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Small Confirmation Modal / Popover */}
+                      {isConfirming && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-20 cursor-default"
+                            onClick={() => setConfirmDeleteId(null)}
+                          />
+                          <div
+                            className={`absolute right-0 z-30 w-44 p-2.5 rounded-xl bg-white border border-slate-200 shadow-xl text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150 ${
+                              index >= sortedIngredients.length - 2
+                                ? "bottom-full mb-1.5 origin-bottom-right"
+                                : "top-full mt-1.5 origin-top-right"
+                            }`}
+                          >
+                            <div className="space-y-0.5 text-left">
+                              <p className="font-bold text-slate-900 leading-tight">
+                                Hapus bahan ini?
+                              </p>
+                              <p className="text-[10px] text-slate-500 truncate">
+                                {ing.name}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1.5 pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="flex-1 py-1 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px] transition-colors cursor-pointer text-center"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onRemoveIngredient(ing.id);
+                                  setConfirmDeleteId(null);
+                                }}
+                                className="flex-1 py-1 px-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-[11px] shadow-2xs transition-colors cursor-pointer text-center"
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Slider for interactive adjustments */}
-                <div className="flex items-center space-x-3 pt-0.5">
+                {/* Clean Slider for interactive adjustments */}
+                <div className="flex items-center space-x-2.5 pt-0.5">
                   <input
                     type="range"
                     min="0"
-                    max={ing.role === "solvent" ? "90" : "15"}
+                    max={maxVal}
                     step="0.1"
                     value={ing.weightPct}
                     onChange={(e) =>
-                      onUpdateWeight(ing.id, parseFloat(e.target.value))
+                      handleWeightChange(ing.id, parseFloat(e.target.value))
                     }
                     className="flex-1 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0018a8]"
                   />
-                  <span className="text-[10px] text-slate-400 font-mono w-14 text-right">
+                  <span className="text-[10px] text-slate-400 font-mono w-14 text-right truncate">
                     {ing.role}
                   </span>
                 </div>
@@ -221,31 +243,37 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
             );
           })}
         </div>
-      </div>
 
-      {/* Big Action Button */}
-      <div className="pt-2">
+        {/* Add Ingredient Button */}
         <button
           type="button"
-          onClick={onRunSimulation}
-          disabled={isLoading}
-          className="w-full flex items-center justify-center space-x-2.5 py-3.5 px-6 rounded-2xl font-semibold text-sm bg-[#001299] hover:bg-[#000e7a] text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          onClick={() => setIsSidebarOpen(true)}
+          className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-slate-200 hover:border-[#0018a8] hover:bg-blue-50/40 text-slate-600 hover:text-[#0018a8] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
         >
-          {isLoading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Menghitung Stabilitas Fisikokimia In-Silico...</span>
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 fill-current" />
-              <span>
-                Simulate 40°C Stability ({temperatureC}°C, {durationDays} Hari)
-              </span>
-            </>
-          )}
+          <Plus className="w-3.5 h-3.5" />
+          <span>Tambah Bahan Baru dari Katalog</span>
         </button>
       </div>
+
+      {/* Proceed to Configuration Button */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={onProceedToConfig}
+          className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl font-semibold text-xs bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+        >
+          <span>Lanjut ke Konfigurasi Parameter Uji</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Slide-over Sidebar Drawer */}
+      <AddIngredientSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        currentIngredients={ingredients}
+        onAddIngredient={onAddIngredient}
+      />
     </div>
   );
 };

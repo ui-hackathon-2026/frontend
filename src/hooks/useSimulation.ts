@@ -58,7 +58,7 @@ export function useSimulation() {
       if (!prev) return null;
       const updatedIngredients = prev.ingredients.map((ing) => {
         if (ing.id === ingredientId) {
-          return { ...ing, weightPct: Math.round(newWeight * 10) / 10 };
+          return { ...ing, weightPct: Math.round(newWeight * 100) / 100 };
         }
         return ing;
       });
@@ -79,6 +79,28 @@ export function useSimulation() {
   const updateEngine = useCallback((engine: SimulationEngineType) => {
     setResult(null);
     setCurrentRequest((prev) => (prev ? { ...prev, engine } : null));
+  }, []);
+
+  const addIngredient = useCallback((newIng: IngredientInput) => {
+    setResult(null);
+    setCurrentRequest((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ingredients: [...prev.ingredients, newIng],
+      };
+    });
+  }, []);
+
+  const removeIngredient = useCallback((ingredientId: string) => {
+    setResult(null);
+    setCurrentRequest((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        ingredients: prev.ingredients.filter((i) => i.id !== ingredientId),
+      };
+    });
   }, []);
 
   const runSimulation = useCallback(async () => {
@@ -107,6 +129,8 @@ export function useSimulation() {
     selectPreset,
     currentRequest,
     updateIngredientWeight,
+    addIngredient,
+    removeIngredient,
     updateTemperature,
     updateDuration,
     updateEngine,
