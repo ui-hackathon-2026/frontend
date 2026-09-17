@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
+import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 
 export default function CompliancePage() {
   const {
@@ -28,13 +29,15 @@ export default function CompliancePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 w-full py-6 space-y-6">
         {/* Top Header Banner */}
         <div className="border-b border-slate-200/80 pb-4">
-          <div className="space-y-1">
+          <div className="flex items-center space-x-2">
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
               Enterprise BPOM, Halal HAS 23000 &amp; TKDN Sentinel
             </h1>
-            <p className="text-slate-500 text-xs sm:text-sm max-w-4xl leading-relaxed">
-              Audit forensik regulasi otomatis: penarikan pasal hukum Perka BPOM No. 17/2022 via Vector RAG, verifikasi titik kritis halal, dan rekomendasi substitusi bahan hayati lokal.
-            </p>
+            <DelayedInfoTooltip
+              content="Audit forensik regulasi otomatis: penarikan pasal hukum Perka BPOM No. 17/2022 via Vector RAG, verifikasi titik kritis halal, dan rekomendasi substitusi bahan hayati lokal."
+              delayMs={1000}
+              position="right"
+            />
           </div>
         </div>
 

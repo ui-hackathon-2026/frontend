@@ -54,13 +54,15 @@ export default function WorkbenchPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 w-full py-6 space-y-6">
         {/* Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
-          <div className="space-y-1">
+          <div className="flex items-center space-x-2">
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
               Next-Gen Interactive Formulation Canvas
             </h1>
-            <p className="text-slate-500 text-xs sm:text-sm">
-              Meja kerja digital presisi 4-fase: Pilih formula benchmark awal atau rancang komposisi bahan secara langsung.
-            </p>
+            <DelayedInfoTooltip
+              content="Meja kerja digital presisi 4-fase: Pilih formula benchmark awal atau rancang komposisi bahan secara langsung."
+              delayMs={1000}
+              position="right"
+            />
           </div>
 
           {/* Stepper Tabs */}

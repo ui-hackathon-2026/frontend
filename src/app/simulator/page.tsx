@@ -19,6 +19,7 @@ import {
   FlaskConical,
   RotateCcw,
 } from "lucide-react";
+import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 
 export default function SimulatorPage() {
   const {
@@ -45,10 +46,12 @@ export default function SimulatorPage() {
               <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
                 In-Silico 40°C Stability &amp; Physicochemical Simulator
               </h1>
+              <DelayedInfoTooltip
+                content="Simulasi uji kestabilan fisik emulsi 90 hari di climatic chamber (40°C / 75% RH) berbasis model prediksi ML Cloudeka."
+                delayMs={1000}
+                position="right"
+              />
             </div>
-            <p className="text-slate-500 text-xs sm:text-sm">
-              Simulasi uji kestabilan fisik emulsi 90 hari di climatic chamber (40°C / 75% RH) berbasis model prediksi ML Cloudeka.
-            </p>
           </div>
 
           {/* Quick Handshake Link to Workbench */}
