@@ -1,54 +1,123 @@
-import Link from "next/link";
+"use client";
+
+import React from "react";
 import { Navbar } from "@/components/Navbar";
-import { Zap, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useParetoOptimizer } from "@/hooks/useParetoOptimizer";
+import { OptimizationMetricsBar } from "@/components/optimizer/OptimizationMetricsBar";
+import { ParetoObjectivesCard } from "@/components/optimizer/ParetoObjectivesCard";
+import { ParetoFrontierScatterPlot } from "@/components/optimizer/ParetoFrontierScatterPlot";
+import { ParetoCandidateComparisonCard } from "@/components/optimizer/ParetoCandidateComparisonCard";
+import { ShimmerSkeleton } from "@/components/ShimmerWidget";
+import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { Zap } from "lucide-react";
 
 export default function OptimizerPage() {
+  const {
+    preset,
+    selectPreset,
+    weights,
+    updateWeight,
+    constraints,
+    updateConstraint,
+    projectionAxis,
+    setProjectionAxis,
+    selectedCandidateId,
+    setSelectedCandidateId,
+    isOptimizing,
+    result,
+    error,
+    handleRunOptimization,
+  } = useParetoOptimizer();
+
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
       <Navbar brandName="Paragon Studio" />
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-12 w-full space-y-8">
-        <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
 
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-[#0a192f] tracking-tight font-heading">
-              Pareto Frontier NSGA-II Multi-Objective Optimizer
-            </h1>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
-              Mengevaluasi hingga 50.000 kombinasi formula dalam 2 detik untuk menemukan titik kompromi terbaik (*sweet spot*) antara Kestabilan 40°C, Biaya (COGS), Viskositas, dan Skor Hayati Lokal (TKDN ≥ 40%).
+      <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
+        {/* Header Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0a192f] tracking-tight font-heading">
+                Pareto Multi-Objective Optimizer
+              </h1>
+              <DelayedInfoTooltip
+                content="Algoritma genetika Optuna NSGA-II mengevaluasi hingga 50.000 kombinasi rasio formula pada simpleks massa 100% untuk menemukan titik kompromi optimal (sweet spot) stabilitas, biaya, viskositas, dan TKDN."
+                delayMs={300}
+                position="right"
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              Penapisan masif ruang kombinasi formula kosmetik bebas halusinasi berbasis hukum termodinamika koloid
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 text-xs">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1.5">
-              <span className="font-bold text-slate-700 block">Komputasi Paralel Presisi</span>
-              <p className="text-slate-500">
-                NSGA-II Genetic Algorithm dengan fungsi evaluasi kelayakan formula secara simultan.
-              </p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1.5">
-              <span className="font-bold text-slate-700 block">3D Interactive Scatter</span>
-              <p className="text-slate-500">
-                Visualisasi sebaran titik Pareto 3D (Stabilitas vs Biaya vs TKDN) dengan 3 kandidat juara.
-              </p>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1.5">
-              <span className="font-bold text-slate-700 block">Evaluasi Mutu</span>
-              <p className="text-slate-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Non-dominated sorting multi-kriteria
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-4 flex flex-wrap items-center gap-3">
-            <Link
-              href="/workbench?step=3"
-              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-[#001299] text-white hover:bg-[#000e7a] shadow-xs transition-all"
-            >
-              <span>Uji Simulasi Kestabilan 40°C</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+            {error}
+          </div>
+        )}
+
+        {/* Performance Metrics Bar */}
+        {result && (
+          <OptimizationMetricsBar
+            trialsEvaluated={result.trialsEvaluated}
+            executionTimeMs={result.executionTimeMs}
+            nonDominatedCount={result.nonDominatedCount}
+            hypervolumeScore={result.hypervolumeScore}
+            isOptimizing={isOptimizing}
+          />
+        )}
+
+        {/* Constraints & Objectives Card */}
+        <ParetoObjectivesCard
+          preset={preset}
+          onSelectPreset={selectPreset}
+          weights={weights}
+          onUpdateWeight={updateWeight}
+          constraints={constraints}
+          onUpdateConstraint={updateConstraint}
+          isOptimizing={isOptimizing}
+          onRunOptimization={handleRunOptimization}
+        />
+
+        {/* SKELETON LOADING STATE (Strictly active when isOptimizing) */}
+        {isOptimizing && (
+          <div className="p-6 sm:p-8 rounded-3xl bg-white border border-blue-200/80 shadow-xs space-y-6 animate-in fade-in duration-200">
+            <div className="space-y-2">
+              <ShimmerSkeleton className="w-56 h-5 rounded-lg" />
+              <ShimmerSkeleton className="w-80 h-4 rounded-md" />
+            </div>
+            <ShimmerSkeleton className="h-72 rounded-2xl" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <ShimmerSkeleton className="h-28 rounded-2xl" />
+              <ShimmerSkeleton className="h-28 rounded-2xl" />
+              <ShimmerSkeleton className="h-28 rounded-2xl" />
+            </div>
+          </div>
+        )}
+
+        {/* INTERACTIVE PARETO SCATTER PLOT & CANDIDATES (When ready) */}
+        {!isOptimizing && result && (
+          <>
+            <ParetoFrontierScatterPlot
+              points={result.points}
+              topCandidates={result.topCandidates}
+              selectedCandidateId={selectedCandidateId}
+              onSelectCandidate={(id) => setSelectedCandidateId(id)}
+              projectionAxis={projectionAxis}
+              onChangeProjectionAxis={setProjectionAxis}
+            />
+
+            <ParetoCandidateComparisonCard
+              candidates={result.topCandidates}
+              selectedCandidateId={selectedCandidateId || "A"}
+              onSelectCandidate={(id) => setSelectedCandidateId(id)}
+            />
+          </>
+        )}
       </main>
     </div>
   );

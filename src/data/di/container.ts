@@ -12,11 +12,16 @@ import { IBriefRepository } from "@/domain/repositories/IBriefRepository";
 import { MockBriefRepository } from "../repositories/MockBriefRepository";
 import { HttpBriefRepository } from "../repositories/HttpBriefRepository";
 
+import { IOptimizerRepository } from "@/domain/repositories/IOptimizerRepository";
+import { MockOptimizerRepository } from "../repositories/MockOptimizerRepository";
+import { HttpOptimizerRepository } from "../repositories/HttpOptimizerRepository";
+
 class ServiceContainer {
   private static simulationRepository: ISimulationRepository | null = null;
   private static workbenchRepository: IWorkbenchRepository | null = null;
   private static complianceRepository: IComplianceRepository | null = null;
   private static briefRepository: IBriefRepository | null = null;
+  private static optimizerRepository: IOptimizerRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -82,6 +87,22 @@ class ServiceContainer {
     return this.briefRepository!;
   }
 
+  public static getOptimizerRepository(): IOptimizerRepository {
+    if (!this.optimizerRepository) {
+      const useMock =
+        process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
+        process.env.NODE_ENV === "development" ||
+        !process.env.NEXT_PUBLIC_BACKEND_URL;
+
+      if (useMock) {
+        this.optimizerRepository = new MockOptimizerRepository();
+      } else {
+        this.optimizerRepository = new HttpOptimizerRepository();
+      }
+    }
+    return this.optimizerRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -91,4 +112,5 @@ export const getSimulationRepository = () => ServiceContainer.getSimulationRepos
 export const getWorkbenchRepository = () => ServiceContainer.getWorkbenchRepository();
 export const getComplianceRepository = () => ServiceContainer.getComplianceRepository();
 export const getBriefRepository = () => ServiceContainer.getBriefRepository();
+export const getOptimizerRepository = () => ServiceContainer.getOptimizerRepository();
 
