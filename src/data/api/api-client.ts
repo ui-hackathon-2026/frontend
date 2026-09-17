@@ -13,8 +13,28 @@ export class ApiError extends Error {
   }
 }
 
+function extractErrorMessage(status: number, errorData: unknown, endpoint: string): string {
+  if (typeof errorData === "object" && errorData !== null) {
+    const record = errorData as Record<string, unknown>;
+    if (typeof record.detail === "string") {
+      if (record.detail === "invalid credentials") return "Email atau password salah. Silakan periksa kembali.";
+      if (record.detail === "email already registered") return "Email sudah terdaftar. Silakan masuk atau gunakan email lain.";
+      if (record.detail === "invalid refresh token") return "Sesi telah berakhir. Silakan masuk kembali.";
+      return record.detail;
+    }
+    if (Array.isArray(record.detail) && record.detail.length > 0) {
+      const first = record.detail[0];
+      if (typeof first === "object" && first !== null && "msg" in first) {
+        return String(first.msg);
+      }
+    }
+    if (typeof record.message === "string") return record.message;
+  }
+  return `Permintaan ke ${endpoint} gagal (Status: ${status})`;
+}
+
 export interface ApiClientConfig {
-  baseUrl: string;
+  baseUrl?: string;
   timeoutMs?: number;
 }
 
@@ -54,11 +74,8 @@ export class ApiClient {
         } catch {
           errorData = await response.text();
         }
-        throw new ApiError(
-          `Request to ${endpoint} failed with status ${response.status}`,
-          response.status,
-          errorData
-        );
+        const friendlyMsg = extractErrorMessage(response.status, errorData, endpoint);
+        throw new ApiError(friendlyMsg, response.status, errorData);
       }
 
       return (await response.json()) as TRes;
@@ -66,10 +83,10 @@ export class ApiClient {
       clearTimeout(timeoutId);
       if (err instanceof ApiError) throw err;
       if (err instanceof Error && err.name === "AbortError") {
-        throw new ApiError(`Request to ${endpoint} timed out`, 408);
+        throw new ApiError(`Koneksi ke backend timed out (${this.timeoutMs / 1000}s)`, 408);
       }
       throw new ApiError(
-        err instanceof Error ? err.message : "Network error",
+        err instanceof Error ? err.message : "Terjadi kesalahan jaringan",
         500,
         err
       );
@@ -98,11 +115,8 @@ export class ApiClient {
         } catch {
           errorData = await response.text();
         }
-        throw new ApiError(
-          `Request to ${endpoint} failed with status ${response.status}`,
-          response.status,
-          errorData
-        );
+        const friendlyMsg = extractErrorMessage(response.status, errorData, endpoint);
+        throw new ApiError(friendlyMsg, response.status, errorData);
       }
 
       return (await response.json()) as TRes;
@@ -110,7 +124,7 @@ export class ApiClient {
       clearTimeout(timeoutId);
       if (err instanceof ApiError) throw err;
       throw new ApiError(
-        err instanceof Error ? err.message : "Network error",
+        err instanceof Error ? err.message : "Terjadi kesalahan jaringan",
         500,
         err
       );
@@ -140,11 +154,8 @@ export class ApiClient {
         } catch {
           errorData = await response.text();
         }
-        throw new ApiError(
-          `Request to ${endpoint} failed with status ${response.status}`,
-          response.status,
-          errorData
-        );
+        const friendlyMsg = extractErrorMessage(response.status, errorData, endpoint);
+        throw new ApiError(friendlyMsg, response.status, errorData);
       }
 
       return (await response.json()) as TRes;
@@ -152,7 +163,7 @@ export class ApiClient {
       clearTimeout(timeoutId);
       if (err instanceof ApiError) throw err;
       throw new ApiError(
-        err instanceof Error ? err.message : "Network error",
+        err instanceof Error ? err.message : "Terjadi kesalahan jaringan",
         500,
         err
       );
