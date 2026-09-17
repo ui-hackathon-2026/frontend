@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { useWorkbench } from "@/hooks/useWorkbench";
 import { FormulaEditorPanel } from "@/components/simulator/FormulaEditorPanel";
 import { FormulaPhaseOverviewCard } from "@/components/simulator/FormulaPhaseOverviewCard";
+import { Step3SimulationConsole } from "@/components/workbench/Step3SimulationConsole";
 import {
   Sliders,
   CheckCircle2,
@@ -13,13 +15,19 @@ import {
   ChevronRight,
   RotateCcw,
   FlaskConical,
+  Gauge,
 } from "lucide-react";
 import { getSimulationRepository } from "@/data/di/container";
 import { PresetFormulaItem } from "@/domain/models/simulation";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 
-export default function WorkbenchPage() {
-  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+function WorkbenchContent() {
+  const searchParams = useSearchParams();
+  const initialStepParam = searchParams.get("step");
+  const initialStep: 1 | 2 | 3 =
+    initialStepParam === "3" ? 3 : initialStepParam === "2" ? 2 : 1;
+
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(initialStep);
   const [presets, setPresets] = useState<PresetFormulaItem[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
 
@@ -60,18 +68,18 @@ export default function WorkbenchPage() {
               Next-Gen Interactive Formulation Canvas
             </h1>
             <DelayedInfoTooltip
-              content="Meja kerja digital presisi 4-fase: Pilih formula benchmark awal atau rancang komposisi bahan secara langsung."
+              content="Alur kerja terpadu 3-tahap: Pilih benchmark, rancang formula 4-fase, dan uji kestabilan emulsi in-silico 40°C (90 Hari)."
               delayMs={300}
               position="right"
             />
           </div>
 
-          {/* Stepper Tabs */}
-          <div className="flex items-center space-x-2 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
+          {/* 3-Step Navigation Stepper Tabs */}
+          <div className="flex items-center space-x-1.5 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 currentStep === 1
                   ? "bg-white text-[#0a192f] shadow-xs font-bold"
                   : "text-slate-500 hover:text-slate-900"
@@ -92,7 +100,7 @@ export default function WorkbenchPage() {
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 currentStep === 2
                   ? "bg-white text-[#0a192f] shadow-xs font-bold"
                   : "text-slate-500 hover:text-slate-900"
@@ -106,6 +114,27 @@ export default function WorkbenchPage() {
                 2
               </span>
               <span>Komposisi 4-Fase</span>
+            </button>
+
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+
+            <button
+              type="button"
+              onClick={() => setCurrentStep(3)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                currentStep === 3
+                  ? "bg-white text-[#0a192f] shadow-xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span
+                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  currentStep === 3 ? "bg-[#001299] text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                3
+              </span>
+              <span>Simulasi 40°C (90 Hari)</span>
             </button>
           </div>
         </div>
@@ -250,8 +279,7 @@ export default function WorkbenchPage() {
                   onAddIngredient={addIngredient}
                   onRemoveIngredient={removeIngredient}
                   onProceedToConfig={() => {
-                    // Navigate to Simulator to perform in-silico test
-                    window.location.href = "/simulator";
+                    setCurrentStep(3);
                   }}
                 />
               </div>
@@ -268,7 +296,34 @@ export default function WorkbenchPage() {
             </div>
           </section>
         )}
+
+        {/* STEP 3: SIMULASI KESTABILAN 40°C (90 HARI) */}
+        {currentStep === 3 && (
+          <section className="space-y-6 animate-in fade-in duration-200">
+            <Step3SimulationConsole
+              formulaName={formulaName}
+              category={category}
+              ingredients={ingredients}
+              totalWeight={totalWeightPct}
+              onBackToComposition={() => setCurrentStep(2)}
+            />
+          </section>
+        )}
       </main>
     </div>
+  );
+}
+
+export default function WorkbenchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center text-xs text-slate-500 font-sans">
+          Memuat Formulation Canvas...
+        </div>
+      }
+    >
+      <WorkbenchContent />
+    </Suspense>
   );
 }

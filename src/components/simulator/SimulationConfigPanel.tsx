@@ -112,70 +112,61 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
       </div>
 
       {/* 1. Incubator Temperature Selection */}
-      <div className="space-y-2">
+      {/* 1 & 2. Fixed Conditions: 40°C & 90 Hari (Calibrated ML surrogate) */}
+      <div className="space-y-3">
         <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-          <Thermometer className="w-4 h-4 text-blue-600" />
-          <span>1. Suhu Inkubator (Incubator Temperature)</span>
+          <Thermometer className="w-4 h-4 text-[#001299]" />
+          <span>Kondisi Baku Uji Stabilitas BPOM (Terkalibrasi)</span>
         </label>
-        <div className="grid grid-cols-3 gap-2.5">
-          {tempOptions.map((opt) => {
-            const isSelected = temperatureC === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onUpdateTemperature(opt.value)}
-                className={`py-3 px-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-center space-x-2 ${
-                  isSelected
-                    ? "border-[#0018a8] bg-blue-50/70 text-[#0018a8] ring-2 ring-[#0018a8]/20 shadow-xs font-bold"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/60 font-semibold"
-                }`}
-              >
-                <span className="text-sm font-heading">{opt.label}</span>
-                {opt.recommended && (
-                  <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
-                    Standar
-                  </span>
-                )}
-              </button>
-            );
-          })}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3.5 rounded-2xl border border-blue-200/70 bg-blue-50/40 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">
+                Suhu Inkubator
+              </span>
+              <span className="text-[9px] font-bold text-[#001299] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
+                Baku BPOM
+              </span>
+            </div>
+            <div className="flex items-baseline space-x-1.5">
+              <span className="text-xl font-extrabold text-[#0a192f] font-heading">
+                40°C
+              </span>
+              <span className="text-[11px] text-slate-500 font-medium">(±2°C)</span>
+            </div>
+            <span className="text-[10px] text-slate-500 block">
+              Uji Percepatan Zona IVb
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl border border-blue-200/70 bg-blue-50/40 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">
+                Durasi Uji
+              </span>
+              <span className="text-[9px] font-bold text-[#001299] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
+                Standar
+              </span>
+            </div>
+            <div className="flex items-baseline space-x-1.5">
+              <span className="text-xl font-extrabold text-[#0a192f] font-heading">
+                90 Hari
+              </span>
+              <span className="text-[11px] text-slate-500 font-medium">(3 Bulan)</span>
+            </div>
+            <span className="text-[10px] text-slate-500 block">
+              Setara 24 bulan real-time
+            </span>
+          </div>
         </div>
+
+        <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+          <strong>Catatan Tim AI/ML:</strong> Model surrogate dikalibrasi presisi pada kondisi spesifik <strong>40°C / 90 Hari</strong> sesuai pedoman percepatan stabilitas sediaan kosmetik BPOM.
+        </p>
       </div>
 
-      {/* 2. Simulated Duration Selection */}
-      <div className="space-y-2">
-        <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-          <Calendar className="w-4 h-4 text-blue-600" />
-          <span>2. Periode Uji Simulasi (Simulated Period)</span>
-        </label>
-        <div className="grid grid-cols-3 gap-2.5">
-          {durationOptions.map((opt) => {
-            const isSelected = durationDays === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onUpdateDuration(opt.value)}
-                className={`py-3 px-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-center space-x-2 ${
-                  isSelected
-                    ? "border-[#0018a8] bg-blue-50/70 text-[#0018a8] ring-2 ring-[#0018a8]/20 shadow-xs font-bold"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/60 font-semibold"
-                }`}
-              >
-                <span className="text-sm font-heading">{opt.label}</span>
-                {opt.recommended && (
-                  <span className="text-[9px] font-bold text-[#0018a8] bg-blue-100/80 px-1.5 py-0.5 rounded-md">
-                    BPOM
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. AI Model Engine Selection */}
+      {/* 3. AI Model Engine Selection: LightGBM Active, GNN Disabled */}
       <div className="space-y-2.5">
         <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
           <Cpu className="w-4 h-4 text-blue-600" />
@@ -183,22 +174,38 @@ export const SimulationConfigPanel: React.FC<SimulationConfigPanelProps> = ({
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {engineOptions.map((eng) => {
+            const isGNN = eng.id === "DEEP_COLLOID_GNN";
             const isSelected = engine === eng.id;
             return (
               <div
                 key={eng.id}
-                onClick={() => onUpdateEngine(eng.id)}
-                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-1.5 ${
-                  isSelected
-                    ? "border-[#0018a8] bg-blue-50/50 ring-2 ring-[#0018a8]/20 shadow-xs"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                onClick={() => {
+                  if (!isGNN) onUpdateEngine(eng.id);
+                }}
+                className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between space-y-1.5 ${
+                  isGNN
+                    ? "border-slate-200 bg-slate-50/70 opacity-60 cursor-not-allowed select-none"
+                    : isSelected
+                    ? "border-[#0018a8] bg-blue-50/50 ring-2 ring-[#0018a8]/20 shadow-xs cursor-pointer"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60 cursor-pointer"
                 }`}
+                title={
+                  isGNN
+                    ? "Mesin Deep Colloid GNN saat ini sedang dalam proses pelatihan di klaster Lintasarta GPU Cloudeka."
+                    : undefined
+                }
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                    {eng.badge}
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      isGNN
+                        ? "bg-amber-100 text-amber-800"
+                        : "text-[#0018a8] bg-blue-100/80"
+                    }`}
+                  >
+                    {isGNN ? "Segera Hadir" : eng.badge}
                   </span>
-                  <span className="text-[10px] font-mono font-bold text-[#0018a8]">
+                  <span className="text-[10px] font-mono font-bold text-slate-500">
                     {eng.speed}
                   </span>
                 </div>

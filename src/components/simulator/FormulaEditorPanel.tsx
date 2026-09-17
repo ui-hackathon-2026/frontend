@@ -241,14 +241,14 @@ export const FormulaEditorPanel: React.FC<FormulaEditorPanelProps> = ({
         </button>
       </div>
 
-      {/* Proceed to Configuration Button */}
+      {/* Proceed to Simulation Button */}
       <div className="pt-1">
         <button
           type="button"
           onClick={onProceedToConfig}
           className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl font-semibold text-xs bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
         >
-          <span>Lanjut ke Konfigurasi Parameter Uji</span>
+          <span>Lanjut ke Simulasi 40°C (90 Hari)</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
