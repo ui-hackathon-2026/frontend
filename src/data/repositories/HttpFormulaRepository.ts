@@ -30,63 +30,14 @@ export class HttpFormulaRepository implements IFormulaRepository {
     formulaId: string,
     payload: FormulaUpdatePayload
   ): Promise<FormulaItemResponse> {
-    const controller = new AbortController();
-    const timeoutMs = 15000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/formulas/${formulaId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        let errData: any;
-        try {
-          errData = await response.json();
-        } catch {
-          errData = await response.text();
-        }
-        throw new Error(
-          typeof errData?.detail === "string"
-            ? errData.detail
-            : `Gagal memperbarui formula (${response.status})`
-        );
-      }
-      return (await response.json()) as FormulaItemResponse;
-    } catch (err) {
-      clearTimeout(timeoutId);
-      throw err;
-    }
+    return this.client.put<FormulaUpdatePayload, FormulaItemResponse>(
+      `/api/v1/formulas/${formulaId}`,
+      payload
+    );
   }
 
   async deleteFormula(formulaId: string): Promise<void> {
-    const controller = new AbortController();
-    const timeoutMs = 15000;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/formulas/${formulaId}`, {
-        method: "DELETE",
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok && response.status !== 204) {
-        throw new Error(`Gagal menghapus formula (${response.status})`);
-      }
-    } catch (err) {
-      clearTimeout(timeoutId);
-      throw err;
-    }
+    return this.client.delete(`/api/v1/formulas/${formulaId}`);
   }
 
   async listVersions(formulaId: string): Promise<FormulaVersionItem[]> {

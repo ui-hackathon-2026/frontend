@@ -20,6 +20,7 @@ import {
 } from "@/domain/models/editor";
 import { FormulaItemResponse, FormulaVersionItem } from "@/domain/models/formula";
 import { getFormulaRepository } from "@/data/di/container";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STORAGE_KEY_ACTIVE_ID = "ps_editor_active_formula_id";
 
@@ -123,6 +124,7 @@ interface EditorContextType {
 const EditorContext = createContext<EditorContextType | null>(null);
 
 export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [drafts, setDrafts] = useState<DraftFormulation[]>([]);
   const [activeDraftId, setActiveDraftId] = useState<string>("");
   const [activeVersions, setActiveVersions] = useState<FormulaVersionItem[]>([]);
@@ -140,6 +142,10 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   });
 
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const getActiveStorageKey = useCallback(() => {
+    return user ? `${STORAGE_KEY_ACTIVE_ID}_${user.id}` : STORAGE_KEY_ACTIVE_ID;
+  }, [user]);
 
   // Fetch formulas from backend
   const loadFormulasFromBackend = useCallback(async () => {
@@ -164,13 +170,16 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       setDrafts(mappedDrafts);
 
+      const storageKey = getActiveStorageKey();
       if (mappedDrafts.length > 0) {
-        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_ACTIVE_ID) : null;
+        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
         const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
         if (targetActive) {
           setActiveDraftId(targetActive.id);
           if (targetActive.ingredients.length > 0) {
             setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+          } else {
+            setSelectedMoleculeIngredient(null);
           }
           try {
             const vList = await repo.listVersions(targetActive.id);
@@ -189,7 +198,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getActiveStorageKey]);
 
   useEffect(() => {
     loadFormulasFromBackend();
@@ -207,7 +216,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (!target) return;
       setActiveDraftId(draftId);
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY_ACTIVE_ID, draftId);
+        localStorage.setItem(getActiveStorageKey(), draftId);
       }
       if (target.ingredients.length > 0) {
         setSelectedMoleculeIngredient(target.ingredients[0]);
@@ -225,7 +234,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setActiveVersions([]);
       }
     },
-    [drafts]
+    [drafts, getActiveStorageKey]
   );
 
   // Save current active draft to backend
@@ -300,7 +309,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setDrafts((prev) => [newDraft, ...prev]);
       setActiveDraftId(newDraft.id);
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY_ACTIVE_ID, newDraft.id);
+        localStorage.setItem(getActiveStorageKey(), newDraft.id);
       }
       setSelectedMoleculeIngredient(newDraft.ingredients[0] || null);
       setActiveVersions([]);
@@ -311,7 +320,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsSaving(false);
     }
-  }, [drafts.length]);
+  }, [drafts.length, getActiveStorageKey]);
 
   // Create Draft Fork (Clones active formula)
   const createDraftFork = useCallback(async () => {
@@ -353,7 +362,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setDrafts((prev) => [newDraft, ...prev]);
       setActiveDraftId(newDraft.id);
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_KEY_ACTIVE_ID, newDraft.id);
+        localStorage.setItem(getActiveStorageKey(), newDraft.id);
       }
       setActiveVersions([]);
       setCenterViewMode("chat");
@@ -363,7 +372,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsSaving(false);
     }
-  }, [activeDraft, drafts.length, createNewDraft]);
+  }, [activeDraft, drafts.length, createNewDraft, getActiveStorageKey]);
 
   // Rename Draft in Backend
   const renameDraft = useCallback(
@@ -401,7 +410,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             const next = remaining[0];
             setActiveDraftId(next.id);
             if (typeof window !== "undefined") {
-              localStorage.setItem(STORAGE_KEY_ACTIVE_ID, next.id);
+              localStorage.setItem(getActiveStorageKey(), next.id);
             }
             setSelectedMoleculeIngredient(next.ingredients[0] || null);
             const vList = await repo.listVersions(next.id);
@@ -411,7 +420,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setSelectedMoleculeIngredient(null);
             setActiveVersions([]);
             if (typeof window !== "undefined") {
-              localStorage.removeItem(STORAGE_KEY_ACTIVE_ID);
+              localStorage.removeItem(getActiveStorageKey());
             }
           }
         }
@@ -419,7 +428,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         console.error("Gagal menghapus formula:", err);
       }
     },
-    [drafts, activeDraftId]
+    [drafts, activeDraftId, getActiveStorageKey]
   );
 
   // Restore snapshot version
