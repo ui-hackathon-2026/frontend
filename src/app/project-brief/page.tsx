@@ -28,6 +28,59 @@ import {
   SensoryFinishProfile,
 } from "@/domain/models/brief";
 
+interface BrandCogsProfile {
+  min: number;
+  mid: number;
+  max: number;
+  step: number;
+  defaultCogs: number;
+}
+
+const BRAND_COGS_CONFIG: Record<string, BrandCogsProfile> = {
+  Emina: {
+    min: 15000,
+    mid: 28000,
+    max: 45000,
+    step: 1000,
+    defaultCogs: 25000,
+  },
+  Kahf: {
+    min: 20000,
+    mid: 35000,
+    max: 55000,
+    step: 1000,
+    defaultCogs: 35000,
+  },
+  Wardah: {
+    min: 25000,
+    mid: 45000,
+    max: 75000,
+    step: 1000,
+    defaultCogs: 42000,
+  },
+  "Make Over": {
+    min: 35000,
+    mid: 60000,
+    max: 95000,
+    step: 1000,
+    defaultCogs: 65000,
+  },
+  "Laboré": {
+    min: 40000,
+    mid: 75000,
+    max: 110000,
+    step: 1000,
+    defaultCogs: 75000,
+  },
+  "Custom R&D": {
+    min: 15000,
+    mid: 50000,
+    max: 100000,
+    step: 1000,
+    defaultCogs: 45000,
+  },
+};
+
 export default function ProjectBriefPage() {
   const [activeTab, setActiveTab] = useState<"visual" | "ingest">("visual");
 
@@ -73,6 +126,8 @@ export default function ProjectBriefPage() {
 
   const brands = ["Wardah", "Kahf", "Emina", "Make Over", "Laboré", "Custom R&D"] as const;
 
+  const currentBrandConfig = BRAND_COGS_CONFIG[brief.brand] || BRAND_COGS_CONFIG["Wardah"];
+
   const onFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -98,34 +153,36 @@ export default function ProjectBriefPage() {
                   position="right"
                 />
               </div>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Setup parameter awal secara visual deterministik atau ingest berkas brief PDF marketing.
+              </p>
             </div>
 
-            {/* Mode Switcher Tabs */}
-            <div className="flex items-center space-x-1.5 p-1 bg-slate-100 rounded-xl text-xs shrink-0 self-start sm:self-center">
+            {/* Inisiasi Mode Switcher Tabs */}
+            <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("visual")}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === "visual"
-                    ? "bg-white text-[#001299] font-bold shadow-xs"
+                    ? "bg-white text-[#001299] shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Sliders className="w-3.5 h-3.5" />
-                <span>Rancang Sasaran Visual</span>
+                <span>Target Matrix Visual</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setActiveTab("ingest")}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === "ingest"
-                    ? "bg-white text-[#001299] font-bold shadow-xs"
+                    ? "bg-white text-[#001299] shadow-xs"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Ingest PDF / Formula Eksisting</span>
+                <FileText className="w-3.5 h-3.5" />
+                <span>PDF Ingest / Base Chassis</span>
               </button>
             </div>
           </div>
@@ -162,7 +219,14 @@ export default function ProjectBriefPage() {
                     </label>
                     <select
                       value={brief.brand}
-                      onChange={(e) => updateBriefField("brand", e.target.value as any)}
+                      onChange={(e) => {
+                        const newBrand = e.target.value as any;
+                        updateBriefField("brand", newBrand);
+                        const cfg = BRAND_COGS_CONFIG[newBrand] || BRAND_COGS_CONFIG["Wardah"];
+                        if (brief.maxCogsIdrPerKg < cfg.min || brief.maxCogsIdrPerKg > cfg.max) {
+                          updateBriefField("maxCogsIdrPerKg", cfg.defaultCogs);
+                        }
+                      }}
                       className="w-full text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] bg-white cursor-pointer"
                     >
                       {brands.map((b) => (
@@ -292,9 +356,9 @@ export default function ProjectBriefPage() {
                     <div className="py-1">
                       <input
                         type="range"
-                        min="20000"
-                        max="85000"
-                        step="1000"
+                        min={currentBrandConfig.min}
+                        max={currentBrandConfig.max}
+                        step={currentBrandConfig.step}
                         value={brief.maxCogsIdrPerKg}
                         onChange={(e) =>
                           updateBriefField("maxCogsIdrPerKg", parseInt(e.target.value))
@@ -302,27 +366,37 @@ export default function ProjectBriefPage() {
                         className="paragon-range-slider"
                         style={{
                           background: `linear-gradient(to right, #001299 0%, #001299 ${Math.round(
-                            ((brief.maxCogsIdrPerKg - 20000) / (85000 - 20000)) * 100
+                            ((brief.maxCogsIdrPerKg - currentBrandConfig.min) /
+                              (currentBrandConfig.max - currentBrandConfig.min)) *
+                              100
                           )}%, #e2e8f0 ${Math.round(
-                            ((brief.maxCogsIdrPerKg - 20000) / (85000 - 20000)) * 100
+                            ((brief.maxCogsIdrPerKg - currentBrandConfig.min) /
+                              (currentBrandConfig.max - currentBrandConfig.min)) *
+                              100
                           )}%, #e2e8f0 100%)`,
                         }}
                       />
                     </div>
 
-                    {/* 2-Liner Readable Indicators */}
+                    {/* 2-Liner Readable Indicators — Tanpa sebut merk, dinamis mengikuti Target Brand Paragon */}
                     <div className="flex justify-between pt-0.5">
                       <div className="text-left">
-                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 20.000</span>
-                        <span className="block text-[11px] font-semibold text-slate-500">Mass (Emina)</span>
+                        <span className="block text-xs font-mono font-bold text-slate-800">
+                          Rp {currentBrandConfig.min.toLocaleString("id-ID")}
+                        </span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Mass</span>
                       </div>
                       <div className="text-center">
-                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 45.000</span>
-                        <span className="block text-[11px] font-semibold text-slate-500">Prestige (Wardah)</span>
+                        <span className="block text-xs font-mono font-bold text-slate-800">
+                          Rp {currentBrandConfig.mid.toLocaleString("id-ID")}
+                        </span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Prestige</span>
                       </div>
                       <div className="text-right">
-                        <span className="block text-xs font-mono font-bold text-slate-800">Rp 85.000</span>
-                        <span className="block text-[11px] font-semibold text-slate-500">Pro (Make Over)</span>
+                        <span className="block text-xs font-mono font-bold text-slate-800">
+                          Rp {currentBrandConfig.max.toLocaleString("id-ID")}
+                        </span>
+                        <span className="block text-[11px] font-semibold text-slate-500">Pro</span>
                       </div>
                     </div>
                   </div>
