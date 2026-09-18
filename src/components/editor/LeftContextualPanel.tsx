@@ -165,10 +165,10 @@ export const LeftContextualPanel: React.FC = () => {
 
   const catalogSource = libraryItems ?? COSMETIC_INGREDIENTS_CATALOG;
 
-  // Find 3D conformer for selected ingredient
+  // Find 3D conformer for selected ingredient (explicit unavailable, never wrong molecule)
   const targetMolecule = React.useMemo(() => {
     if (liveMolecule) return liveMolecule;
-    if (!selectedMoleculeIngredient) return MOLECULAR_CATALOG[0];
+    if (!selectedMoleculeIngredient) return null;
     const nameLower = selectedMoleculeIngredient.name.toLowerCase();
     const inciLower = selectedMoleculeIngredient.inci.toLowerCase();
     
@@ -177,7 +177,7 @@ export const LeftContextualPanel: React.FC = () => {
       inciLower.includes(m.inci.toLowerCase()) ||
       m.id.toLowerCase().includes(selectedMoleculeIngredient.id.toLowerCase())
     );
-    return matched || MOLECULAR_CATALOG[0];
+    return matched || null;
   }, [selectedMoleculeIngredient, liveMolecule]);
 
   // Filter library ingredients
@@ -249,6 +249,17 @@ export const LeftContextualPanel: React.FC = () => {
       {/* Mode 1: Contextual 3D Molecule Inspector */}
       {leftPanelMode === "molecule-3d" && (
         <div className="flex-1 flex flex-col overflow-hidden p-3 space-y-2">
+          {!targetMolecule ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2">
+              <span className="text-xs font-bold text-slate-700">Struktur 3D tidak tersedia</span>
+              <p className="text-[11px] text-slate-500">
+                {selectedMoleculeIngredient
+                  ? `Belum ada struktur terverifikasi untuk ${selectedMoleculeIngredient.name}.`
+                  : "Pilih bahan di Kitchen Panel untuk menginspeksi strukturnya."}
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="flex items-center justify-between px-1">
             <div className="truncate">
               <span className="text-[11px] font-bold text-slate-800 font-heading block truncate">
@@ -270,6 +281,8 @@ export const LeftContextualPanel: React.FC = () => {
               canvasHeight="h-full min-h-[220px]"
             />
           </div>
+          </>
+          )}
         </div>
       )}
 
