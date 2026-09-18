@@ -157,4 +157,34 @@ export class MockFormulaRepository implements IFormulaRepository {
   async listVersions(formulaId: string): Promise<FormulaVersionItem[]> {
     return this.versionsMap[formulaId] || [];
   }
+
+  private messagesMap: Record<string, any[]> = {};
+
+  async listMessages(formulaId: string): Promise<any[]> {
+    return this.messagesMap[formulaId] || [];
+  }
+
+  async addMessage(
+    formulaId: string,
+    payload: {
+      role: "user" | "assistant" | "system";
+      content: string;
+      proposal?: any;
+      linked_artifact_id?: string | null;
+    }
+  ): Promise<any> {
+    const list = this.messagesMap[formulaId] || [];
+    const item = {
+      id: Date.now(),
+      session_id: `sess_${formulaId}`,
+      role: payload.role,
+      content: payload.content,
+      proposal: payload.proposal,
+      linked_artifact_id: payload.linked_artifact_id,
+      created_at: new Date().toISOString(),
+    };
+    list.push(item);
+    this.messagesMap[formulaId] = list;
+    return item;
+  }
 }

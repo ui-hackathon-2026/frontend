@@ -55,4 +55,23 @@ export class HttpFormulaRepository implements IFormulaRepository {
   async listVersions(formulaId: string): Promise<FormulaVersionItem[]> {
     return this.client.get<FormulaVersionItem[]>(`/api/v1/formulas/${formulaId}/versions`);
   }
+
+  async listMessages(formulaId: string): Promise<FormulaChatMessageItem[]> {
+    return this.client.get<FormulaChatMessageItem[]>(`/api/v1/formulas/${formulaId}/messages`);
+  }
+
+  async addMessage(
+    formulaId: string,
+    payload: {
+      role: "user" | "assistant" | "system";
+      content: string;
+      proposal?: any;
+      linked_artifact_id?: string | null;
+    }
+  ): Promise<FormulaChatMessageItem> {
+    return this.client.post<typeof payload, FormulaChatMessageItem>(
+      `/api/v1/formulas/${formulaId}/messages`,
+      payload
+    );
+  }
 }

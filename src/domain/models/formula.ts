@@ -83,3 +83,13 @@ export interface FormulaAdjustmentResponse {
   updated_phases: FormulaPhasesDto;
   total_weight_pct: number;
 }
+
+export interface FormulaChatMessageItem {
+  id: number;
+  session_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  proposal?: any;
+  linked_artifact_id?: string | null;
+  created_at: string;
+}
