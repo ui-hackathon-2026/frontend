@@ -46,18 +46,35 @@ function readStorage() {
   }
 }
 
+// middleware.ts runs server-side (including on client-side route
+// transitions) and can only see cookies, never localStorage — so the
+// access token must be mirrored into a cookie or every navigation to a
+// protected route bounces back to /login regardless of client auth state.
+function writeAuthCookie(accessToken: string, expiresInSeconds: number) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${KEY_ACCESS}=${accessToken}; path=/; max-age=${expiresInSeconds}; SameSite=Lax${secure}`;
+}
+
+function clearAuthCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = `${KEY_ACCESS}=; path=/; max-age=0; SameSite=Lax`;
+}
+
 function writeStorage(user: AuthUser, tokens: AuthTokens) {
   const expiresAt = Date.now() + tokens.expiresIn * 1000;
   localStorage.setItem(KEY_USER, JSON.stringify(user));
   localStorage.setItem(KEY_ACCESS, tokens.accessToken);
   localStorage.setItem(KEY_REFRESH, tokens.refreshToken);
   localStorage.setItem(KEY_EXPIRES, String(expiresAt));
+  writeAuthCookie(tokens.accessToken, tokens.expiresIn);
 }
 
 function clearStorage() {
   [KEY_USER, KEY_ACCESS, KEY_REFRESH, KEY_EXPIRES, "ps_editor_active_formula_id"].forEach((k) =>
     localStorage.removeItem(k)
   );
+  clearAuthCookie();
   try {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
