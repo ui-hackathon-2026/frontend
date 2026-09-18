@@ -110,8 +110,16 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start relative z-10">
           <div className="lg:col-span-5 space-y-4 text-left pt-2">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200/70 text-[11px] font-bold text-[#001299] animate-fade-in-up">
-              <FlaskConical className="w-3.5 h-3.5" />
-              <span>Paragon Formulation Studio • In-Silico R&D</span>
+              <div className="w-4 h-4 rounded-md overflow-hidden shrink-0">
+                <Image
+                  src="/images/coramu-icon.png"
+                  alt="CoRamu"
+                  width={16}
+                  height={16}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <span>CoRamu Formulation Studio • In-Silico R&D</span>
             </div>
 
             <h1
@@ -530,8 +538,14 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
           <div className="space-y-3 sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#0a192f] text-white flex items-center justify-center">
-                <FlaskConical className="w-4 h-4 text-blue-200" />
+              <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center bg-[#0a192f]">
+                <Image
+                  src="/images/coramu-icon.png"
+                  alt="CoRamu"
+                  width={28}
+                  height={28}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <span className="font-bold text-[#0a192f] text-base tracking-tight font-heading">CoRamu</span>
             </div>

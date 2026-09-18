@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useEditor } from "@/contexts/EditorContext";
 import {
   Folder,
@@ -71,8 +72,14 @@ export const LeftWorkspaceDrafts: React.FC = () => {
       {/* Top Brand Navigation */}
       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-6 h-6 rounded-lg bg-[#0a192f] text-white flex items-center justify-center group-hover:bg-[#0018a8] transition-colors">
-            <FlaskConical className="w-3.5 h-3.5 text-blue-200" />
+          <div className="w-6 h-6 rounded-lg overflow-hidden flex items-center justify-center bg-[#0a192f] group-hover:scale-105 transition-all">
+            <Image
+              src="/images/coramu-icon.png"
+              alt="CoRamu"
+              width={24}
+              height={24}
+              className="w-full h-full object-cover"
+            />
           </div>
           <span className="text-xs font-extrabold text-[#0a192f] font-heading tracking-tight group-hover:text-[#0018a8] transition-colors">
             CoRamu

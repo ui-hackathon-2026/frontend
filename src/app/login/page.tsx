@@ -2,6 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FlaskConical, Eye, EyeOff, AlertCircle, ArrowRight, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -150,8 +151,14 @@ export default function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between w-[45%] bg-[#0a192f] px-12 py-10">
         {/* Brand */}
         <Link href="/" className="flex items-center space-x-2.5 group w-fit">
-          <div className="w-8 h-8 rounded-lg bg-white/10 text-white flex items-center justify-center group-hover:bg-white/20 transition-colors">
-            <FlaskConical className="w-4 h-4 text-blue-300" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white/10 group-hover:scale-105 transition-all">
+            <Image
+              src="/images/coramu-icon.png"
+              alt="CoRamu"
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+            />
           </div>
           <span className="text-lg font-extrabold tracking-tight text-white font-heading">
             CoRamu
@@ -193,8 +200,14 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Mobile brand */}
         <div className="lg:hidden mb-8 flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#0a192f] text-white flex items-center justify-center">
-            <FlaskConical className="w-4 h-4 text-blue-300" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-[#0a192f]">
+            <Image
+              src="/images/coramu-icon.png"
+              alt="CoRamu"
+              width={32}
+              height={32}
+              className="w-full h-full object-cover"
+            />
           </div>
           <span className="text-lg font-extrabold tracking-tight text-[#0a192f] font-heading">
             CoRamu

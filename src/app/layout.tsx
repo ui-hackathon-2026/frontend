@@ -55,6 +55,11 @@ export const metadata: Metadata = {
   title: "CoRamu - Formulation Studio",
   description:
     "AI-driven cosmetic formulation platform for Paragon Technology and Innovation.",
+  icons: {
+    icon: "/images/coramu-icon.png",
+    shortcut: "/images/coramu-icon.png",
+    apple: "/images/coramu-icon.png",
+  },
 };
 
 export default function RootLayout({
