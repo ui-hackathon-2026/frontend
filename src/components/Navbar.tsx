@@ -25,7 +25,7 @@ interface NavbarProps {
   brandName?: string;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) => {
+export const Navbar: React.FC<NavbarProps> = ({ brandName = "CoRamu" }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);

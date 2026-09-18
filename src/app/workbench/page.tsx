@@ -59,7 +59,7 @@ function WorkbenchContent() {
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
-      <Navbar brandName="Paragon Studio" />
+      <Navbar brandName="CoRamu" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-8 w-full py-6 space-y-6">
         {/* Header Title */}

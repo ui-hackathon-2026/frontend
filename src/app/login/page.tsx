@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
@@ -154,7 +154,7 @@ export default function LoginPage() {
             <FlaskConical className="w-4 h-4 text-blue-300" />
           </div>
           <span className="text-lg font-extrabold tracking-tight text-white font-heading">
-            Paragon Studio
+            CoRamu
           </span>
         </Link>
 
@@ -197,7 +197,7 @@ export default function LoginPage() {
             <FlaskConical className="w-4 h-4 text-blue-300" />
           </div>
           <span className="text-lg font-extrabold tracking-tight text-[#0a192f] font-heading">
-            Paragon Studio
+            CoRamu
           </span>
         </div>
 

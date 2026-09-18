@@ -52,7 +52,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Paragon Formulation Studio",
+  title: "CoRamu - Formulation Studio",
   description:
     "AI-driven cosmetic formulation platform for Paragon Technology and Innovation.",
 };

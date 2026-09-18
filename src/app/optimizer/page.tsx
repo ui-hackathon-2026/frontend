@@ -39,7 +39,7 @@ export default function OptimizerPage() {
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
-      <Navbar brandName="Paragon Studio" />
+      <Navbar brandName="CoRamu" />
 
       <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
         {/* Header Title & Preset Selector */}

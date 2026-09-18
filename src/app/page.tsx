@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronRight,
   FlaskConical,
+  Sparkles,
 } from "lucide-react";
 
 const PAGE_PREVIEW = "/images/landing/placeholder-page.png";
@@ -99,7 +100,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#fafbfc] text-slate-900 flex flex-col overflow-x-clip font-sans">
-      <Navbar brandName="Paragon Studio" />
+      <Navbar brandName="CoRamu" />
 
       {/* 1. HERO */}
       <section className="relative pt-14 pb-14 md:pt-20 md:pb-16 px-4 sm:px-6 lg:px-8 w-full bg-white overflow-hidden border-b border-slate-200/70">
@@ -179,7 +180,7 @@ export default function HomePage() {
                 <div className="relative aspect-[16/9] w-full bg-slate-50">
                   <Image
                     src={PAGE_PREVIEW}
-                    alt="Paragon Studio Formulation Workspace"
+                    alt="CoRamu Formulation Workspace"
                     fill
                     sizes="(max-width: 1024px) 100vw, 60vw"
                     className="object-cover object-left-top"
@@ -495,7 +496,7 @@ export default function HomePage() {
           <RevealOnScroll direction="up">
             <div className="space-y-5">
               <div className="mx-auto w-14 h-14 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white relative">
-                <Image src={IMG_TILE} alt="Paragon Studio" fill sizes="56px" className="object-cover" />
+                <Image src={IMG_TILE} alt="CoRamu" fill sizes="56px" className="object-cover" />
               </div>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0a192f] tracking-tight leading-tight font-heading">
                 Mulai Formulasi Cerdas Hari Ini
@@ -503,15 +504,20 @@ export default function HomePage() {
               <p className="text-sm text-slate-600 leading-relaxed max-w-xl mx-auto">
                 Rancang brief pertama Anda dan dapatkan blueprint 4-fase terstruktur dalam hitungan detik.
               </p>
-              <div className="pt-1 flex flex-wrap justify-center gap-3">
-                <Link href="/project-brief" className="inline-flex items-center gap-2 px-7 py-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white font-bold text-sm shadow-sm">
-                  <Bot className="w-4 h-4" />
-                  <span>Buka Brief Studio</span>
-                  <ArrowRight className="h-4 w-4" />
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <Link
+                  href="/editor"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3 rounded-xl bg-[#001299] text-white font-bold hover:bg-[#000e7a] transition-all shadow-sm group cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-blue-200 group-hover:scale-110 transition-transform" />
+                  <span>Buka Studio Formulasi AI</span>
+                  <ArrowRight className="w-4 h-4 text-blue-200 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="/compliance" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm hover:bg-slate-50">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Cek Kepatuhan BPOM</span>
+                <Link
+                  href="/workbench"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                >
+                  <span>Lihat Workbench 4-Fase</span>
                 </Link>
               </div>
             </div>
@@ -527,7 +533,7 @@ export default function HomePage() {
               <div className="w-7 h-7 rounded-lg bg-[#0a192f] text-white flex items-center justify-center">
                 <FlaskConical className="w-4 h-4 text-blue-200" />
               </div>
-              <span className="font-bold text-[#0a192f] text-base tracking-tight font-heading">Paragon Studio</span>
+              <span className="font-bold text-[#0a192f] text-base tracking-tight font-heading">CoRamu</span>
             </div>
             <p className="text-xs leading-relaxed">Platform formulasi kosmetik in-silico untuk R&D tropis Paragon — dari brief hingga batch sheet siap pabrik.</p>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-[11px] font-semibold text-[#001299]">
@@ -566,7 +572,7 @@ export default function HomePage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <span>© 2026 Paragon Studio. Seluruh hak cipta dilindungi.</span>
+          <span>© 2026 CoRamu. Seluruh hak cipta dilindungi.</span>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="flex items-center gap-1"><Sliders className="w-3 h-3" /> Canvas 4-Fase</span>
             <span>•</span>

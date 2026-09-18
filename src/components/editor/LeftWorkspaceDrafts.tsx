@@ -75,7 +75,7 @@ export const LeftWorkspaceDrafts: React.FC = () => {
             <FlaskConical className="w-3.5 h-3.5 text-blue-200" />
           </div>
           <span className="text-xs font-extrabold text-[#0a192f] font-heading tracking-tight group-hover:text-[#0018a8] transition-colors">
-            Paragon Studio
+            CoRamu
           </span>
         </Link>
 

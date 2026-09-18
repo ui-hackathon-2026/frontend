@@ -681,9 +681,45 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         });
 
         const restoredIngredients = mapDtoToEditorIngredients(updated.ingredients);
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-restore-${Date.now()}`,
+          sender: "user",
+          content: `Kembalikan formula ke snapshot **Versi ${v.version}** (${v.created_at}).`,
+          timestamp: "Baru saja",
+        };
+        const assistantMsg: EditorChatMessage = {
+          id: `msg-asst-restore-${Date.now() + 1}`,
+          sender: "assistant",
+          content: `Formula berhasil dikembalikan ke snapshot **Versi ${v.version}**. Seluruh konsentrasi bahan di Composition Panel telah diselaraskan sesuai riwayat snapshot.`,
+          timestamp: "Baru saja",
+        };
+
         setDrafts((prev) =>
-          prev.map((d) => (d.id === activeDraft.id ? { ...d, name: updated.name, ingredients: restoredIngredients } : d))
+          prev.map((d) =>
+            d.id === activeDraft.id
+              ? {
+                  ...d,
+                  name: updated.name,
+                  ingredients: restoredIngredients,
+                  messages: [...d.messages, userMsg, assistantMsg],
+                }
+              : d
+          )
         );
+
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: assistantMsg.content,
+          });
+        } catch (e) {
+          console.error("Gagal persist restore messages:", e);
+        }
+
         const vList = await repo.listVersions(activeDraft.id);
         setActiveVersions(vList);
       } catch (err) {
@@ -845,6 +881,22 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             console.error("Gagal persist initial message for new formula draft:", e);
           }
 
+          // Persist user intent in parent draft
+          const parentUserMsg: EditorChatMessage = {
+            id: `msg-user-prop-${Date.now()}`,
+            sender: "user",
+            content: `Terapkan usulan **${proposal.title}** sebagai draft versi baru.`,
+            timestamp: "Baru saja",
+          };
+          try {
+            await repo.addMessage(activeDraft.id, {
+              role: "user",
+              content: parentUserMsg.content,
+            });
+          } catch (e) {
+            console.error("Gagal persist user proposal new_version message:", e);
+          }
+
           // Mark proposal as applied on the previous draft
           setDrafts((prev) => [
             newDraft,
@@ -852,19 +904,22 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               if (d.id !== activeDraft.id) return d;
               return {
                 ...d,
-                messages: d.messages.map((m) => {
-                  if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
-                    return {
-                      ...m,
-                      proposal: {
-                        ...m.proposal,
-                        isApplied: true,
-                        appliedMode: "new_version" as const,
-                      },
-                    };
-                  }
-                  return m;
-                }),
+                messages: [
+                  ...d.messages.map((m) => {
+                    if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
+                      return {
+                        ...m,
+                        proposal: {
+                          ...m.proposal,
+                          isApplied: true,
+                          appliedMode: "new_version" as const,
+                        },
+                      };
+                    }
+                    return m;
+                  }),
+                  parentUserMsg,
+                ],
               };
             }),
           ]);
@@ -897,7 +952,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         );
 
         const freshIngredients = mapDtoToEditorIngredients(updated.ingredients);
-        const confirmationContent = `Formula aktif **${activeDraft.name}** berhasil diperbarui (Overwrite). Komposisi di Composition Panel telah disinkronkan langsung ke cloud backend.`;
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-prop-${Date.now()}`,
+          sender: "user",
+          content: `Terapkan usulan **${proposal.title}** ke formula ini (Overwrite).`,
+          timestamp: "Baru saja",
+        };
+        const confirmationContent = `Usulan formula berhasil diaplikasikan ke kanvas! Komposisi di Composition Panel telah disinkronkan langsung ke cloud backend.`;
+        const assistantMsg: EditorChatMessage = {
+          id: `sys-applied-${Date.now() + 1}`,
+          sender: "assistant" as const,
+          content: confirmationContent,
+          timestamp: "Baru saja",
+        };
 
         setDrafts((prev) =>
           prev.map((d) => {
@@ -920,20 +987,16 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             return {
               ...d,
               ingredients: freshIngredients,
-              messages: [
-                ...updatedMessages,
-                {
-                  id: `sys-applied-${Date.now()}`,
-                  sender: "assistant" as const,
-                  content: confirmationContent,
-                  timestamp: "Baru saja",
-                },
-              ],
+              messages: [...updatedMessages, userMsg, assistantMsg],
             };
           })
         );
 
         try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
           await repo.addMessage(activeDraft.id, {
             role: "assistant",
             content: confirmationContent,
@@ -982,6 +1045,63 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     async (type: ArtifactType, configParams?: any) => {
       if (!activeDraft) return;
       closeActionConfig();
+
+      // 1. Build descriptive user request message for the chat trace
+      let userActionContent = "";
+      if (type === "simulation") {
+        const temp = configParams?.temperature ?? configParams?.tempCelsius ?? 40;
+        const days = configParams?.durationDays ?? 90;
+        userActionContent = `Jalankan simulasi kestabilan tropis in-silico: **Simulasi Kestabilan ${temp}°C** (${days} hari / 75% RH).`;
+      } else if (type === "pareto") {
+        const presetMap: Record<string, string> = {
+          "balanced": "Balanced Trade-off",
+          "cost-leader": "Cost Leader (Hemat)",
+          "max-stability": "Stabilitas Maksimal",
+          "high-tkdn": "High-TKDN Lokal",
+          "custom": "Kustom",
+        };
+        const presetLabel = configParams?.preset
+          ? presetMap[configParams.preset] || configParams.preset
+          : "Balanced Trade-off";
+        const maxCogs = configParams?.maxCogs ?? 45000;
+        const minStability = configParams?.minStability ?? 85;
+        const targetTkdn = configParams?.targetTkdn ?? configParams?.minTkdn ?? 40;
+        userActionContent = `Jalankan optimasi: **Pareto Multi-Objective Optimizer** (Preset: ${presetLabel}, Min Stabilitas: ${minStability}%, Max COGS: Rp ${Number(maxCogs).toLocaleString("id-ID")}/kg, Target TKDN: ${targetTkdn}%).`;
+      } else if (type === "sentinel") {
+        const checks: string[] = [];
+        if (configParams?.checkBpom ?? true) checks.push("BPOM");
+        if (configParams?.checkHalal ?? true) checks.push("Halal HAS-23000");
+        if (configParams?.checkTkdn ?? true) checks.push("TKDN");
+        const checkStr = checks.length > 0 ? ` (${checks.join(", ")})` : "";
+        userActionContent = `Jalankan audit kepatuhan: **Enterprise BPOM, Halal & TKDN Sentinel**${checkStr}.`;
+      } else {
+        const scope = configParams?.brandScope ?? "all";
+        const scopeLabel = scope === "all" ? "Semua Portofolio Merk Paragon" : `Merk ${scope.toUpperCase()}`;
+        userActionContent = `Jalankan analisis kemiripan: **Dual-Scope Formula Similarity & Patent FTO** (Scope: ${scopeLabel}).`;
+      }
+
+      const userMsg: EditorChatMessage = {
+        id: `msg-user-act-${Date.now()}`,
+        sender: "user",
+        content: userActionContent,
+        timestamp: "Baru saja",
+      };
+
+      // Instantly show user chat bubble in chat stream
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, userMsg] } : d))
+      );
+
+      // Persist user request message to backend
+      const repo = getFormulaRepository();
+      try {
+        await repo.addMessage(activeDraft.id, {
+          role: "user",
+          content: userMsg.content,
+        });
+      } catch (e) {
+        console.error("Gagal persist user action message:", e);
+      }
 
       const newArtId = `art-${type}-${Date.now().toString().slice(-4)}`;
       let newArtifact: EditorArtifact;
@@ -1117,7 +1237,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
 
       const assistantMsg: EditorChatMessage = {
-        id: `msg-art-${Date.now()}`,
+        id: `msg-art-${Date.now() + 1}`,
         sender: "assistant" as const,
         content: assistantContent,
         timestamp: "Baru saja",
@@ -1138,19 +1258,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       // Persist assistant message with proposal to backend
       try {
-        const repo = getFormulaRepository();
         await repo.addMessage(activeDraft.id, {
           role: "assistant",
           content: assistantContent,
           proposal: proposal || undefined,
+          linked_artifact_id: newArtifact.id,
         });
       } catch (e) {
         console.error("Gagal persist artifact message:", e);
       }
 
-      viewArtifact(newArtifact);
+      setCenterViewMode("chat");
     },
-    [activeDraft, closeActionConfig, ingredients, viewArtifact]
+    [activeDraft, closeActionConfig, ingredients]
   );
 
   // Chat message send
@@ -1340,8 +1460,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   );
 
   const workspace: EditorWorkspace = {
-    id: "ws-paragon",
-    name: "Paragon R&D Studio: Tropical Skincare",
+    id: "ws-coramu",
+    name: "CoRamu R&D Studio: Tropical Skincare",
     activeDraftId: activeDraft ? activeDraft.id : "",
     drafts,
   };
