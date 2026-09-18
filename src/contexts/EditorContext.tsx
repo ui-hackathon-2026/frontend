@@ -994,10 +994,14 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           }
         }
         if (!streamed) throw new Error("empty reply");
-      } catch (err) {
-        console.error(err);
-        const fallback =
-          streamed || "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
+    } catch (err) {
+      console.error(err);
+      const unreachable = err instanceof TypeError;
+      const fallback =
+        streamed ||
+        (unreachable
+          ? `Tidak dapat terhubung ke backend (${API_BASE}). Pastikan backend jalan dan buka halaman ini via localhost.`
+          : "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.");
         setDrafts((prev) =>
           prev.map((d) =>
             d.id !== draftId
