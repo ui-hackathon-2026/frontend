@@ -195,36 +195,42 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         artifacts: [],
       }));
 
-      setDrafts(mappedDrafts);
-
       const storageKey = getActiveStorageKey();
-      if (mappedDrafts.length > 0) {
-        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
-        const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
-        if (targetActive) {
-          setActiveDraftId(targetActive.id);
-          if (targetActive.ingredients.length > 0) {
-            setSelectedMoleculeIngredient(targetActive.ingredients[0]);
-          } else {
-            setSelectedMoleculeIngredient(null);
-          }
-          try {
-            const [vList, msgList] = await Promise.all([
-              repo.listVersions(targetActive.id),
-              repo.listMessages(targetActive.id),
-            ]);
-            setActiveVersions(vList);
-            if (msgList && msgList.length > 0) {
-              const restoredMsgs = mapDtoToEditorMessages(msgList);
-              setDrafts((prev) =>
-                prev.map((d) => (d.id === targetActive.id ? { ...d, messages: restoredMsgs } : d))
-              );
-            }
-          } catch {
-            setActiveVersions([]);
-          }
+      const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+      const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
+
+      if (targetActive) {
+        setActiveDraftId(targetActive.id);
+        if (targetActive.ingredients.length > 0) {
+          setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+        } else {
+          setSelectedMoleculeIngredient(null);
+        }
+
+        try {
+          const [vList, msgList] = await Promise.all([
+            repo.listVersions(targetActive.id),
+            repo.listMessages(targetActive.id),
+          ]);
+          setActiveVersions(vList);
+
+          const initialMsgs =
+            msgList && msgList.length > 0
+              ? mapDtoToEditorMessages(msgList)
+              : INITIAL_MESSAGES_V1;
+
+          setDrafts(
+            mappedDrafts.map((d) =>
+              d.id === targetActive.id ? { ...d, messages: initialMsgs } : d
+            )
+          );
+        } catch (e) {
+          console.error("Gagal load history formula aktif:", e);
+          setDrafts(mappedDrafts);
+          setActiveVersions([]);
         }
       } else {
+        setDrafts(mappedDrafts);
         setActiveDraftId("");
         setSelectedMoleculeIngredient(null);
         setActiveVersions([]);
@@ -412,16 +418,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           setSelectedMoleculeIngredient(mappedIngredients[0]);
         }
 
-        // Persist interaction to backend
-        repo.addMessage(activeDraft.id, {
-          role: "user",
-          content: userMsg.content,
-        }).catch((e) => console.error("Gagal persist preset user msg:", e));
-
-        repo.addMessage(activeDraft.id, {
-          role: "assistant",
-          content: assistantMsg.content,
-        }).catch((e) => console.error("Gagal persist preset asst msg:", e));
+        // Persist interaction to backend sequentially
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: assistantMsg.content,
+          });
+        } catch (e) {
+          console.error("Gagal persist preset messages:", e);
+        }
 
         try {
           const vList = await repo.listVersions(activeDraft.id);
@@ -739,11 +748,14 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
           })
         );
-
-        repo.addMessage(activeDraft.id, {
-          role: "assistant",
-          content: confirmationContent,
-        }).catch((e) => console.error("Gagal persist applied msg:", e));
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: confirmationContent,
+          });
+        } catch (e) {
+          console.error("Gagal persist applied msg:", e);
+        }
 
         const vList = await repo.listVersions(activeDraft.id);
         setActiveVersions(vList);
@@ -970,11 +982,15 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       );
 
       // Persist assistant message with proposal to backend
-      repo.addMessage(activeDraft.id, {
-        role: "assistant",
-        content: assistantReply,
-        proposal: proposal || undefined,
-      }).catch((e) => console.error("Gagal persist assistant message:", e));
+      try {
+        await repo.addMessage(activeDraft.id, {
+          role: "assistant",
+          content: assistantReply,
+          proposal: proposal || undefined,
+        });
+      } catch (e) {
+        console.error("Gagal persist assistant message:", e);
+      }
     },
     [ingredients, activeDraft, activeVersions.length]
   );
