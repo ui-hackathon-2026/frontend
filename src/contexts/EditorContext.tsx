@@ -247,7 +247,8 @@ interface EditorContextType {
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;
   removeIngredient: (id: string) => void;
-  addIngredient: (item: Omit<EditorIngredient, "isLocked">) => void;
+  addIngredient: (item: Omit<EditorIngredient, "id" | "isLocked"> & { id?: string }) => void;
+  updateIngredientPhase: (id: string, newPhase: "A" | "B" | "C" | "D") => void;
   applyProposal: (
     proposal: FormulaModificationProposal,
     mode?: "overwrite" | "new_version"
@@ -916,16 +917,33 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
 
   // Add Ingredient
   const addIngredient = useCallback(
-    (item: Omit<EditorIngredient, "isLocked">) => {
+    (item: Omit<EditorIngredient, "id" | "isLocked"> & { id?: string }) => {
       if (!activeDraft) return;
       const exists = ingredients.some((it) => it.name.toLowerCase() === item.name.toLowerCase());
       if (exists) return;
-      const newIng: EditorIngredient = { ...item, isLocked: false };
+      const ingId =
+        item.id ||
+        `ing-${item.phase.toLowerCase()}-${item.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()
+          .toString()
+          .slice(-4)}`;
+      const newIng: EditorIngredient = { ...item, id: ingId, isLocked: false };
       const updated = [...ingredients, newIng];
       setDrafts((prev) =>
         prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d))
       );
       setSelectedMoleculeIngredient(newIng);
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Update Ingredient Phase (e.g. for drag and drop between phases)
+  const updateIngredientPhase = useCallback(
+    (id: string, newPhase: "A" | "B" | "C" | "D") => {
+      if (!activeDraft) return;
+      const updated = ingredients.map((it) => (it.id === id ? { ...it, phase: newPhase } : it));
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d))
+      );
     },
     [ingredients, activeDraft]
   );
@@ -1244,7 +1262,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           role: "user",
           content: userActionMsg.content,
         })
-        .catch((e) => console.error("Gagal persist user action message:", e));
+        .catch((e) => console.warn("Info: Gagal persist user action message ke remote (draft lokal):", e));
 
       const pushArtifact = (
         title: string,
@@ -1304,6 +1322,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
       };
 
       try {
+<<<<<<< HEAD
         if (type === "pareto") {
           const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
             constraints: {
@@ -1438,6 +1457,16 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 ? "Simulasi kestabilan"
                 : "Analisis similaritas"
         );
+=======
+        await repo.addMessage(activeDraft.id, {
+          role: "assistant",
+          content: assistantContent,
+          proposal: proposal || undefined,
+          linked_artifact_id: newArtifact.id,
+        });
+      } catch (e) {
+        console.warn("Info: Gagal persist artifact message ke remote (draft lokal):", e);
+>>>>>>> d14ee63 (feat(compliance): integrate Enterprise BPOM 25/2025, Halal HAS 23000 and TKDN Sentinel with interactive RAG chat)
       }
     },
     [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
@@ -1768,6 +1797,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         toggleLockIngredient,
         removeIngredient,
         addIngredient,
+        updateIngredientPhase,
         applyProposal,
         applyCandidateRecipe,
         selectedMoleculeIngredient,

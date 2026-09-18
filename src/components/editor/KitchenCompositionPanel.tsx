@@ -16,6 +16,7 @@ import {
   Plus,
   Droplets,
   Atom,
+  GripVertical,
 } from "lucide-react";
 
 export const KitchenCompositionPanel: React.FC = () => {
@@ -25,10 +26,15 @@ export const KitchenCompositionPanel: React.FC = () => {
     updateIngredientWeight,
     toggleLockIngredient,
     removeIngredient,
+    addIngredient,
+    updateIngredientPhase,
     selectedMoleculeIngredient,
     setSelectedMoleculeIngredient,
     setLeftPanelMode,
   } = useEditor();
+
+  const [dragOverPhase, setDragOverPhase] = React.useState<"A" | "B" | "C" | "D" | "canvas" | null>(null);
+  const [dragFeedback, setDragFeedback] = React.useState<string | null>(null);
 
   // Group by Phase
   const phases = useMemo(() => {
@@ -82,6 +88,44 @@ export const KitchenCompositionPanel: React.FC = () => {
         return "bg-indigo-500 text-indigo-50";
       case "D":
         return "bg-emerald-500 text-emerald-50";
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetPhase?: "A" | "B" | "C" | "D" | null) => {
+    e.preventDefault();
+    setDragOverPhase(null);
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      if (data.source === "library" && data.item) {
+        const item = data.item;
+        const exists = ingredients.some(
+          (it) => it.name.toLowerCase() === item.name.toLowerCase()
+        );
+        if (exists) {
+          setDragFeedback(`Bahan "${item.name}" sudah ada di formulasi`);
+          setTimeout(() => setDragFeedback(null), 2500);
+          return;
+        }
+        const assignedPhase = targetPhase || item.defaultPhase || "B";
+        addIngredient({
+          name: item.name,
+          inci: item.inci,
+          phase: assignedPhase,
+          weightPct: item.defaultWeightPct || 1.0,
+          role: item.role,
+        });
+        setDragFeedback(`Bahan "${item.name}" ditambahkan ke Fase ${assignedPhase}!`);
+        setTimeout(() => setDragFeedback(null), 2500);
+      } else if (data.source === "composition" && data.ingredientId && targetPhase) {
+        updateIngredientPhase(data.ingredientId, targetPhase);
+        setDragFeedback(`Bahan dipindahkan ke Fase ${targetPhase}`);
+        setTimeout(() => setDragFeedback(null), 2000);
+      }
+    } catch (err) {
+      console.error("Gagal memproses drop bahan:", err);
     }
   };
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -17,7 +17,7 @@ export function useCompliance() {
     {
       id: "welcome",
       sender: "assistant",
-      text: "Halo! Saya adalah **Regulatory & Halal Sentinel**. Basis data saya terindeks secara semantik (Vector RAG) dengan **Perka BPOM No. 17/2022**, Kriteria Halal HAS 23000, dan Katalog TKDN Kemenperin. Ada yang bisa saya bantu audit mengenai batas kadar bahan atau status halal?",
+      text: "Halo! Saya adalah **Enterprise Regulatory & Halal Sentinel**. Basis data saya terindeks secara semantik (Vector RAG) dengan **Peraturan BPOM No. 25 Tahun 2025** (Lampiran I-V), Daftar Bahan Bebas Sertifikasi Halal **KMA 1360/2021 & HAS 23000**, serta Kebijakan Nilai TKDN **Permenperin 15/2011**. Ada yang bisa saya bantu audit mengenai batas kadar bahan, bahan terlarang, atau status titik kritis halal?",
       timestamp: "Sekarang",
     },
   ]);
