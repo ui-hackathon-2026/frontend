@@ -7,8 +7,10 @@ import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { EmptyState } from "@/components/EmptyState";
 import { PhaseCompositionBar } from "@/components/shared/PhaseCompositionBar";
+import { SimilarityPanel } from "@/components/formulation/SimilarityPanel";
 import { useFormulations } from "@/hooks/useFormulations";
-import { Search, ArrowUpDown, FlaskConical, CheckCircle2, FileEdit } from "lucide-react";
+import { useFormulaSimilarity } from "@/hooks/useFormulaSimilarity";
+import { Search, ArrowUpDown, FlaskConical, CheckCircle2, FileEdit, GitCompareArrows, ChevronUp } from "lucide-react";
 
 function relativeDate(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -54,6 +56,7 @@ function RowSkeleton() {
       <td className="px-4 py-3"><ShimmerSkeleton className="w-24 h-2.5 rounded-full" /></td>
       <td className="px-4 py-3"><ShimmerSkeleton className="w-12 h-3.5 rounded-lg" /></td>
       <td className="px-4 py-3"><ShimmerSkeleton className="w-16 h-3.5 rounded-lg ml-auto" /></td>
+      <td className="px-4 py-3"><ShimmerSkeleton className="w-8 h-8 rounded-xl ml-auto" /></td>
     </tr>
   );
 }
@@ -75,6 +78,8 @@ export default function FormulationPage() {
     sortKey,
     setSortKey,
   } = useFormulations();
+
+  const { expandedId, stateFor, toggle, retry } = useFormulaSimilarity();
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
@@ -161,7 +166,7 @@ export default function FormulationPage() {
         ) : (
           <div className="relative rounded-2xl border border-slate-200/80 bg-white overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[760px]">
+              <table className="w-full text-left min-w-[860px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-[#fafbfc]">
                   <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Nama Formula</th>
@@ -170,6 +175,7 @@ export default function FormulationPage() {
                   <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Komposisi Fase</th>
                   <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Batch</th>
                   <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Diubah</th>
+                  <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Similarity</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,33 +184,82 @@ export default function FormulationPage() {
                   : formulas.map((f) => {
                       const meta = statusMeta(f.status);
                       const StatusIcon = meta.icon;
+                      const isExpanded = expandedId === f.formula_id;
+                      const hasIngredients = f.ingredients.length > 0;
+                      const simState = stateFor(f.formula_id);
                       return (
-                        <tr key={f.formula_id} className="border-b border-slate-50 last:border-0 hover:bg-blue-50/30 transition-colors">
-                          <td className="px-4 py-3">
-                            <Link
-                              href={`/editor?formula=${f.formula_id}`}
-                              className="text-xs font-bold text-[#0a192f] hover:text-[#001299]"
-                            >
-                              {f.name}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-slate-500 capitalize">{f.category ?? "—"}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta.className}`}>
-                              <StatusIcon className="w-3 h-3" />
-                              {meta.label}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 w-40">
-                            {f.ingredients.length > 0 ? (
-                              <PhaseCompositionBar formula={f} height="sm" />
-                            ) : (
-                              <span className="text-[10px] text-slate-300">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-slate-500">{f.batch_size_g.toFixed(0)} g</td>
-                          <td className="px-4 py-3 text-xs text-slate-500 text-right">{relativeDate(f.updated_at)}</td>
-                        </tr>
+                        <React.Fragment key={f.formula_id}>
+                          <tr
+                            className={`border-b border-slate-50 last:border-0 hover:bg-blue-50/30 transition-colors ${
+                              isExpanded ? "bg-blue-50/40" : ""
+                            }`}
+                          >
+                            <td className="px-4 py-3">
+                              <Link
+                                href={`/editor?formula=${f.formula_id}`}
+                                className="text-xs font-bold text-[#0a192f] hover:text-[#001299]"
+                              >
+                                {f.name}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-500 capitalize">{f.category ?? "—"}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${meta.className}`}>
+                                <StatusIcon className="w-3 h-3" />
+                                {meta.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 w-40">
+                              {hasIngredients ? (
+                                <PhaseCompositionBar formula={f} height="sm" />
+                              ) : (
+                                <span className="text-[10px] text-slate-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-500">{f.batch_size_g.toFixed(0)} g</td>
+                            <td className="px-4 py-3 text-xs text-slate-500 text-right">{relativeDate(f.updated_at)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                disabled={!hasIngredients}
+                                onClick={() => toggle(f)}
+                                title={
+                                  hasIngredients
+                                    ? "Cek similarity dengan formula lain & produk kompetitor"
+                                    : "Formula ini belum punya komposisi untuk dibandingkan"
+                                }
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-xl border transition-colors ${
+                                  isExpanded
+                                    ? "bg-[#001299] border-[#001299] text-white"
+                                    : "bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:text-[#001299]"
+                                } disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-500`}
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                ) : (
+                                  <GitCompareArrows className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-[#fafbfc] border-b border-slate-100">
+                              <td colSpan={7} className="p-0">
+                                {/* Sticky so the panel stays in view even when the
+                                    table itself is horizontally scrolled on mobile. */}
+                                <div className="sticky left-0 w-[min(calc(100vw-2rem),64rem)] p-4">
+                                  <SimilarityPanel
+                                    status={simState.status}
+                                    internal={simState.internal}
+                                    external={simState.external}
+                                    error={simState.error}
+                                    onRetry={() => retry(f)}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
               </tbody>

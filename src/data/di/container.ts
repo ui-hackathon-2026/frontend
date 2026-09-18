@@ -27,6 +27,10 @@ import { IWorkspaceRepository } from "@/domain/repositories/IWorkspaceRepository
 import { MockWorkspaceRepository } from "../repositories/MockWorkspaceRepository";
 import { HttpWorkspaceRepository } from "../repositories/HttpWorkspaceRepository";
 
+import { ISimilarityRepository } from "@/domain/repositories/ISimilarityRepository";
+import { MockSimilarityRepository } from "../repositories/MockSimilarityRepository";
+import { HttpSimilarityRepository } from "../repositories/HttpSimilarityRepository";
+
 function shouldUseMockApi(): boolean {
   if (process.env.NEXT_PUBLIC_USE_MOCK_API === "false") return false;
   return (
@@ -45,6 +49,7 @@ class ServiceContainer {
   private static authRepository: IAuthRepository | null = null;
   private static formulaRepository: IFormulaRepository | null = null;
   private static workspaceRepository: IWorkspaceRepository | null = null;
+  private static similarityRepository: ISimilarityRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -150,6 +155,19 @@ class ServiceContainer {
     return this.workspaceRepository!;
   }
 
+  public static getSimilarityRepository(): ISimilarityRepository {
+    if (!this.similarityRepository) {
+      const useMock = shouldUseMockApi();
+
+      if (useMock) {
+        this.similarityRepository = new MockSimilarityRepository();
+      } else {
+        this.similarityRepository = new HttpSimilarityRepository();
+      }
+    }
+    return this.similarityRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -163,5 +181,6 @@ export const getOptimizerRepository = () => ServiceContainer.getOptimizerReposit
 export const getAuthRepository = () => ServiceContainer.getAuthRepository();
 export const getFormulaRepository = () => ServiceContainer.getFormulaRepository();
 export const getWorkspaceRepository = () => ServiceContainer.getWorkspaceRepository();
+export const getSimilarityRepository = () => ServiceContainer.getSimilarityRepository();
 
 

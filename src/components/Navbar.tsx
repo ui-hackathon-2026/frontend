@@ -60,6 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
 
   const navFeatures = [
     { label: "Workspace", href: "/workspace", icon: FolderOpen },
+    { label: "Formulasi", href: "/formulation", icon: FlaskConical },
     { label: "Project Brief Studio", href: "/project-brief", icon: Bot },
     { label: "Formulation Canvas", href: "/workbench", icon: Sliders },
     { label: "Pareto Optimizer", href: "/optimizer", icon: Zap },
