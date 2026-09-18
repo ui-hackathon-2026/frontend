@@ -1322,7 +1322,6 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
       };
 
       try {
-<<<<<<< HEAD
         if (type === "pareto") {
           const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
             constraints: {
@@ -1457,16 +1456,6 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 ? "Simulasi kestabilan"
                 : "Analisis similaritas"
         );
-=======
-        await repo.addMessage(activeDraft.id, {
-          role: "assistant",
-          content: assistantContent,
-          proposal: proposal || undefined,
-          linked_artifact_id: newArtifact.id,
-        });
-      } catch (e) {
-        console.warn("Info: Gagal persist artifact message ke remote (draft lokal):", e);
->>>>>>> d14ee63 (feat(compliance): integrate Enterprise BPOM 25/2025, Halal HAS 23000 and TKDN Sentinel with interactive RAG chat)
       }
     },
     [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
