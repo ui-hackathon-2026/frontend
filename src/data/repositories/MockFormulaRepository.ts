@@ -75,25 +75,28 @@ export class MockFormulaRepository implements IFormulaRepository {
 
   async updateFormula(
     formulaId: string,
-    payload: FormulaUpdatePayload
+    payload: FormulaUpdatePayload,
+    createVersion: boolean = true
   ): Promise<FormulaItemResponse> {
     const index = this.formulas.findIndex((it) => it.formula_id === formulaId);
     if (index === -1) throw new Error("Formula not found");
 
     const prev = this.formulas[index];
-    const curVersions = this.versionsMap[formulaId] || [];
-    curVersions.unshift({
-      version: curVersions.length + 1,
-      snapshot: {
-        name: prev.name,
-        category: prev.category,
-        batch_size_g: prev.batch_size_g,
-        notes: prev.notes,
-        ingredients: prev.ingredients,
-      },
-      created_at: new Date().toISOString(),
-    });
-    this.versionsMap[formulaId] = curVersions;
+    if (createVersion) {
+      const curVersions = this.versionsMap[formulaId] || [];
+      curVersions.unshift({
+        version: curVersions.length + 1,
+        snapshot: {
+          name: prev.name,
+          category: prev.category,
+          batch_size_g: prev.batch_size_g,
+          notes: prev.notes,
+          ingredients: prev.ingredients,
+        },
+        created_at: new Date().toISOString(),
+      });
+      this.versionsMap[formulaId] = curVersions;
+    }
 
     const allIngs = [
       ...payload.phases.phase_a.map((i) => ({ ...i, phase: "A", is_locked: !!i.is_locked })),
@@ -116,6 +119,36 @@ export class MockFormulaRepository implements IFormulaRepository {
     return updated;
   }
 
+  async proposeAdjustment(
+    formulaId: string,
+    prompt: string
+  ): Promise<any> {
+    const f = await this.getFormula(formulaId);
+    return {
+      formula_id: formulaId,
+      title: "Rekomendasi Penyesuaian Formula",
+      explanation: `Penyesuaian berbasis prompt "${prompt}"`,
+      changes: [
+        {
+          ingredient_id: "ing-1",
+          name: f.ingredients[0]?.name || "Active",
+          inci: f.ingredients[0]?.inci || "Active",
+          phase: f.ingredients[0]?.phase || "A",
+          old_pct: f.ingredients[0]?.weight_pct || 1.0,
+          new_pct: Math.max(0.1, (f.ingredients[0]?.weight_pct || 1.0) + 0.5),
+          action: "modified",
+        },
+      ],
+      updated_phases: {
+        phase_a: f.ingredients.filter((i) => i.phase === "A"),
+        phase_b: f.ingredients.filter((i) => i.phase === "B"),
+        phase_c: f.ingredients.filter((i) => i.phase === "C"),
+        phase_d: f.ingredients.filter((i) => i.phase === "D"),
+      },
+      total_weight_pct: 100.0,
+    };
+  }
+
   async deleteFormula(formulaId: string): Promise<void> {
     this.formulas = this.formulas.filter((it) => it.formula_id !== formulaId);
     delete this.versionsMap[formulaId];
@@ -123,5 +156,35 @@ export class MockFormulaRepository implements IFormulaRepository {
 
   async listVersions(formulaId: string): Promise<FormulaVersionItem[]> {
     return this.versionsMap[formulaId] || [];
+  }
+
+  private messagesMap: Record<string, any[]> = {};
+
+  async listMessages(formulaId: string): Promise<any[]> {
+    return this.messagesMap[formulaId] || [];
+  }
+
+  async addMessage(
+    formulaId: string,
+    payload: {
+      role: "user" | "assistant" | "system";
+      content: string;
+      proposal?: any;
+      linked_artifact_id?: string | null;
+    }
+  ): Promise<any> {
+    const list = this.messagesMap[formulaId] || [];
+    const item = {
+      id: Date.now(),
+      session_id: `sess_${formulaId}`,
+      role: payload.role,
+      content: payload.content,
+      proposal: payload.proposal,
+      linked_artifact_id: payload.linked_artifact_id,
+      created_at: new Date().toISOString(),
+    };
+    list.push(item);
+    this.messagesMap[formulaId] = list;
+    return item;
   }
 }

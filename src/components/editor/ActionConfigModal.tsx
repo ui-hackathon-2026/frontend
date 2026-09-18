@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { ArtifactType } from "@/domain/models/editor";
-import { X, Play, Zap, ShieldCheck, Thermometer, Compass, Sliders, CheckCircle2 } from "lucide-react";
+import { X, Play, Zap, ShieldCheck, Thermometer, FileText, Sliders, CheckCircle2 } from "lucide-react";
 
 interface ActionConfigModalProps {
   isOpen: boolean;
@@ -60,7 +60,7 @@ export const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       case "simulation":
         return { title: "Konfigurasi Simulasi Kestabilan 40°C", icon: Thermometer, color: "text-rose-600" };
       case "similarity":
-        return { title: "Konfigurasi Dual-Scope Similarity & Patent", icon: Compass, color: "text-blue-600" };
+        return { title: "Konfigurasi Dual-Scope Similarity & Patent", icon: FileText, color: "text-blue-600" };
     }
   };
 

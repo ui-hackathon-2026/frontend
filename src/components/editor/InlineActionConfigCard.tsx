@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { ArtifactType } from "@/domain/models/editor";
@@ -9,7 +9,7 @@ import {
   Zap,
   ShieldCheck,
   Thermometer,
-  Compass,
+  FileText,
   Sparkles,
   Scale,
   DollarSign,
@@ -146,7 +146,7 @@ export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
       case "similarity":
         return {
           title: "Konfigurasi Dual-Scope Formula Similarity & Patent FTO",
-          icon: Compass,
+          icon: FileText,
           color: "text-blue-600 bg-blue-50 border-blue-200",
           desc: "Pilih cakupan perbandingan repositori internal Paragon & database paten eksternal.",
         };

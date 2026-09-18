@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { ArtifactType } from "@/domain/models/editor";
-import { Zap, ShieldCheck, Thermometer, Compass, Plus, Sparkles } from "lucide-react";
+import { Zap, ShieldCheck, Thermometer, FileText, Plus, Sparkles } from "lucide-react";
 
 interface ActionPlusMenuProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ export const ActionPlusMenu: React.FC<ActionPlusMenuProps> = ({
       type: "similarity",
       title: "Dual-Scope Formula Similarity & Patent FTO",
       description: "Deteksi kemiripan chassis lintas merk Paragon & audit kebaruan paten global.",
-      icon: Compass,
+      icon: FileText,
       accentColor: "text-blue-600 bg-blue-50 border-blue-200",
     },
   ];

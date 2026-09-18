@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { RagChatMessage } from "@/domain/models/compliance";
 import { Send, Bot, User, Bookmark, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 interface RagKnowledgeChatProps {
   messages: RagChatMessage[];
@@ -80,7 +81,7 @@ export const RagKnowledgeChat: React.FC<RagKnowledgeChatProps> = ({
                     : "bg-[#001299] text-white font-medium"
                 }`}
               >
-                <p className="whitespace-pre-wrap">{msg.text}</p>
+                <MarkdownRenderer content={msg.text} isUser={!isBot} />
 
                 {/* Citations Box */}
                 {msg.citations && msg.citations.length > 0 && (

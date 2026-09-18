@@ -18,7 +18,13 @@ import {
   ArtifactType,
   FormulaModificationProposal,
 } from "@/domain/models/editor";
-import { FormulaItemResponse, FormulaVersionItem } from "@/domain/models/formula";
+import {
+  FormulaAdjustmentResponse,
+  FormulaChatMessageItem,
+  FormulaItemResponse,
+  FormulaVersionItem,
+} from "@/domain/models/formula";
+import { PresetFormulaItem } from "@/domain/models/simulation";
 import { getFormulaRepository } from "@/data/di/container";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -57,13 +63,30 @@ async function apiGet<T>(path: string): Promise<T> {
 
 const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
   {
-    id: "msg-1",
+    id: "msg-welcome-v1",
     sender: "assistant",
     content:
-      "Halo Formulator Paragon! Selamat datang di **Studio Editor Formulasi**. Anda dapat menguji kestabilan 40°C, menjalankan optimasi Pareto, atau mengaudit regulasi BPOM & Halal melalui menu **(+)**. Klik bahan di Composition panel kanan untuk langsung menginspeksi struktur 3D molekulnya.",
+      "Halo Formulator Paragon! Selamat datang di **Studio Formulasi AI**.\n\nApa target formulasi atau riset sediaan yang ingin Anda kembangkan hari ini? Silakan pilih salah satu acuan benchmark dari **Workbench** berikut untuk langsung memuat komposisi awal, atau mulai racik bahan secara mandiri melalui Library Bahan:",
     timestamp: "Baru saja",
   },
 ];
+
+function mapDtoToEditorMessages(items: FormulaChatMessageItem[]): EditorChatMessage[] {
+  if (!items || items.length === 0) {
+    return INITIAL_MESSAGES_V1;
+  }
+  return items.map((m) => ({
+    id: `msg-db-${m.id}`,
+    sender: m.role === "user" ? "user" : "assistant",
+    content: m.content,
+    timestamp: new Date(m.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    proposal: m.proposal || undefined,
+    linkedArtifactId: m.linked_artifact_id || undefined,
+  }));
+}
 
 function mapDtoToEditorIngredients(dtoIngredients: FormulaItemResponse["ingredients"]): EditorIngredient[] {
   return dtoIngredients.map((item, idx) => ({
@@ -122,13 +145,17 @@ interface EditorContextType {
   deleteDraft: (draftId: string) => Promise<void>;
   saveCurrentFormula: () => Promise<void>;
   restoreVersion: (version: FormulaVersionItem) => Promise<void>;
+  applyPresetBenchmark: (preset: PresetFormulaItem) => Promise<void>;
   // Ingredients (Composition Panel)
   ingredients: EditorIngredient[];
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;
   removeIngredient: (id: string) => void;
   addIngredient: (item: Omit<EditorIngredient, "isLocked">) => void;
-  applyProposal: (proposal: FormulaModificationProposal) => void;
+  applyProposal: (
+    proposal: FormulaModificationProposal,
+    mode?: "overwrite" | "new_version"
+  ) => Promise<void>;
   applyCandidateRecipe: (entries: Array<{ inci: string; weightPct: number }>) => void;
   // Contextual Left Panel
   selectedMoleculeIngredient: EditorIngredient | null;
@@ -200,27 +227,42 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         artifacts: [],
       }));
 
-      setDrafts(mappedDrafts);
-
       const storageKey = getActiveStorageKey();
-      if (mappedDrafts.length > 0) {
-        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
-        const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
-        if (targetActive) {
-          setActiveDraftId(targetActive.id);
-          if (targetActive.ingredients.length > 0) {
-            setSelectedMoleculeIngredient(targetActive.ingredients[0]);
-          } else {
-            setSelectedMoleculeIngredient(null);
-          }
-          try {
-            const vList = await repo.listVersions(targetActive.id);
-            setActiveVersions(vList);
-          } catch {
-            setActiveVersions([]);
-          }
+      const savedActiveId = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
+      const targetActive = mappedDrafts.find((d) => d.id === savedActiveId) || mappedDrafts[0];
+
+      if (targetActive) {
+        setActiveDraftId(targetActive.id);
+        if (targetActive.ingredients.length > 0) {
+          setSelectedMoleculeIngredient(targetActive.ingredients[0]);
+        } else {
+          setSelectedMoleculeIngredient(null);
+        }
+
+        try {
+          const [vList, msgList] = await Promise.all([
+            repo.listVersions(targetActive.id),
+            repo.listMessages(targetActive.id),
+          ]);
+          setActiveVersions(vList);
+
+          const initialMsgs =
+            msgList && msgList.length > 0
+              ? mapDtoToEditorMessages(msgList)
+              : INITIAL_MESSAGES_V1;
+
+          setDrafts(
+            mappedDrafts.map((d) =>
+              d.id === targetActive.id ? { ...d, messages: initialMsgs } : d
+            )
+          );
+        } catch (e) {
+          console.error("Gagal load history formula aktif:", e);
+          setDrafts(mappedDrafts);
+          setActiveVersions([]);
         }
       } else {
+        setDrafts(mappedDrafts);
         setActiveDraftId("");
         setSelectedMoleculeIngredient(null);
         setActiveVersions([]);
@@ -293,8 +335,17 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       try {
         const repo = getFormulaRepository();
-        const vList = await repo.listVersions(draftId);
+        const [vList, msgList] = await Promise.all([
+          repo.listVersions(draftId),
+          repo.listMessages(draftId),
+        ]);
         setActiveVersions(vList);
+        if (msgList && msgList.length > 0) {
+          const restoredMsgs = mapDtoToEditorMessages(msgList);
+          setDrafts((prev) =>
+            prev.map((d) => (d.id === draftId ? { ...d, messages: restoredMsgs } : d))
+          );
+        }
       } catch {
         setActiveVersions([]);
       }
@@ -325,7 +376,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, [activeDraft]);
 
-  // Create Brand New Empty Draft Formula
+  // Create Brand New Pristine Empty Draft Formula
   const createNewDraft = useCallback(async (customName?: string) => {
     setIsSaving(true);
     try {
@@ -333,7 +384,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const newVersionNum = drafts.length + 1;
       const newDraftName = customName || `Formula Baru ${newVersionNum}`;
 
-      // Default minimal balanced chassis (Water 100%) so backend mass-balance validation passes
+      // Default pristine empty draft with 0 ingredients
       const created = await repo.createFormula({
         name: newDraftName,
         category: "skincare",
@@ -341,15 +392,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         notes: "Draft baru kosongan",
         phases: {
           phase_a: [],
-          phase_b: [
-            {
-              inci: "Aqua",
-              name: "Demineralized Water",
-              weight_pct: 100.0,
-              is_locked: false,
-              is_solvent: true,
-            },
-          ],
+          phase_b: [],
           phase_c: [],
           phase_d: [],
         },
@@ -359,15 +402,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         id: created.formula_id,
         name: created.name,
         createdAt: "Baru saja",
-        ingredients: mapDtoToEditorIngredients(created.ingredients),
-        messages: [
-          {
-            id: `msg-init-${Date.now()}`,
-            sender: "assistant" as const,
-            content: `Draft formula baru **${created.name}** telah siap! Silakan tambahkan bahan aktif dan emulgator dari **Library Bahan** di panel kiri atau diskusikan dengan AI.`,
-            timestamp: "Baru saja",
-          },
-        ],
+        ingredients: [],
+        messages: INITIAL_MESSAGES_V1,
         artifacts: [],
       };
 
@@ -376,7 +412,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (typeof window !== "undefined") {
         localStorage.setItem(getActiveStorageKey(), newDraft.id);
       }
-      setSelectedMoleculeIngredient(newDraft.ingredients[0] || null);
+      setSelectedMoleculeIngredient(null);
       setActiveVersions([]);
       setCenterViewMode("chat");
       setActiveArtifact(null);
@@ -386,6 +422,95 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setIsSaving(false);
     }
   }, [drafts.length, getActiveStorageKey]);
+
+  // Apply Benchmark Preset from Workbench
+  const applyPresetBenchmark = useCallback(
+    async (preset: PresetFormulaItem) => {
+      if (!activeDraft) return;
+      setIsSaving(true);
+      try {
+        const repo = getFormulaRepository();
+        const mappedIngredients: EditorIngredient[] = preset.request.ingredients.map(
+          (item, idx) => ({
+            id: `ing-${item.phase.toLowerCase()}-${item.inci
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "-")}-${idx}`,
+            name: item.name || item.inci,
+            inci: item.inci,
+            phase: (item.phase as "A" | "B" | "C" | "D") || "B",
+            weightPct: item.weightPct,
+            role: item.role || inferRole(item.inci),
+            isLocked: false,
+          })
+        );
+
+        const phases = mapEditorToDtoPhases(mappedIngredients);
+        await repo.updateFormula(activeDraft.id, {
+          name: preset.name,
+          category: preset.category,
+          batch_size_g: 500,
+          phases,
+        });
+
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-preset-${Date.now()}`,
+          sender: "user",
+          content: `Saya memilih acuan benchmark: "${preset.name}".`,
+          timestamp: "Baru saja",
+        };
+
+        const assistantMsg: EditorChatMessage = {
+          id: `msg-asst-preset-${Date.now() + 1}`,
+          sender: "assistant",
+          content: `Bagus! Komposisi acuan benchmark **${preset.name}** (${preset.request.ingredients.length} bahan) telah dimuat ke kanvas 4-Fase dengan total 100.0%.\n\nKarakteristik acuan:\n- **Kategori**: ${preset.category}\n- **Catatan R&D**: ${preset.description}\n\nKomposisi siap dikembangkan! Anda dapat menyesuaikan konsentrasi bahan di Composition Panel kanan, menginspeksi konformasi molekul 3D, atau menguji stabilitas 40°C melalui menu **(+)**.`,
+          timestamp: "Baru saja",
+        };
+
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id === activeDraft.id
+              ? {
+                  ...d,
+                  name: preset.name,
+                  ingredients: mappedIngredients,
+                  messages: [...d.messages, userMsg, assistantMsg],
+                }
+              : d
+          )
+        );
+
+        if (mappedIngredients.length > 0) {
+          setSelectedMoleculeIngredient(mappedIngredients[0]);
+        }
+
+        // Persist interaction to backend sequentially
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: assistantMsg.content,
+          });
+        } catch (e) {
+          console.error("Gagal persist preset messages:", e);
+        }
+
+        try {
+          const vList = await repo.listVersions(activeDraft.id);
+          setActiveVersions(vList);
+        } catch {
+          // ignore
+        }
+      } catch (err) {
+        console.error("Gagal memuat preset benchmark:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [activeDraft]
+  );
 
   // Create Draft Fork (Clones active formula)
   const createDraftFork = useCallback(async () => {
@@ -635,31 +760,77 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     [ingredients, activeDraft]
   );
 
-  // Apply Proposal from AI
+  // Apply Proposal from AI (Supports Overwrite current version vs Create New Version)
   const applyProposal = useCallback(
-    (proposal: FormulaModificationProposal) => {
+    async (
+      proposal: FormulaModificationProposal,
+      mode: "overwrite" | "new_version" = "new_version"
+    ) => {
       if (!activeDraft) return;
-      setDrafts((prev) =>
-        prev.map((d) => {
-          if (d.id !== activeDraft.id) return d;
-          return {
-            ...d,
-            ingredients: proposal.updatedIngredients,
-            messages: [
-              ...d.messages,
-              {
-                id: `sys-applied-${Date.now()}`,
-                sender: "assistant" as const,
-                content: `Perubahan formula berhasil diterapkan ke Composition Panel! Komposisi kini telah disesuaikan dan di-sinkronkan ke cloud.`,
-                timestamp: "Baru saja",
-              },
-            ],
-          };
-        })
-      );
-      saveCurrentFormula();
+      setIsSaving(true);
+      try {
+        const repo = getFormulaRepository();
+        const phases = mapEditorToDtoPhases(proposal.updatedIngredients);
+
+        // create_version is true for new_version, false for overwrite
+        const shouldCreateVersion = mode === "new_version";
+
+        const updated = await repo.updateFormula(
+          activeDraft.id,
+          {
+            name: activeDraft.name,
+            category: "skincare",
+            batch_size_g: 500,
+            phases,
+          },
+          shouldCreateVersion
+        );
+
+        const freshIngredients = mapDtoToEditorIngredients(updated.ingredients);
+
+        const modeBadge =
+          mode === "new_version"
+            ? "versi snapshot baru"
+            : "overwrite (timpa versi saat ini)";
+
+        const confirmationContent = `Usulan formula berhasil diaplikasikan sebagai **${modeBadge}**. Komposisi di Composition Panel telah diperbarui dan disinkronkan ke cloud backend.`;
+
+        setDrafts((prev) =>
+          prev.map((d) => {
+            if (d.id !== activeDraft.id) return d;
+            return {
+              ...d,
+              ingredients: freshIngredients,
+              messages: [
+                ...d.messages,
+                {
+                  id: `sys-applied-${Date.now()}`,
+                  sender: "assistant" as const,
+                  content: confirmationContent,
+                  timestamp: "Baru saja",
+                },
+              ],
+            };
+          })
+        );
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: confirmationContent,
+          });
+        } catch (e) {
+          console.error("Gagal persist applied msg:", e);
+        }
+
+        const vList = await repo.listVersions(activeDraft.id);
+        setActiveVersions(vList);
+      } catch (err) {
+        console.error("Gagal menerapkan usulan formula:", err);
+      } finally {
+        setIsSaving(false);
+      }
     },
-    [activeDraft, saveCurrentFormula]
+    [activeDraft]
   );
 
   // Artifact & Modal Controls
@@ -904,7 +1075,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
   );
 
-  // Chat message send (real backend SSE stream)
+  // Chat message send: propose-adjustment for modification intents,
+  // SSE copilot stream for general discussion. All messages persist.
   const sendMessage = useCallback(
     async (text: string) => {
       if (!activeDraft) return;
@@ -917,23 +1089,43 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         content: text,
         timestamp,
       };
-      const assistantId = `ai-${Date.now()}`;
-      let streamed = "";
+      const repo = getFormulaRepository();
+
       setDrafts((prev) =>
-        prev.map((d) =>
-          d.id !== draftId
-            ? d
-            : {
-                ...d,
-                messages: [
-                  ...d.messages,
-                  userMsg,
-                  { id: assistantId, sender: "assistant" as const, content: "", timestamp },
-                ],
-              }
-        )
+        prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
       );
-      try {
+      repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
+        console.error("Gagal persist user message:", e)
+      );
+
+      const persistAssistant = async (content: string, proposal?: FormulaModificationProposal) => {
+        try {
+          await repo.addMessage(draftId, {
+            role: "assistant",
+            content,
+            proposal: proposal || undefined,
+          });
+        } catch (e) {
+          console.error("Gagal persist assistant message:", e);
+        }
+      };
+
+      const streamCopilotReply = async (): Promise<string> => {
+        const assistantId = `ai-${Date.now()}`;
+        let streamed = "";
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== draftId
+              ? d
+              : {
+                  ...d,
+                  messages: [
+                    ...d.messages,
+                    { id: assistantId, sender: "assistant" as const, content: "", timestamp },
+                  ],
+                }
+          )
+        );
         const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -994,29 +1186,92 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           }
         }
         if (!streamed) throw new Error("empty reply");
-    } catch (err) {
-      console.error(err);
-      const unreachable = err instanceof TypeError;
-      const fallback =
-        streamed ||
-        (unreachable
-          ? `Tidak dapat terhubung ke backend (${API_BASE}). Pastikan backend jalan dan buka halaman ini via localhost.`
-          : "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.");
+        return streamed;
+      };
+
+      if (ingredients.length > 0) {
+        try {
+          const res = await repo.proposeAdjustment(draftId, text);
+          if (res && res.changes && res.changes.length > 0) {
+            const updatedEditorIngredients: EditorIngredient[] = [];
+            const mapping = [
+              { phase: "A" as const, items: res.updated_phases.phase_a },
+              { phase: "B" as const, items: res.updated_phases.phase_b },
+              { phase: "C" as const, items: res.updated_phases.phase_c },
+              { phase: "D" as const, items: res.updated_phases.phase_d },
+            ];
+            let idx = 0;
+            for (const group of mapping) {
+              for (const it of group.items) {
+                updatedEditorIngredients.push({
+                  id: `ing-${group.phase.toLowerCase()}-${it.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${idx++}`,
+                  name: it.name || it.inci,
+                  inci: it.inci,
+                  phase: group.phase,
+                  weightPct: it.weight_pct,
+                  role: inferRole(it.inci),
+                  isLocked: it.is_locked,
+                });
+              }
+            }
+            const proposal: FormulaModificationProposal = {
+              id: `prop-${Date.now()}`,
+              title: res.title,
+              explanation: res.explanation,
+              changes: res.changes.map((c) => ({
+                ingredientId: c.ingredient_id,
+                name: c.name,
+                oldPct: c.old_pct,
+                newPct: c.new_pct,
+                phase: (c.phase as "A" | "B" | "C" | "D") || "B",
+                action: c.action,
+              })),
+              updatedIngredients: updatedEditorIngredients,
+            };
+            const content = `Saya telah menganalisis permintaan Anda dan menyusun usulan modifikasi formula.\n\nSilakan periksa kartu usulan di bawah ini. Anda dapat memilih untuk **Terapkan Sebagai Versi Baru** (menyimpan snapshot v${activeVersions.length + 1}) atau **Overwrite Versi Ini** (menimpa draft aktif langsung).`;
+            const assistantMsg: EditorChatMessage = {
+              id: `ai-${Date.now()}`,
+              sender: "assistant" as const,
+              content,
+              timestamp,
+              proposal,
+            };
+            setDrafts((prev) =>
+              prev.map((d) =>
+                d.id === draftId ? { ...d, messages: [...d.messages, assistantMsg] } : d
+              )
+            );
+            await persistAssistant(content, proposal);
+            return;
+          }
+        } catch (err) {
+          console.error("Gagal meminta usulan formulasi AI:", err);
+        }
+      }
+
+      try {
+        const reply = await streamCopilotReply();
+        await persistAssistant(reply);
+      } catch (err) {
+        console.error(err);
+        const fallback = "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
         setDrafts((prev) =>
           prev.map((d) =>
             d.id !== draftId
               ? d
               : {
                   ...d,
-                  messages: d.messages.map((m) =>
-                    m.id === assistantId ? { ...m, content: fallback } : m
-                  ),
+                  messages: [
+                    ...d.messages,
+                    { id: `ai-${Date.now()}`, sender: "assistant" as const, content: fallback, timestamp },
+                  ],
                 }
           )
         );
+        await persistAssistant(fallback);
       }
     },
-    [activeDraft, ingredients, chatSessionId]
+    [ingredients, activeDraft, activeVersions.length, chatSessionId]
   );
 
   const workspace: EditorWorkspace = {
@@ -1041,6 +1296,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         deleteDraft,
         saveCurrentFormula,
         restoreVersion,
+        applyPresetBenchmark,
         ingredients,
         updateIngredientWeight,
         toggleLockIngredient,

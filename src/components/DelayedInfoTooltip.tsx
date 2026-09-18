@@ -10,8 +10,10 @@ export interface DelayedInfoTooltipProps {
   delayMs?: number;
   /** Tooltip position relative to trigger */
   position?: "top" | "bottom" | "left" | "right";
-  /** Horizontal alignment: 'auto' checks viewport & parent container boundaries, 'right' aligns to right edge of trigger */
+  /** Horizontal alignment: 'auto' checks viewport & parent container boundaries, 'right' aligns to right edge of trigger, 'center' centers horizontally */
   align?: "auto" | "left" | "right" | "center";
+  /** Text alignment inside tooltip */
+  textAlign?: "left" | "center" | "right";
   /** Optional custom trigger. Defaults to a small Info icon. */
   children?: React.ReactNode;
   /** Size class for default Info icon */
@@ -25,13 +27,16 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
   delayMs = 300,
   position = "top",
   align = "auto",
+  textAlign,
   children,
   iconSizeClass = "w-3.5 h-3.5",
   className = "",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [computedPosition, setComputedPosition] = useState(position);
-  const [alignMode, setAlignMode] = useState<"center" | "left" | "right">("center");
+  const [alignMode, setAlignMode] = useState<"center" | "left" | "right">(
+    align === "auto" ? "center" : align
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -142,7 +147,17 @@ export const DelayedInfoTooltip: React.FC<DelayedInfoTooltipProps> = ({
       {isVisible && (
         <div
           role="tooltip"
-          className={`absolute z-50 pointer-events-none max-w-xs w-max whitespace-normal text-left px-3 py-2 rounded-xl bg-slate-900/95 text-white text-xs font-sans leading-relaxed shadow-xl border border-slate-700/60 backdrop-blur-xs animate-in fade-in zoom-in-95 duration-150 ${getPositionClasses()}`}
+          className={`absolute z-50 pointer-events-none max-w-xs w-max whitespace-normal ${
+            textAlign
+              ? textAlign === "center"
+                ? "text-center"
+                : textAlign === "right"
+                ? "text-right"
+                : "text-left"
+              : alignMode === "center"
+              ? "text-center"
+              : "text-left"
+          } px-3 py-2 rounded-xl bg-slate-900/95 text-white text-xs font-sans leading-relaxed shadow-xl border border-slate-700/60 backdrop-blur-xs animate-in fade-in zoom-in-95 duration-150 ${getPositionClasses()}`}
         >
           {content}
         </div>
