@@ -171,9 +171,39 @@ export const KitchenCompositionPanel: React.FC = () => {
       </div>
 
       {/* Ingredient Items by Phase or Empty State */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-5"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(e) => {
+          if (dragOverPhase === "canvas") {
+            handleDrop(e, "B");
+          }
+        }}
+      >
+        {dragFeedback && (
+          <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 shadow-2xs">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="truncate">{dragFeedback}</span>
+          </div>
+        )}
+
         {!activeDraft || ingredients.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverPhase("canvas");
+            }}
+            onDragLeave={() => setDragOverPhase(null)}
+            onDrop={(e) => handleDrop(e, "A")}
+            className={`h-full flex flex-col items-center justify-center text-center p-6 space-y-3 rounded-2xl border-2 border-dashed transition-all ${
+              dragOverPhase === "canvas"
+                ? "border-[#001299] bg-blue-50/70 ring-4 ring-[#001299]/10 text-[#001299]"
+                : "border-slate-200/80 hover:border-slate-300"
+            }`}
+          >
             <div className="relative w-40 h-36 mb-1">
               <Image
                 src="/images/landing/No%20Content.png"
@@ -186,16 +216,34 @@ export const KitchenCompositionPanel: React.FC = () => {
             </div>
             <h3 className="text-sm font-bold text-[#0a192f] font-heading">Belum Ada Komposisi</h3>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-              Pilih bahan baku dari panel <strong>Library Bahan</strong> di kiri atau buat formula baru untuk menyusun sediaan kosmetik Anda.
+              Tarik bahan dari <strong>Library Bahan</strong> di kiri ke kanvas ini atau klik (+) untuk mulai meracik formula.
             </p>
           </div>
         ) : (
           (["A", "B", "C", "D"] as const).map((phaseKey) => {
             const items = phases[phaseKey];
-            if (items.length === 0) return null;
+            const isTargetOver = dragOverPhase === phaseKey;
 
             return (
-              <div key={phaseKey} className="space-y-2">
+              <div
+                key={phaseKey}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "copy";
+                  setDragOverPhase(phaseKey);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setDragOverPhase(null);
+                  }
+                }}
+                onDrop={(e) => handleDrop(e, phaseKey)}
+                className={`space-y-2 p-2 rounded-2xl transition-all ${
+                  isTargetOver
+                    ? "bg-blue-50/80 border-2 border-dashed border-[#001299] ring-4 ring-[#001299]/10 shadow-xs"
+                    : "border border-transparent"
+                }`}
+              >
                 <div className="flex items-center justify-between px-1">
                   <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider font-heading">
                     {getPhaseName(phaseKey)}
@@ -205,86 +253,125 @@ export const KitchenCompositionPanel: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="space-y-2">
-                  {items.map((ing) => {
-                    const isSelected = selectedMoleculeIngredient?.id === ing.id;
-                    const minVal = 0.05;
-                    const maxVal = ing.role === "solvent" ? 95 : Math.max(25, Math.ceil(ing.weightPct));
-                    const pct = Math.min(100, Math.max(0, ((ing.weightPct - minVal) / (maxVal - minVal)) * 100));
+                {items.length === 0 ? (
+                  <div
+                    className={`p-3 rounded-xl border-2 border-dashed transition-all flex items-center justify-center gap-1.5 text-xs font-medium ${
+                      isTargetOver
+                        ? "border-[#001299] bg-blue-100/60 text-[#001299]"
+                        : "border-slate-200/70 text-slate-400 bg-slate-50/40 hover:bg-slate-50 hover:border-slate-300"
+                    }`}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tarik bahan ke sini untuk Fase {phaseKey}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {items.map((ing) => {
+                      const isSelected = selectedMoleculeIngredient?.id === ing.id;
+                      const minVal = 0.05;
+                      const maxVal = ing.role === "solvent" ? 95 : Math.max(25, Math.ceil(ing.weightPct));
+                      const pct = Math.min(100, Math.max(0, ((ing.weightPct - minVal) / (maxVal - minVal)) * 100));
 
-                    return (
-                      <div
-                        key={ing.id}
-                        onClick={() => handleSelectIngredient(ing)}
-                        className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-2 ${
-                          isSelected
-                            ? "border-[#001299] bg-blue-50/50 shadow-xs ring-1 ring-[#001299]/30"
-                            : "border-slate-200/80 hover:border-slate-300 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getPhaseColor(ing.phase)}`}>
-                                {ing.phase}
-                              </span>
-                              <span className="text-xs font-bold text-slate-900 truncate block">
-                                {ing.name}
-                              </span>
+                      return (
+                        <div
+                          key={ing.id}
+                          draggable={!ing.isLocked}
+                          onDragStart={(e) => {
+                            if (ing.isLocked) {
+                              e.preventDefault();
+                              return;
+                            }
+                            e.dataTransfer.setData(
+                              "application/json",
+                              JSON.stringify({
+                                source: "composition",
+                                ingredientId: ing.id,
+                                fromPhase: ing.phase,
+                              })
+                            );
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onClick={() => handleSelectIngredient(ing)}
+                          className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-2 group ${
+                            isSelected
+                              ? "border-[#001299] bg-blue-50/50 shadow-xs ring-1 ring-[#001299]/30"
+                              : "border-slate-200/80 hover:border-slate-300 bg-white"
+                          } ${!ing.isLocked ? "cursor-grab active:cursor-grabbing" : ""}`}
+                          title={
+                            ing.isLocked
+                              ? "Bahan terkunci"
+                              : "Tarik untuk memindahkan fase bahan ini"
+                          }
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1 flex items-start gap-1.5">
+                              {!ing.isLocked && (
+                                <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#001299] shrink-0 mt-0.5 transition-colors" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getPhaseColor(ing.phase)}`}>
+                                    {ing.phase}
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-900 truncate block">
+                                    {ing.name}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-mono block truncate mt-0.5">
+                                  {ing.inci}
+                                </span>
+                              </div>
                             </div>
-                            <span className="text-[10px] text-slate-400 font-mono block truncate mt-0.5">
-                              {ing.inci}
-                            </span>
+
+                            {/* Weight Badge & Controls */}
+                            <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-xs font-mono font-extrabold text-[#001299] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                                {ing.weightPct.toFixed(1)}%
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleLockIngredient(ing.id)}
+                                className={`p-1 rounded-md transition-colors ${
+                                  ing.isLocked ? "bg-amber-100 text-amber-800" : "text-slate-300 hover:text-slate-600"
+                                }`}
+                                title={ing.isLocked ? "Terkunci (tidak terpengaruh auto-balance)" : "Kunci bobot"}
+                              >
+                                {ing.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => removeIngredient(ing.id)}
+                                className="p-1 rounded-md text-slate-300 hover:text-rose-600 transition-colors"
+                                title="Hapus bahan"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Weight Badge & Controls */}
-                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs font-mono font-extrabold text-[#001299] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
-                              {ing.weightPct.toFixed(1)}%
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => toggleLockIngredient(ing.id)}
-                              className={`p-1 rounded-md transition-colors ${
-                                ing.isLocked ? "bg-amber-100 text-amber-800" : "text-slate-300 hover:text-slate-600"
-                              }`}
-                              title={ing.isLocked ? "Terkunci (tidak terpengaruh auto-balance)" : "Kunci bobot"}
-                            >
-                              {ing.isLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => removeIngredient(ing.id)}
-                              className="p-1 rounded-md text-slate-300 hover:text-rose-600 transition-colors"
-                              title="Hapus bahan"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                          {/* Weight Slider */}
+                          <div className="pt-2 pb-0.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="range"
+                              min={minVal}
+                              max={maxVal}
+                              step="0.05"
+                              value={ing.weightPct}
+                              disabled={ing.isLocked}
+                              onChange={(e) => updateIngredientWeight(ing.id, parseFloat(e.target.value))}
+                              className="paragon-range-slider disabled:opacity-40 disabled:cursor-not-allowed"
+                              style={{
+                                background: `linear-gradient(to right, #001299 0%, #001299 ${pct}%, #e2e8f0 ${pct}%, #e2e8f0 100%)`,
+                              }}
+                            />
                           </div>
                         </div>
-
-                        {/* Weight Slider */}
-                        <div className="pt-2 pb-0.5" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="range"
-                            min={minVal}
-                            max={maxVal}
-                            step="0.05"
-                            value={ing.weightPct}
-                            disabled={ing.isLocked}
-                            onChange={(e) => updateIngredientWeight(ing.id, parseFloat(e.target.value))}
-                            className="paragon-range-slider disabled:opacity-40 disabled:cursor-not-allowed"
-                            style={{
-                              background: `linear-gradient(to right, #001299 0%, #001299 ${pct}%, #e2e8f0 ${pct}%, #e2e8f0 100%)`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })
