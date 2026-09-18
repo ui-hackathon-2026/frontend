@@ -136,7 +136,7 @@ function inferRole(inci: string): EditorIngredient["role"] {
 function mapEditorToDtoPhases(ingredients: EditorIngredient[]) {
   const getPhase = (p: "A" | "B" | "C" | "D") =>
     ingredients
-      .filter((i) => i.phase === p)
+      .filter((i) => i.phase === p && i.weightPct > 0)
       .map((i) => ({
         inci: i.inci,
         name: i.name,
@@ -228,6 +228,126 @@ function buildProposalFromParetoCandidate(
   };
 }
 
+function buildProposalFromComplianceAudit(
+  currentIngredients: EditorIngredient[],
+  auditRes: any
+): FormulaModificationProposal | null {
+  const auditList: any[] = auditRes.ingredients_audit || [];
+  const failedAudits = auditList.filter((a) => a.status !== "PASSED");
+  if (failedAudits.length === 0) return null;
+
+  // Work on a mutable copy
+  let working: EditorIngredient[] = currentIngredients.map((i) => ({ ...i }));
+  let totalDelta = 0;
+
+  for (const failed of failedAudits) {
+    const target = working.find(
+      (i) =>
+        i.inci.toLowerCase() === (failed.inci || "").toLowerCase() ||
+        i.name.toLowerCase() === (failed.name || "").toLowerCase()
+    );
+    if (!target) continue;
+
+    let targetNewPct: number;
+    if (typeof failed.bpom_limit_pct === "number" && failed.bpom_limit_pct > 0) {
+      // Clamp to BPOM legal limit
+      targetNewPct = Number(failed.bpom_limit_pct.toFixed(2));
+    } else {
+      // Forbidden ingredient (Halal violation, zero limit) — remove entirely
+      targetNewPct = 0;
+    }
+
+    const delta = target.weightPct - targetNewPct;
+    if (delta > 0) {
+      totalDelta += delta;
+      target.weightPct = targetNewPct;
+    }
+  }
+
+  // Remove ingredients that were set to 0 (forbidden/removed)
+  const removedIds = new Set(working.filter((i) => i.weightPct === 0).map((i) => i.id));
+  working = working.filter((i) => i.weightPct > 0);
+
+  // Rebalance water (Aqua / solvent) in Phase A so total stays 100%
+  if (totalDelta > 0) {
+    const solvent = working.find(
+      (i) =>
+        i.role === "solvent" ||
+        i.inci.toLowerCase().includes("aqua") ||
+        i.inci.toLowerCase().includes("water")
+    );
+    if (solvent) {
+      solvent.weightPct = Number((solvent.weightPct + totalDelta).toFixed(2));
+    }
+  }
+
+  // Re-normalise to exactly 100 to absorb floating-point drift
+  const total = working.reduce((s, i) => s + i.weightPct, 0);
+  if (Math.abs(total - 100) > 0.05) {
+    const solvent = working.find(
+      (i) =>
+        i.role === "solvent" ||
+        i.inci.toLowerCase().includes("aqua") ||
+        i.inci.toLowerCase().includes("water")
+    );
+    if (solvent) {
+      solvent.weightPct = Number((solvent.weightPct + (100 - total)).toFixed(2));
+    }
+  }
+
+  const changes: FormulaDiffChange[] = [];
+  for (const item of working) {
+    const orig = currentIngredients.find((i) => i.id === item.id);
+    if (orig && Math.abs(orig.weightPct - item.weightPct) > 0.01) {
+      changes.push({
+        ingredientId: item.id,
+        name: item.name,
+        oldPct: orig.weightPct,
+        newPct: item.weightPct,
+        phase: item.phase,
+        action: "modified",
+      });
+    }
+  }
+  // Record removed ingredients as changes
+  for (const id of removedIds) {
+    const orig = currentIngredients.find((i) => i.id === id);
+    if (orig) {
+      changes.push({
+        ingredientId: orig.id,
+        name: orig.name,
+        oldPct: orig.weightPct,
+        newPct: 0,
+        phase: orig.phase,
+        action: "removed",
+      });
+    }
+  }
+
+  if (changes.length === 0) return null;
+
+  const removedNames = [...removedIds]
+    .map((id) => currentIngredients.find((i) => i.id === id)?.name)
+    .filter(Boolean);
+  const cappedNames = failedAudits
+    .filter((f) => typeof f.bpom_limit_pct === "number" && f.bpom_limit_pct > 0)
+    .map((f) => f.name || f.inci);
+
+  const title = `Remediasi Kepatuhan BPOM 25/2025 & HAS 23000`;
+  const explanation =
+    (cappedNames.length > 0 ? `Koreksi konsentrasi ke batas legal: ${cappedNames.join(", ")}. ` : "") +
+    (removedNames.length > 0 ? `Dihapus (bahan terlarang Halal/BPOM): ${removedNames.join(", ")}. ` : "") +
+    `Fase pelarut (Aqua) disesuaikan kembali (+${totalDelta.toFixed(2)}%) agar total massa formula tepat 100.0%.`;
+
+  return {
+    id: `prop-sentinel-${Date.now()}`,
+    title,
+    explanation,
+    changes,
+    updatedIngredients: working,
+  };
+}
+
 interface EditorContextType {
   workspace: EditorWorkspace;
   activeDraft: DraftFormulation | null;
@@ -247,7 +367,8 @@ interface EditorContextType {
   updateIngredientWeight: (id: string, weight: number) => void;
   toggleLockIngredient: (id: string) => void;
   removeIngredient: (id: string) => void;
-  addIngredient: (item: Omit<EditorIngredient, "isLocked">) => void;
+  addIngredient: (item: Omit<EditorIngredient, "id" | "isLocked"> & { id?: string }) => void;
+  updateIngredientPhase: (id: string, newPhase: "A" | "B" | "C" | "D") => void;
   applyProposal: (
     proposal: FormulaModificationProposal,
     mode?: "overwrite" | "new_version"
@@ -274,6 +395,8 @@ interface EditorContextType {
   executeAction: (type: ArtifactType, configParams?: any) => void;
   // Chat
   sendMessage: (text: string) => void;
+  isGenerating: boolean;
+  generatingStatus: string | null;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -289,6 +412,8 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const [activeVersions, setActiveVersions] = useState<FormulaVersionItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [generatingStatus, setGeneratingStatus] = useState<string | null>(null);
 
   const [selectedMoleculeIngredient, setSelectedMoleculeIngredient] = useState<EditorIngredient | null>(null);
   const [leftPanelMode, setLeftPanelMode] = useState<"molecule-3d" | "library">("molecule-3d");
@@ -310,17 +435,9 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const loadFormulasFromBackend = useCallback(async () => {
     setIsLoading(true);
     try {
-      // No workspace scope (e.g. /editor opened directly, or a brand new
-      // workspace with nothing imported into it yet) means a blank editor,
-      // never the unscoped global formula list.
-      if (!workspaceId) {
-        setDrafts([]);
-        setActiveDraftId("");
-        setSelectedMoleculeIngredient(null);
-        setActiveVersions([]);
-        return;
-      }
-
+      // Load all formulas regardless of whether a workspace param was provided.
+      // When workspaceId is present we scope to that project; otherwise we
+      // load the user's full global list so the sidebar is never empty.
       const repo = getFormulaRepository();
       const list = await repo.listFormulas(2000, workspaceId);
 
@@ -747,6 +864,13 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               localStorage.removeItem(getActiveStorageKey());
             }
           }
+          // Reset artifact viewer, modals, and actions
+          setActiveArtifact(null);
+          setCenterViewMode("chat");
+          setActionConfigModal({ isOpen: false, actionType: null });
+          setArtifactsListModalOpen(false);
+          setIsGenerating(false);
+          setGeneratingStatus(null);
         }
       } catch (err) {
         console.error("Gagal menghapus formula:", err);
@@ -916,16 +1040,33 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
 
   // Add Ingredient
   const addIngredient = useCallback(
-    (item: Omit<EditorIngredient, "isLocked">) => {
+    (item: Omit<EditorIngredient, "id" | "isLocked"> & { id?: string }) => {
       if (!activeDraft) return;
       const exists = ingredients.some((it) => it.name.toLowerCase() === item.name.toLowerCase());
       if (exists) return;
-      const newIng: EditorIngredient = { ...item, isLocked: false };
+      const ingId =
+        item.id ||
+        `ing-${item.phase.toLowerCase()}-${item.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()
+          .toString()
+          .slice(-4)}`;
+      const newIng: EditorIngredient = { ...item, id: ingId, isLocked: false };
       const updated = [...ingredients, newIng];
       setDrafts((prev) =>
         prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d))
       );
       setSelectedMoleculeIngredient(newIng);
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Update Ingredient Phase (e.g. for drag and drop between phases)
+  const updateIngredientPhase = useCallback(
+    (id: string, newPhase: "A" | "B" | "C" | "D") => {
+      if (!activeDraft) return;
+      const updated = ingredients.map((it) => (it.id === id ? { ...it, phase: newPhase } : it));
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, ingredients: updated } : d))
+      );
     },
     [ingredients, activeDraft]
   );
@@ -1184,6 +1325,16 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
     async (type: ArtifactType, configParams?: any) => {
       if (!activeDraft) return;
       closeActionConfig();
+      setIsGenerating(true);
+      if (type === "pareto") {
+        setGeneratingStatus("Menjalankan optimasi Pareto 50.000 iterasi simpleks massa (GPU L40S)...");
+      } else if (type === "sentinel") {
+        setGeneratingStatus("Melakukan audit batas legal BPOM No. 25/2025 & Halal HAS 23000...");
+      } else if (type === "simulation") {
+        setGeneratingStatus("Menjalankan simulasi kestabilan dipercepat 40°C in-silico (LightGBM)...");
+      } else if (type === "similarity") {
+        setGeneratingStatus("Menganalisis kemiripan kimiawi chassis & Morgan Fingerprints...");
+      }
 
       const timestamp = new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -1244,7 +1395,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           role: "user",
           content: userActionMsg.content,
         })
-        .catch((e) => console.error("Gagal persist user action message:", e));
+        .catch((e) => console.warn("Info: Gagal persist user action message ke remote (draft lokal):", e));
 
       const pushArtifact = (
         title: string,
@@ -1260,6 +1411,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           subtitle,
           createdAt: timestamp,
           data: dataPayload,
+          proposal: proposal || undefined,
         };
         const newChatMsg: EditorChatMessage = {
           id: `msg-art-${Date.now()}`,
@@ -1357,6 +1509,46 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           const violations = (res.ingredients_audit || []).filter(
             (a: any) => a.status !== "PASSED"
           ).length;
+
+          let chatText = "";
+          let actionProposal: FormulaModificationProposal | undefined = undefined;
+
+          if (res.overall_status === "COMPLIANT" && violations === 0) {
+            chatText = `### ✅ Audit Regulasi BPOM & Halal: COMPLIANT\n\n` +
+              `Formula **${activeDraft.name}** memenuhi seluruh ketentuan batas aman **Perka BPOM No. 25/2025** dan standar kriteria **HAS-23000**.\n\n` +
+              `- **Kepatuhan BPOM Score**: ${Math.round((res.compliance_score || 0) * 100)}%\n` +
+              `- **Status Halal**: ${res.halal_status}\n` +
+              `- **Estimasi TKDN**: ${res.total_tkdn_pct}%\n\n` +
+              `*Semua ${(res.ingredients_audit || []).length} bahan dalam konsentrasi aman dan terdaftar pada basis data kepatuhan.*`;
+          } else {
+            const failedAudits = (res.ingredients_audit || []).filter((a: any) => a.status !== "PASSED");
+            const failedList = failedAudits
+              .map((a: any) => `- **${a.name} (${a.inci})**: ${a.audit_notes}${a.bpom_limit_pct ? ` • Batas aman legal: **${a.bpom_limit_pct}%**` : ""}`)
+              .join("\n");
+
+            const warnings = (res.llm_reasoning?.mandatory_label_warnings || [])
+              .map((w: string) => `- ⚠️ ${w}`)
+              .join("\n");
+
+            const subs = (res.llm_reasoning?.local_substitution_recommendations || [])
+              .map((s: any) => `- **${s.current_ingredient}** ➔ Saran Substitusi: **${s.recommended_local}** (TKDN +${s.tkdn_impact || 0}%). *${s.rationale}*`)
+              .join("\n");
+
+            chatText = `### 🚨 Temuan Audit Regulasi: ${res.overall_status}\n\n` +
+              `Ditemukan **${violations} ketidaksesuaian regulasi** pada formula **${activeDraft.name}** berdasarkan Perka BPOM No. 25/2025 dan kriteria Halal HAS-23000:\n\n` +
+              `#### 📋 Detail Temuan Bahan:\n${failedList}\n\n` +
+              (res.llm_reasoning?.toxicology_evaluation ? `#### 🧪 Evaluasi Toksikologi & Batas Paparan:\n${res.llm_reasoning.toxicology_evaluation}\n\n` : "") +
+              (warnings ? `#### ⚠️ Peringatan Label Wajib (Mandatory Warnings):\n${warnings}\n\n` : "") +
+              (subs ? `#### 🌿 Saran Substitusi Bahan Baku Lokal (Peningkatan TKDN):\n${subs}\n\n` : "") +
+              `💡 **Saran Remediasi Formula**: Sentinel telah menyusun usulan modifikasi formula yang mengoreksi konsentrasi bahan non-compliant ke batas legal BPOM dan menyeimbangkan kembali fase pelarut (Aqua). Anda dapat langsung memilih **Buat Versi Baru (Snapshot)** atau **Overwrite Versi Ini** di bawah untuk menerapkan perbaikan.`;
+
+            try {
+              actionProposal = buildProposalFromComplianceAudit(activeDraft.ingredients, res) || undefined;
+            } catch (e) {
+              console.error("Gagal menyusun proposal kepatuhan:", e);
+            }
+          }
+
           pushArtifact(
             "Regulatory Compliance & Halal Audit",
             "BPOM Annex III/V • Halal Assurance System HAS-23000",
@@ -1367,8 +1559,12 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               tkdnScore: `${res.total_tkdn_pct}%`,
               checkedRules: (res.ingredients_audit || []).length,
               violations,
+              ingredientsAudit: res.ingredients_audit || [],
+              llmReasoning: res.llm_reasoning,
+              summaryVerdict: res.summary_verdict,
             },
-            `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan.`
+            chatText,
+            actionProposal
           );
         } else if (type === "simulation") {
           const res: any = await apiPost("/api/v1/simulate/stability", {
@@ -1438,6 +1634,9 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 ? "Simulasi kestabilan"
                 : "Analisis similaritas"
         );
+      } finally {
+        setIsGenerating(false);
+        setGeneratingStatus(null);
       }
     },
     [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
@@ -1448,23 +1647,26 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const sendMessage = useCallback(
     async (text: string) => {
       if (!activeDraft) return;
-      const draftId = activeDraft.id;
-      const draftName = activeDraft.name;
-      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const userMsg: EditorChatMessage = {
-        id: `user-${Date.now()}`,
-        sender: "user" as const,
-        content: text,
-        timestamp,
-      };
-      const repo = getFormulaRepository();
+      setIsGenerating(true);
+      setGeneratingStatus("AI Co-Pilot sedang menganalisis pesan...");
+      try {
+        const draftId = activeDraft.id;
+        const draftName = activeDraft.name;
+        const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const userMsg: EditorChatMessage = {
+          id: `user-${Date.now()}`,
+          sender: "user" as const,
+          content: text,
+          timestamp,
+        };
+        const repo = getFormulaRepository();
 
-      setDrafts((prev) =>
-        prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
-      );
-      repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
-        console.error("Gagal persist user message:", e)
-      );
+        setDrafts((prev) =>
+          prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
+        );
+        repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
+          console.error("Gagal persist user message:", e)
+        );
 
       const persistAssistant = async (content: string, proposal?: FormulaModificationProposal) => {
         try {
@@ -1736,9 +1938,13 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         );
         await persistAssistant(fallback);
       }
-    },
-    [ingredients, activeDraft, activeVersions.length, chatSessionId]
-  );
+    } finally {
+      setIsGenerating(false);
+      setGeneratingStatus(null);
+    }
+  },
+  [ingredients, activeDraft, activeVersions.length, chatSessionId]
+);
 
   const workspace: EditorWorkspace = {
     id: workspaceId || "ws-untitled",
@@ -1768,6 +1974,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         toggleLockIngredient,
         removeIngredient,
         addIngredient,
+        updateIngredientPhase,
         applyProposal,
         applyCandidateRecipe,
         selectedMoleculeIngredient,
@@ -1786,6 +1993,8 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         closeActionConfig,
         executeAction,
         sendMessage,
+        isGenerating,
+        generatingStatus,
       }}
     >
       {children}

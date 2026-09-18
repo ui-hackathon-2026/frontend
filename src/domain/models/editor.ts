@@ -45,6 +45,7 @@ export interface EditorArtifact {
   subtitle: string;
   createdAt: string;
   data: any; // specific data payload for each artifact type
+  proposal?: FormulaModificationProposal;
 }
 
 export interface DraftFormulation {

@@ -7,7 +7,7 @@ import { COSMETIC_INGREDIENTS_CATALOG } from "@/data/mock/ingredientsCatalog";
 import type { MoleculeItem } from "@/domain/models/molecule";
 import { Molecule3DViewer } from "@/components/molecular/Molecule3DViewer";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
-import { Atom, BookOpen, Plus, Search, Check, Sparkles } from "lucide-react";
+import { Atom, BookOpen, Plus, Search, Check, Sparkles, GripVertical } from "lucide-react";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -318,13 +318,48 @@ export const LeftContextualPanel: React.FC = () => {
               return (
                 <div
                   key={item.id}
-                  className="p-2 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 text-xs"
+                  draggable={!alreadyInFormula}
+                  onDragStart={(e) => {
+                    if (alreadyInFormula) {
+                      e.preventDefault();
+                      return;
+                    }
+                    e.dataTransfer.setData(
+                      "application/json",
+                      JSON.stringify({
+                        source: "library",
+                        item: {
+                          name: item.name,
+                          inci: item.inci,
+                          defaultPhase: item.defaultPhase,
+                          defaultWeightPct: item.defaultWeightPct,
+                          role: item.role,
+                        },
+                      })
+                    );
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  className={`p-2 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-50 transition-all flex items-center justify-between gap-2 text-xs group ${
+                    alreadyInFormula
+                      ? "opacity-60 cursor-not-allowed"
+                      : "cursor-grab active:cursor-grabbing hover:border-blue-300 hover:shadow-xs"
+                  }`}
+                  title={
+                    alreadyInFormula
+                      ? "Bahan sudah ada di Composition Panel"
+                      : "Tarik ke Fase di Composition Panel atau klik (+) untuk menambahkan"
+                  }
                 >
-                  <div className="truncate flex-1">
-                    <span className="font-bold text-slate-800 block truncate">{item.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono block truncate">
-                      Fase {item.defaultPhase} • {item.inci}
-                    </span>
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    {!alreadyInFormula && (
+                      <GripVertical className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#001299] shrink-0 transition-colors" />
+                    )}
+                    <div className="truncate flex-1">
+                      <span className="font-bold text-slate-800 block truncate">{item.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block truncate">
+                        Fase {item.defaultPhase} • {item.inci}
+                      </span>
+                    </div>
                   </div>
 
                   <button
@@ -338,7 +373,7 @@ export const LeftContextualPanel: React.FC = () => {
                     }`}
                     title={alreadyInFormula ? "Bahan sudah ada di Composition Panel" : "Tambah ke Composition Panel"}
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    {alreadyInFormula ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               );

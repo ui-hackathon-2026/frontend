@@ -28,7 +28,8 @@ export const RagKnowledgeChat: React.FC<RagKnowledgeChatProps> = ({
 
   const quickPrompts = [
     "Batas aman Phenoxyethanol menurut BPOM?",
-    "Apakah Alpha-Arbutin 2% boleh untuk serum wajah?",
+    "Apakah Salicylic Acid boleh untuk sediaan leave-on dan berapa batasnya?",
+    "Apakah Deoxyarbutin diizinkan dalam kosmetik?",
     "Titik kritis kehalalan gliserin pada sediaan kosmetik?",
   ];
 
@@ -45,7 +46,7 @@ export const RagKnowledgeChat: React.FC<RagKnowledgeChatProps> = ({
               Tanya Regulasi (Semantic Vector RAG)
             </h3>
             <p className="text-[10px] text-slate-400">
-              Basis data: Perka BPOM 17/2022, HAS 23000 &amp; Farmakope Kosmetik
+              Basis data: Peraturan BPOM No. 25 Tahun 2025 (Lampiran I-V), KMA 1360/2021 &amp; HAS 23000
             </p>
           </div>
         </div>
