@@ -1,6 +1,7 @@
 import { IFormulaRepository } from "@/domain/repositories/IFormulaRepository";
 import {
   FormulaAdjustmentResponse,
+  FormulaChatMessageItem,
   FormulaCreatePayload,
   FormulaItemResponse,
   FormulaUpdatePayload,

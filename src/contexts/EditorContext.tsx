@@ -18,7 +18,12 @@ import {
   ArtifactType,
   FormulaModificationProposal,
 } from "@/domain/models/editor";
-import { FormulaItemResponse, FormulaVersionItem } from "@/domain/models/formula";
+import {
+  FormulaAdjustmentResponse,
+  FormulaChatMessageItem,
+  FormulaItemResponse,
+  FormulaVersionItem,
+} from "@/domain/models/formula";
 import { PresetFormulaItem } from "@/domain/models/simulation";
 import { getFormulaRepository } from "@/data/di/container";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +39,23 @@ const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
     timestamp: "Baru saja",
   },
 ];
+
+function mapDtoToEditorMessages(items: FormulaChatMessageItem[]): EditorChatMessage[] {
+  if (!items || items.length === 0) {
+    return INITIAL_MESSAGES_V1;
+  }
+  return items.map((m) => ({
+    id: `msg-db-${m.id}`,
+    sender: m.role === "user" ? "user" : "assistant",
+    content: m.content,
+    timestamp: new Date(m.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    proposal: m.proposal || undefined,
+    linkedArtifactId: m.linked_artifact_id || undefined,
+  }));
+}
 
 function mapDtoToEditorIngredients(dtoIngredients: FormulaItemResponse["ingredients"]): EditorIngredient[] {
   return dtoIngredients.map((item, idx) => ({
@@ -187,8 +209,17 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setSelectedMoleculeIngredient(null);
           }
           try {
-            const vList = await repo.listVersions(targetActive.id);
+            const [vList, msgList] = await Promise.all([
+              repo.listVersions(targetActive.id),
+              repo.listMessages(targetActive.id),
+            ]);
             setActiveVersions(vList);
+            if (msgList && msgList.length > 0) {
+              const restoredMsgs = mapDtoToEditorMessages(msgList);
+              setDrafts((prev) =>
+                prev.map((d) => (d.id === targetActive.id ? { ...d, messages: restoredMsgs } : d))
+              );
+            }
           } catch {
             setActiveVersions([]);
           }
@@ -233,8 +264,17 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       try {
         const repo = getFormulaRepository();
-        const vList = await repo.listVersions(draftId);
+        const [vList, msgList] = await Promise.all([
+          repo.listVersions(draftId),
+          repo.listMessages(draftId),
+        ]);
         setActiveVersions(vList);
+        if (msgList && msgList.length > 0) {
+          const restoredMsgs = mapDtoToEditorMessages(msgList);
+          setDrafts((prev) =>
+            prev.map((d) => (d.id === draftId ? { ...d, messages: restoredMsgs } : d))
+          );
+        }
       } catch {
         setActiveVersions([]);
       }
@@ -371,6 +411,17 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (mappedIngredients.length > 0) {
           setSelectedMoleculeIngredient(mappedIngredients[0]);
         }
+
+        // Persist interaction to backend
+        repo.addMessage(activeDraft.id, {
+          role: "user",
+          content: userMsg.content,
+        }).catch((e) => console.error("Gagal persist preset user msg:", e));
+
+        repo.addMessage(activeDraft.id, {
+          role: "assistant",
+          content: assistantMsg.content,
+        }).catch((e) => console.error("Gagal persist preset asst msg:", e));
 
         try {
           const vList = await repo.listVersions(activeDraft.id);
@@ -668,6 +719,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             ? "versi snapshot baru"
             : "overwrite (timpa versi saat ini)";
 
+        const confirmationContent = `Usulan formula berhasil diaplikasikan sebagai **${modeBadge}**. Komposisi di Composition Panel telah diperbarui dan disinkronkan ke cloud backend.`;
+
         setDrafts((prev) =>
           prev.map((d) => {
             if (d.id !== activeDraft.id) return d;
@@ -679,13 +732,18 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 {
                   id: `sys-applied-${Date.now()}`,
                   sender: "assistant" as const,
-                  content: `Usulan formula berhasil diaplikasikan sebagai **${modeBadge}**. Komposisi di Composition Panel telah diperbarui dan disinkronkan ke cloud backend.`,
+                  content: confirmationContent,
                   timestamp: "Baru saja",
                 },
               ],
             };
           })
         );
+
+        repo.addMessage(activeDraft.id, {
+          role: "assistant",
+          content: confirmationContent,
+        }).catch((e) => console.error("Gagal persist applied msg:", e));
 
         const vList = await repo.listVersions(activeDraft.id);
         setActiveVersions(vList);
@@ -832,13 +890,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, userMsg] } : d))
       );
 
+      // Persist user message to backend
+      const repo = getFormulaRepository();
+      repo.addMessage(activeDraft.id, {
+        role: "user",
+        content: text,
+      }).catch((e) => console.error("Gagal persist user message:", e));
+
       let assistantReply = "";
       let proposal: FormulaModificationProposal | undefined = undefined;
 
       // If formula has ingredients, call AI backend propose-adjustment endpoint
       if (ingredients.length > 0) {
         try {
-          const repo = getFormulaRepository();
           const res = await repo.proposeAdjustment(activeDraft.id, text);
 
           if (res && res.changes && res.changes.length > 0) {
@@ -904,6 +968,13 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setDrafts((prev) =>
         prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, assistantMsg] } : d))
       );
+
+      // Persist assistant message with proposal to backend
+      repo.addMessage(activeDraft.id, {
+        role: "assistant",
+        content: assistantReply,
+        proposal: proposal || undefined,
+      }).catch((e) => console.error("Gagal persist assistant message:", e));
     },
     [ingredients, activeDraft, activeVersions.length]
   );
