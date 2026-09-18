@@ -3,7 +3,7 @@
 import React from "react";
 import { useEditor } from "@/contexts/EditorContext";
 import { EmptyState } from "@/components/EmptyState";
-import { X, FileText, Zap, ShieldCheck, Thermometer, Compass, ChevronRight, Clock } from "lucide-react";
+import { X, FileText, Zap, ShieldCheck, Thermometer, ChevronRight, Clock } from "lucide-react";
 
 export const ArtifactsListModal: React.FC = () => {
   const {
@@ -26,7 +26,7 @@ export const ArtifactsListModal: React.FC = () => {
       case "simulation":
         return <Thermometer className="w-4 h-4 text-rose-600" />;
       case "similarity":
-        return <Compass className="w-4 h-4 text-blue-600" />;
+        return <FileText className="w-4 h-4 text-blue-600" />;
       default:
         return <FileText className="w-4 h-4 text-slate-600" />;
     }

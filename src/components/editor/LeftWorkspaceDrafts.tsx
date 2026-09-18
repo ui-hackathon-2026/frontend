@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useEditor } from "@/contexts/EditorContext";
-import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import {
   Folder,
   GitFork,
@@ -138,12 +137,6 @@ export const LeftWorkspaceDrafts: React.FC = () => {
               <History className="w-3.5 h-3.5" />
             </button>
           )}
-          <DelayedInfoTooltip
-            content="Seluruh draft tersimpan langsung di Neon Postgres Cloud. Setiap perubahan otomatis meng-create version snapshot append-only."
-            position="bottom"
-            align="right"
-            delayMs={300}
-          />
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 import { IFormulaRepository } from "@/domain/repositories/IFormulaRepository";
 import {
+  FormulaAdjustmentResponse,
+  FormulaChatMessageItem,
   FormulaCreatePayload,
   FormulaItemResponse,
   FormulaUpdatePayload,
@@ -28,11 +30,22 @@ export class HttpFormulaRepository implements IFormulaRepository {
 
   async updateFormula(
     formulaId: string,
-    payload: FormulaUpdatePayload
+    payload: FormulaUpdatePayload,
+    createVersion: boolean = true
   ): Promise<FormulaItemResponse> {
     return this.client.put<FormulaUpdatePayload, FormulaItemResponse>(
-      `/api/v1/formulas/${formulaId}`,
+      `/api/v1/formulas/${formulaId}?create_version=${createVersion}`,
       payload
+    );
+  }
+
+  async proposeAdjustment(
+    formulaId: string,
+    prompt: string
+  ): Promise<FormulaAdjustmentResponse> {
+    return this.client.post<{ prompt: string }, FormulaAdjustmentResponse>(
+      `/api/v1/formulas/${formulaId}/propose-adjustment`,
+      { prompt }
     );
   }
 
@@ -42,5 +55,24 @@ export class HttpFormulaRepository implements IFormulaRepository {
 
   async listVersions(formulaId: string): Promise<FormulaVersionItem[]> {
     return this.client.get<FormulaVersionItem[]>(`/api/v1/formulas/${formulaId}/versions`);
+  }
+
+  async listMessages(formulaId: string): Promise<FormulaChatMessageItem[]> {
+    return this.client.get<FormulaChatMessageItem[]>(`/api/v1/formulas/${formulaId}/messages`);
+  }
+
+  async addMessage(
+    formulaId: string,
+    payload: {
+      role: "user" | "assistant" | "system";
+      content: string;
+      proposal?: any;
+      linked_artifact_id?: string | null;
+    }
+  ): Promise<FormulaChatMessageItem> {
+    return this.client.post<typeof payload, FormulaChatMessageItem>(
+      `/api/v1/formulas/${formulaId}/messages`,
+      payload
+    );
   }
 }

@@ -9,7 +9,7 @@ import {
   Zap,
   ShieldCheck,
   Thermometer,
-  Compass,
+  FileText,
   CheckCircle2,
   Sliders,
   Sparkles,
@@ -63,7 +63,7 @@ export const ArtifactViewerPanel: React.FC = () => {
       case "simulation":
         return <Thermometer className="w-4 h-4 text-rose-600" />;
       case "similarity":
-        return <Compass className="w-4 h-4 text-blue-600" />;
+        return <FileText className="w-4 h-4 text-blue-600" />;
     }
   };
 

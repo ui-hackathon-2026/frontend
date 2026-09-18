@@ -95,7 +95,7 @@ export const LeftContextualPanel: React.FC = () => {
               : "Cari bahan baku kosmetik dan tambahkan ke komposisi formula di panel kanan."
           }
           position="bottom"
-          align="right"
+          align="center"
           delayMs={300}
         />
       </div>

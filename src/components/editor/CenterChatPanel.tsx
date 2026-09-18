@@ -6,6 +6,7 @@ import { ActionPlusMenu } from "./ActionPlusMenu";
 import { InlineActionConfigCard } from "./InlineActionConfigCard";
 import { ArtifactType } from "@/domain/models/editor";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import {
   Plus,
   Send,
@@ -17,7 +18,11 @@ import {
   FileText,
   ArrowRight,
   Zap,
+  History,
+  RefreshCw,
 } from "lucide-react";
+import { getSimulationRepository } from "@/data/di/container";
+import { PresetFormulaItem } from "@/domain/models/simulation";
 
 export const CenterChatPanel: React.FC = () => {
   const {
@@ -25,15 +30,22 @@ export const CenterChatPanel: React.FC = () => {
     sendMessage,
     executeAction,
     applyProposal,
+    applyPresetBenchmark,
     viewArtifact,
     setArtifactsListModalOpen,
     createNewDraft,
   } = useEditor();
 
+  const [presets, setPresets] = useState<PresetFormulaItem[]>([]);
   const [inputPrompt, setInputPrompt] = useState("");
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [activeInlineAction, setActiveInlineAction] = useState<ArtifactType | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const simRepo = getSimulationRepository();
+    simRepo.getPresetFormulas().then(setPresets);
+  }, []);
 
   const messages = activeDraft ? activeDraft.messages : [];
 
@@ -46,13 +58,6 @@ export const CenterChatPanel: React.FC = () => {
     if (!inputPrompt.trim()) return;
     sendMessage(inputPrompt);
     setInputPrompt("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e);
-    }
   };
 
   return (
@@ -117,7 +122,7 @@ export const CenterChatPanel: React.FC = () => {
             </button>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, idx) => {
             const isUser = msg.sender === "user";
 
             return (
@@ -145,8 +150,54 @@ export const CenterChatPanel: React.FC = () => {
                         : "bg-slate-50 border border-slate-200/80 text-slate-800 rounded-tl-xs"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <MarkdownRenderer content={msg.content} isUser={isUser} />
                   </div>
+
+                  {/* Benchmark Presets Selector from Workbench (Shown on empty canvas) */}
+                  {!isUser && activeDraft.ingredients.length === 0 && presets.length > 0 && idx === 0 && (
+                    <div className="pt-2 space-y-2.5 max-w-2xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+                          Pilihan Riset &amp; Benchmark (Workbench)
+                        </span>
+                        <span className="text-[10px] text-[#001299] font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md">
+                          {presets.length} Formula Acuan
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {presets.map((preset) => (
+                          <div
+                            key={preset.id}
+                            onClick={() => applyPresetBenchmark(preset)}
+                            className="group text-left p-4 rounded-2xl border border-slate-200 hover:border-[#001299] bg-white hover:bg-blue-50/40 transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-2xs hover:shadow-xs ring-0 hover:ring-2 hover:ring-[#001299]/20"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-[#001299] bg-blue-100/70 px-2 py-0.5 rounded-md">
+                                  {preset.category}
+                                </span>
+                              </div>
+                              <h4 className="font-bold text-slate-900 text-xs leading-snug group-hover:text-[#001299] transition-colors">
+                                {preset.name}
+                              </h4>
+                              <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">
+                                {preset.description}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                              <span>{preset.request.ingredients.length} Komponen Bahan</span>
+                              <span className="inline-flex items-center gap-1 font-semibold text-[#001299] group-hover:translate-x-0.5 transition-transform">
+                                <span>Pilih</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Linked Artifact Button */}
                   {msg.linkedArtifactId && (
@@ -214,14 +265,41 @@ export const CenterChatPanel: React.FC = () => {
                         ))}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => applyProposal(msg.proposal!)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
-                      >
-                        <Sliders className="w-3.5 h-3.5" />
-                        <span>Terapkan ke Composition Panel</span>
-                      </button>
+                      {/* Action Choice: New Version vs Overwrite (Hidden if already applied) */}
+                      {msg.proposal.isApplied ? (
+                        <div className="pt-2 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>
+                              {msg.proposal.appliedMode === "new_version"
+                                ? "Usulan telah diterapkan sebagai Versi Baru"
+                                : "Usulan telah diterapkan (Overwrite)"}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">
+                            Sudah Diaplikasikan
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => applyProposal(msg.proposal!, "new_version")}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer group"
+                          >
+                            <History className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
+                            <span>Buat Versi Baru (Snapshot)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyProposal(msg.proposal!, "overwrite")}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Overwrite Versi Ini</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -251,12 +329,12 @@ export const CenterChatPanel: React.FC = () => {
       <div className="p-4 border-t border-slate-200/80 bg-white shrink-0">
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
           {/* Action (+) Button */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               disabled={!activeDraft}
               onClick={() => setPlusMenuOpen(!plusMenuOpen)}
-              className="w-10 h-10 rounded-2xl flex items-center justify-center text-slate-600 hover:text-[#001299] hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-600 hover:text-[#001299] hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
               title="Aksi Komputasi Formula: Simulasi 40°C, Pareto NSGA-II, BPOM Sentinel"
             >
               <Plus className="w-4 h-4" />
@@ -274,25 +352,25 @@ export const CenterChatPanel: React.FC = () => {
           </div>
 
           {/* Text Input Area */}
-          <div className="flex-1 relative">
-            <textarea
-              rows={1}
+          <div className="flex-1 relative flex items-center">
+            <input
+              type="text"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
               disabled={!activeDraft}
               placeholder={
                 activeDraft
                   ? "Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
                   : "Buat formula terlebih dahulu untuk memulai obrolan..."
               }
-              className="w-full py-2.5 pl-4 pr-12 text-xs bg-slate-50 border border-slate-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-11 pl-4 pr-12 text-xs bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-normal"
             />
 
             <button
               type="submit"
               disabled={!inputPrompt.trim() || !activeDraft}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-[#001299] text-white hover:bg-[#000e7a] disabled:opacity-40 disabled:hover:bg-[#001299] transition-all cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-[#001299] text-white hover:bg-[#000e7a] disabled:opacity-40 disabled:hover:bg-[#001299] transition-all cursor-pointer flex items-center justify-center shrink-0"
+              aria-label="Kirim Pesan"
             >
               <Send className="w-3.5 h-3.5" />
             </button>
