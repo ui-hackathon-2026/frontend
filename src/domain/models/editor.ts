@@ -1,4 +1,4 @@
-﻿export interface EditorIngredient {
+export interface EditorIngredient {
   id: string;
   name: string;
   inci: string;
@@ -23,6 +23,8 @@ export interface FormulaModificationProposal {
   explanation: string;
   changes: FormulaDiffChange[];
   updatedIngredients: EditorIngredient[];
+  isApplied?: boolean;
+  appliedMode?: "overwrite" | "new_version";
 }
 
 export interface EditorChatMessage {
