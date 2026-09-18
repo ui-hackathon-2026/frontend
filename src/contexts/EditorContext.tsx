@@ -75,17 +75,36 @@ function mapDtoToEditorMessages(items: FormulaChatMessageItem[]): EditorChatMess
   if (!items || items.length === 0) {
     return INITIAL_MESSAGES_V1;
   }
-  return items.map((m) => ({
-    id: `msg-db-${m.id}`,
-    sender: m.role === "user" ? "user" : "assistant",
-    content: m.content,
-    timestamp: new Date(m.created_at).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    proposal: m.proposal || undefined,
-    linkedArtifactId: m.linked_artifact_id || undefined,
-  }));
+
+  // Check which proposals have already been applied by scanning confirmation messages
+  const hasAppliedConfirmation = items.some(
+    (it) => it.content && it.content.includes("Usulan formula berhasil diaplikasikan")
+  );
+
+  return items.map((m, idx) => {
+    let proposalData = m.proposal ? { ...m.proposal } : undefined;
+    if (proposalData) {
+      // If proposalData explicitly has isApplied flag or there's a subsequent applied confirmation
+      const isSubsequentApplied = items
+        .slice(idx + 1)
+        .some((it) => it.content && it.content.includes("Usulan formula berhasil diaplikasikan"));
+      if (proposalData.isApplied || isSubsequentApplied) {
+        proposalData.isApplied = true;
+      }
+    }
+
+    return {
+      id: `msg-db-${m.id}`,
+      sender: m.role === "user" ? "user" : "assistant",
+      content: m.content,
+      timestamp: new Date(m.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      proposal: proposalData,
+      linkedArtifactId: m.linked_artifact_id || undefined,
+    };
+  });
 }
 
 function mapDtoToEditorIngredients(dtoIngredients: FormulaItemResponse["ingredients"]): EditorIngredient[] {
@@ -798,11 +817,27 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setDrafts((prev) =>
           prev.map((d) => {
             if (d.id !== activeDraft.id) return d;
+
+            // Mark the proposal that was applied as applied
+            const updatedMessages = d.messages.map((m) => {
+              if (m.proposal && m.proposal.id === proposal.id) {
+                return {
+                  ...m,
+                  proposal: {
+                    ...m.proposal,
+                    isApplied: true,
+                    appliedMode: mode,
+                  },
+                };
+              }
+              return m;
+            });
+
             return {
               ...d,
               ingredients: freshIngredients,
               messages: [
-                ...d.messages,
+                ...updatedMessages,
                 {
                   id: `sys-applied-${Date.now()}`,
                   sender: "assistant" as const,

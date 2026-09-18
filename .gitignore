@@ -43,3 +43,7 @@ next-env.d.ts
 /.unused-agents
 /explorations
 /.gemini
+
+# impeccable local caches / machine-local config (surfaces briefs stay committed)
+.impeccable/hook.cache.json
+.impeccable/config.local.json

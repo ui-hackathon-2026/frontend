@@ -265,25 +265,41 @@ export const CenterChatPanel: React.FC = () => {
                         ))}
                       </div>
 
-                      {/* Action Choice: New Version vs Overwrite */}
-                      <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => applyProposal(msg.proposal!, "new_version")}
-                          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer group"
-                        >
-                          <History className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
-                          <span>Buat Versi Baru (Snapshot)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyProposal(msg.proposal!, "overwrite")}
-                          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                          <span>Overwrite Versi Ini</span>
-                        </button>
-                      </div>
+                      {/* Action Choice: New Version vs Overwrite (Hidden if already applied) */}
+                      {msg.proposal.isApplied ? (
+                        <div className="pt-2 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>
+                              {msg.proposal.appliedMode === "new_version"
+                                ? "Usulan telah diterapkan sebagai Versi Baru"
+                                : "Usulan telah diterapkan (Overwrite)"}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md">
+                            Sudah Diaplikasikan
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => applyProposal(msg.proposal!, "new_version")}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer group"
+                          >
+                            <History className="w-3.5 h-3.5 text-blue-200 group-hover:rotate-12 transition-transform" />
+                            <span>Buat Versi Baru (Snapshot)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyProposal(msg.proposal!, "overwrite")}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Overwrite Versi Ini</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
