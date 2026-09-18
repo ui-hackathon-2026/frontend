@@ -11,7 +11,6 @@ import {
   Zap,
   ShieldCheck,
   FileSpreadsheet,
-  Box,
   Palette,
   FlaskConical,
   FolderOpen,
@@ -183,26 +182,6 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                       </span>
                       <p className="text-xs text-slate-500 leading-snug">
                         Perka BPOM 17/2022, Halal HAS 23000, dan TKDN kalkulator lokal.
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-
-                <li>
-                  <Link
-                    href="/molecular-inspector"
-                    onClick={onClose}
-                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
-                  >
-                    <div className="p-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200/80 mt-0.5">
-                      <Box className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
-                        3D Molecular &amp; Colloid Inspector
-                      </span>
-                      <p className="text-xs text-slate-500 leading-snug">
-                        RDKit 3D conformers &amp; struktur emulsi droplet 360° WebGL.
                       </p>
                     </div>
                   </Link>
