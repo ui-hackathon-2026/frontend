@@ -72,9 +72,6 @@ export const CenterChatPanel: React.FC = () => {
             <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading">
               Formulation Co-Pilot
             </h2>
-            <span className="text-[10px] text-slate-400 font-mono block">
-              Draft Aktif: {activeDraft ? activeDraft.name : "Belum Ada Formula"}
-            </span>
           </div>
         </div>
 
