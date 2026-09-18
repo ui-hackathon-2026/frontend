@@ -83,15 +83,10 @@ export const ArtifactViewerPanel: React.FC = () => {
       };
 
       await applyProposal(proposal, mode);
-      setAppliedNotice(
-        `Formula ${cand.title} berhasil diterapkan sebagai ${mode === "new_version" ? "Versi Baru (Snapshot)" : "Overwrite"} di Composition Panel!`
-      );
-      setTimeout(() => setAppliedNotice(null), 3000);
       return;
     }
 
-    setAppliedNotice(`Formula Kandidat ${selectedCandidate} berhasil diterapkan ke Composition Panel!`);
-    setTimeout(() => setAppliedNotice(null), 2500);
+    closeArtifactView();
   };
 
   const getIcon = () => {

@@ -803,9 +803,88 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const repo = getFormulaRepository();
         const phases = mapEditorToDtoPhases(proposal.updatedIngredients);
 
-        // create_version is true for new_version, false for overwrite
-        const shouldCreateVersion = mode === "new_version";
+        if (mode === "new_version") {
+          // CREATE A REAL NEW DRAFT FORMULA IN BACKEND & WORKSPACE!
+          const newDraftNum = drafts.length + 1;
+          const cleanBaseName = activeDraft.name.replace(/\s*\(v\d+.*?\)$/i, "").trim();
+          const newDraftName = `${cleanBaseName} (v${newDraftNum})`;
 
+          const created = await repo.createFormula({
+            name: newDraftName,
+            category: "skincare",
+            batch_size_g: 500,
+            notes: `Dibuat dari usulan: ${proposal.title}`,
+            phases,
+          });
+
+          const initialMsgContent = `Draft formula baru **${created.name}** berhasil dibuat berdasarkan usulan **${proposal.title}**.\n\nKomposisi baru (${proposal.updatedIngredients.length} bahan) telah dimuat ke Composition Panel. Anda dapat mulai menguji simulasi kestabilan 40°C atau meminta modifikasi formula lanjutan pada chat ini.`;
+
+          const welcomeMsg: EditorChatMessage = {
+            id: `msg-welcome-${Date.now()}`,
+            sender: "assistant",
+            content: initialMsgContent,
+            timestamp: "Baru saja",
+          };
+
+          const newDraft: DraftFormulation = {
+            id: created.formula_id,
+            name: created.name,
+            createdAt: "Baru saja",
+            ingredients: mapDtoToEditorIngredients(created.ingredients),
+            messages: [welcomeMsg],
+            artifacts: [],
+          };
+
+          // Persist initial message to backend for new formula
+          try {
+            await repo.addMessage(created.formula_id, {
+              role: "assistant",
+              content: initialMsgContent,
+            });
+          } catch (e) {
+            console.error("Gagal persist initial message for new formula draft:", e);
+          }
+
+          // Mark proposal as applied on the previous draft
+          setDrafts((prev) => [
+            newDraft,
+            ...prev.map((d) => {
+              if (d.id !== activeDraft.id) return d;
+              return {
+                ...d,
+                messages: d.messages.map((m) => {
+                  if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
+                    return {
+                      ...m,
+                      proposal: {
+                        ...m.proposal,
+                        isApplied: true,
+                        appliedMode: "new_version" as const,
+                      },
+                    };
+                  }
+                  return m;
+                }),
+              };
+            }),
+          ]);
+
+          setActiveDraftId(newDraft.id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(getActiveStorageKey(), newDraft.id);
+          }
+          setActiveVersions([]);
+          if (newDraft.ingredients.length > 0) {
+            setSelectedMoleculeIngredient(newDraft.ingredients[0]);
+          }
+
+          // Buka chat formula baru
+          setCenterViewMode("chat");
+          setActiveArtifact(null);
+          return;
+        }
+
+        // OVERWRITE MODE: Updates active formula in-place
         const updated = await repo.updateFormula(
           activeDraft.id,
           {
@@ -814,31 +893,24 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             batch_size_g: 500,
             phases,
           },
-          shouldCreateVersion
+          false // do not create snapshot, overwrite current
         );
 
         const freshIngredients = mapDtoToEditorIngredients(updated.ingredients);
-
-        const modeBadge =
-          mode === "new_version"
-            ? "versi snapshot baru"
-            : "overwrite (timpa versi saat ini)";
-
-        const confirmationContent = `Usulan formula berhasil diaplikasikan sebagai **${modeBadge}**. Komposisi di Composition Panel telah diperbarui dan disinkronkan ke cloud backend.`;
+        const confirmationContent = `Formula aktif **${activeDraft.name}** berhasil diperbarui (Overwrite). Komposisi di Composition Panel telah disinkronkan langsung ke cloud backend.`;
 
         setDrafts((prev) =>
           prev.map((d) => {
             if (d.id !== activeDraft.id) return d;
 
-            // Mark the proposal that was applied as applied
             const updatedMessages = d.messages.map((m) => {
-              if (m.proposal && m.proposal.id === proposal.id) {
+              if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
                 return {
                   ...m,
                   proposal: {
                     ...m.proposal,
                     isApplied: true,
-                    appliedMode: mode,
+                    appliedMode: "overwrite" as const,
                   },
                 };
               }
@@ -860,6 +932,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
           })
         );
+
         try {
           await repo.addMessage(activeDraft.id, {
             role: "assistant",
@@ -869,15 +942,21 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.error("Gagal persist applied msg:", e);
         }
 
-        const vList = await repo.listVersions(activeDraft.id);
-        setActiveVersions(vList);
+        try {
+          const vList = await repo.listVersions(activeDraft.id);
+          setActiveVersions(vList);
+        } catch {}
+
+        // Kembali ke chat ini lagi
+        setCenterViewMode("chat");
+        setActiveArtifact(null);
       } catch (err) {
         console.error("Gagal menerapkan usulan formula:", err);
       } finally {
         setIsSaving(false);
       }
     },
-    [activeDraft]
+    [activeDraft, drafts.length, getActiveStorageKey]
   );
 
   // Artifact & Modal Controls
