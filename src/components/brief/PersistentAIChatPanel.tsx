@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ChatMessage, ProjectBriefInput, FormulationBlueprint } from "@/domain/models/brief";
 import { EmptyState } from "@/components/EmptyState";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 
 interface PersistentAIChatPanelProps {
   isOpen: boolean;
@@ -121,7 +122,7 @@ export const PersistentAIChatPanel: React.FC<PersistentAIChatPanelProps> = ({
                     : "bg-[#001299] text-white rounded-tr-sm"
                 }`}
               >
-                {m.content}
+                <MarkdownRenderer content={m.content} isUser={!isAssistant} />
               </div>
               <span className="text-[9px] text-slate-400 px-1">{m.timestamp}</span>
 

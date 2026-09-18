@@ -6,6 +6,7 @@ import { ActionPlusMenu } from "./ActionPlusMenu";
 import { InlineActionConfigCard } from "./InlineActionConfigCard";
 import { ArtifactType } from "@/domain/models/editor";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import {
   Plus,
   Send,
@@ -149,7 +150,7 @@ export const CenterChatPanel: React.FC = () => {
                         : "bg-slate-50 border border-slate-200/80 text-slate-800 rounded-tl-xs"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <MarkdownRenderer content={msg.content} isUser={isUser} />
                   </div>
 
                   {/* Benchmark Presets Selector from Workbench (Shown on empty canvas) */}
