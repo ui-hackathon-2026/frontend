@@ -16,8 +16,23 @@ export class HttpFormulaRepository implements IFormulaRepository {
     this.client = client || new ApiClient();
   }
 
-  async listFormulas(limit: number = 50): Promise<FormulaItemResponse[]> {
-    return this.client.get<FormulaItemResponse[]>(`/api/v1/formulas?limit=${limit}`);
+  async listFormulas(
+    limit: number = 50,
+    projectId?: string,
+    offset: number = 0,
+    q?: string
+  ): Promise<FormulaItemResponse[]> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (projectId) params.set("project_id", projectId);
+    if (q) params.set("q", q);
+    return this.client.get<FormulaItemResponse[]>(`/api/v1/formulas?${params.toString()}`);
+  }
+
+  async importFormulaToProject(formulaId: string, projectId: string): Promise<FormulaItemResponse> {
+    return this.client.post<{ project_id: string }, FormulaItemResponse>(
+      `/api/v1/formulas/${formulaId}/import`,
+      { project_id: projectId }
+    );
   }
 
   async getFormula(formulaId: string): Promise<FormulaItemResponse> {

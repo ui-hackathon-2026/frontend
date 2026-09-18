@@ -39,14 +39,36 @@ export class MockFormulaRepository implements IFormulaRepository {
 
   private versionsMap: Record<string, FormulaVersionItem[]> = {};
 
-  async listFormulas(): Promise<FormulaItemResponse[]> {
-    return [...this.formulas];
+  async listFormulas(
+    limit: number = 50,
+    projectId?: string,
+    offset: number = 0,
+    q?: string
+  ): Promise<FormulaItemResponse[]> {
+    let list = this.formulas;
+    if (projectId) list = list.filter((f) => f.project_id === projectId);
+    if (q) list = list.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()));
+    return list.slice(offset, offset + limit).map((f) => ({ ...f }));
   }
 
   async getFormula(formulaId: string): Promise<FormulaItemResponse> {
     const f = this.formulas.find((it) => it.formula_id === formulaId);
     if (!f) throw new Error("Formula not found");
     return { ...f };
+  }
+
+  async importFormulaToProject(formulaId: string, projectId: string): Promise<FormulaItemResponse> {
+    const source = this.formulas.find((it) => it.formula_id === formulaId);
+    if (!source) throw new Error("Formula not found");
+    const copy: FormulaItemResponse = {
+      ...source,
+      formula_id: `form_${Date.now()}_${Math.round(Math.random() * 1000)}`,
+      project_id: projectId,
+      updated_at: new Date().toISOString(),
+      ingredients: source.ingredients.map((i) => ({ ...i })),
+    };
+    this.formulas.unshift(copy);
+    return { ...copy };
   }
 
   async createFormula(payload: FormulaCreatePayload): Promise<FormulaItemResponse> {

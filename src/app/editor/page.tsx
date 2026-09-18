@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { EditorProvider, useEditor } from "@/contexts/EditorContext";
 import { LeftWorkspaceDrafts } from "@/components/editor/LeftWorkspaceDrafts";
 import { LeftContextualPanel } from "@/components/editor/LeftContextualPanel";
@@ -49,12 +50,23 @@ function EditorStudioInner() {
   );
 }
 
-export default function EditorPage() {
+function EditorPageInner() {
+  const searchParams = useSearchParams();
+  const workspaceId = searchParams.get("workspace") || undefined;
+
   return (
-    <EditorProvider>
+    <EditorProvider workspaceId={workspaceId}>
       <div className="h-screen w-screen flex flex-col bg-white overflow-hidden font-sans">
         <EditorStudioInner />
       </div>
     </EditorProvider>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={null}>
+      <EditorPageInner />
+    </Suspense>
   );
 }

@@ -3,8 +3,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FormulaItemResponse } from "@/domain/models/formula";
 import { getFormulaRepository } from "@/data/di/container";
+import { PageSize } from "@/components/shared/Pagination";
 
 export type FormulationSortKey = "updated" | "name" | "weight";
+
+const FETCH_LIMIT = 2000;
 
 export function useFormulations() {
   const [formulas, setFormulas] = useState<FormulaItemResponse[]>([]);
@@ -14,6 +17,8 @@ export function useFormulations() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<FormulationSortKey>("updated");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
 
   const formulaRepo = getFormulaRepository();
 
@@ -21,7 +26,7 @@ export function useFormulations() {
     setIsLoading(true);
     setError(null);
     formulaRepo
-      .listFormulas()
+      .listFormulas(FETCH_LIMIT)
       .then(setFormulas)
       .catch(() => setError("Gagal memuat daftar formulasi. Coba muat ulang."))
       .finally(() => setIsLoading(false));
@@ -56,9 +61,23 @@ export function useFormulations() {
     });
   }, [formulas, query, categoryFilter, statusFilter, sortKey]);
 
+  // Reset to page 1 whenever the filtered result set changes shape.
+  useEffect(() => {
+    setPage(1);
+  }, [query, categoryFilter, statusFilter, sortKey, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFormulas.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedFormulas = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredFormulas.slice(start, start + pageSize);
+  }, [filteredFormulas, currentPage, pageSize]);
+
   return {
-    formulas: filteredFormulas,
+    formulas: paginatedFormulas,
     totalCount: formulas.length,
+    filteredCount: filteredFormulas.length,
     categories,
     statuses,
     isLoading,
@@ -71,6 +90,10 @@ export function useFormulations() {
     setStatusFilter,
     sortKey,
     setSortKey,
+    page: currentPage,
+    setPage,
+    pageSize,
+    setPageSize,
     reload: load,
   };
 }

@@ -9,9 +9,20 @@ import {
 
 export interface IFormulaRepository {
   /**
-   * List all saved formulas
+   * List saved formulas, optionally scoped to a workspace (project),
+   * paginated via offset, and filtered by a name search query.
    */
-  listFormulas(limit?: number): Promise<FormulaItemResponse[]>;
+  listFormulas(
+    limit?: number,
+    projectId?: string,
+    offset?: number,
+    q?: string
+  ): Promise<FormulaItemResponse[]>;
+
+  /**
+   * Copy an existing formula (e.g. from the library) into a workspace
+   */
+  importFormulaToProject(formulaId: string, projectId: string): Promise<FormulaItemResponse>;
 
   /**
    * Get single formula by formula_id

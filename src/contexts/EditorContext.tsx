@@ -26,7 +26,7 @@ import {
   FormulaVersionItem,
 } from "@/domain/models/formula";
 import { PresetFormulaItem } from "@/domain/models/simulation";
-import { getFormulaRepository, getOptimizerRepository } from "@/data/di/container";
+import { getFormulaRepository, getOptimizerRepository, getWorkspaceRepository } from "@/data/di/container";
 import { ParetoCandidateFormula } from "@/domain/models/optimizer";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -246,9 +246,13 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | null>(null);
 
-export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: string }> = ({
+  children,
+  workspaceId,
+}) => {
   const { user } = useAuth();
   const [drafts, setDrafts] = useState<DraftFormulation[]>([]);
+  const [workspaceName, setWorkspaceName] = useState<string>("Untitled");
   const [activeDraftId, setActiveDraftId] = useState<string>("");
   const [activeVersions, setActiveVersions] = useState<FormulaVersionItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -274,8 +278,19 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const loadFormulasFromBackend = useCallback(async () => {
     setIsLoading(true);
     try {
+      // No workspace scope (e.g. /editor opened directly, or a brand new
+      // workspace with nothing imported into it yet) means a blank editor,
+      // never the unscoped global formula list.
+      if (!workspaceId) {
+        setDrafts([]);
+        setActiveDraftId("");
+        setSelectedMoleculeIngredient(null);
+        setActiveVersions([]);
+        return;
+      }
+
       const repo = getFormulaRepository();
-      const list = await repo.listFormulas(50);
+      const list = await repo.listFormulas(2000, workspaceId);
 
       const mappedDrafts: DraftFormulation[] = list.map((f) => ({
         id: f.formula_id,
@@ -336,11 +351,32 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsLoading(false);
     }
-  }, [getActiveStorageKey]);
+  }, [getActiveStorageKey, workspaceId]);
 
   useEffect(() => {
     loadFormulasFromBackend();
   }, [loadFormulasFromBackend]);
+
+  // Resolve the real workspace name from the backend; "Untitled" whenever
+  // there's no ?workspace= (direct /editor access) or the lookup fails.
+  useEffect(() => {
+    if (!workspaceId) {
+      setWorkspaceName("Untitled");
+      return;
+    }
+    let cancelled = false;
+    getWorkspaceRepository()
+      .getWorkspace(workspaceId)
+      .then((ws) => {
+        if (!cancelled) setWorkspaceName(ws.name || "Untitled");
+      })
+      .catch(() => {
+        if (!cancelled) setWorkspaceName("Untitled");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   const activeDraft: DraftFormulation | null =
     drafts.find((d) => d.id === activeDraftId) || (drafts.length > 0 ? drafts[0] : null);
@@ -421,6 +457,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         category: "skincare",
         batch_size_g: 500,
         notes: "Draft baru kosongan",
+        project_id: workspaceId ?? null,
         phases: {
           phase_a: [],
           phase_b: [],
@@ -452,7 +489,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsSaving(false);
     }
-  }, [drafts.length, getActiveStorageKey]);
+  }, [drafts.length, getActiveStorageKey, workspaceId]);
 
   // Apply Benchmark Preset from Workbench
   const applyPresetBenchmark = useCallback(
@@ -561,6 +598,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         category: "skincare",
         batch_size_g: 500,
         notes: `Difork dari ${activeDraft.name}`,
+        project_id: workspaceId ?? null,
         phases,
       });
 
@@ -593,7 +631,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     } finally {
       setIsSaving(false);
     }
-  }, [activeDraft, drafts.length, createNewDraft, getActiveStorageKey]);
+  }, [activeDraft, drafts.length, createNewDraft, getActiveStorageKey, workspaceId]);
 
   // Rename Draft in Backend
   const renameDraft = useCallback(
@@ -1261,8 +1299,8 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   );
 
   const workspace: EditorWorkspace = {
-    id: "ws-paragon",
-    name: "Paragon R&D Studio: Tropical Skincare",
+    id: workspaceId || "ws-untitled",
+    name: workspaceName,
     activeDraftId: activeDraft ? activeDraft.id : "",
     drafts,
   };

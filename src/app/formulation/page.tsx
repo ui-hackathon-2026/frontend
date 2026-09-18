@@ -7,6 +7,7 @@ import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { EmptyState } from "@/components/EmptyState";
 import { PhaseCompositionBar } from "@/components/shared/PhaseCompositionBar";
+import { Pagination } from "@/components/shared/Pagination";
 import { SimilarityPanel } from "@/components/formulation/SimilarityPanel";
 import { useFormulations } from "@/hooks/useFormulations";
 import { useFormulaSimilarity } from "@/hooks/useFormulaSimilarity";
@@ -64,7 +65,7 @@ function RowSkeleton() {
 export default function FormulationPage() {
   const {
     formulas,
-    totalCount,
+    filteredCount,
     categories,
     statuses,
     isLoading,
@@ -77,6 +78,10 @@ export default function FormulationPage() {
     setStatusFilter,
     sortKey,
     setSortKey,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
   } = useFormulations();
 
   const { expandedId, stateFor, toggle, retry } = useFormulaSimilarity();
@@ -272,10 +277,14 @@ export default function FormulationPage() {
           </div>
         )}
 
-        {!isLoading && !error && formulas.length > 0 && (
-          <p className="text-[11px] text-slate-400">
-            Menampilkan {formulas.length} dari {totalCount} formulasi
-          </p>
+        {!isLoading && !error && filteredCount > 0 && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredCount}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </main>
     </div>

@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ShimmerSkeleton } from "@/components/ShimmerWidget";
 import { EmptyState } from "@/components/EmptyState";
 import { PhaseCompositionBar } from "@/components/shared/PhaseCompositionBar";
+import { Pagination } from "@/components/shared/Pagination";
+import { NewWorkspaceModal } from "@/components/workspace/NewWorkspaceModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { WorkspaceItem } from "@/domain/models/workspace";
@@ -52,9 +54,10 @@ function WorkspaceCardSkeleton() {
 
 export default function WorkspacePage() {
   const { user } = useAuth();
+  const [isNewWorkspaceOpen, setIsNewWorkspaceOpen] = useState(false);
   const {
     workspaces,
-    totalCount,
+    filteredCount,
     formulasById,
     isLoading,
     error,
@@ -64,6 +67,10 @@ export default function WorkspacePage() {
     setSortKey,
     viewMode,
     setViewMode,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
   } = useWorkspaces();
 
   return (
@@ -83,14 +90,20 @@ export default function WorkspacePage() {
               position="right"
             />
           </div>
-          <Link
-            href="/project-brief"
+          <button
+            type="button"
+            onClick={() => setIsNewWorkspaceOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#001299] hover:bg-[#000e7a] text-white text-xs font-bold transition-colors shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Workspace Baru</span>
-          </Link>
+          </button>
         </div>
+
+        <NewWorkspaceModal
+          isOpen={isNewWorkspaceOpen}
+          onClose={() => setIsNewWorkspaceOpen(false)}
+        />
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -259,10 +272,14 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        {!isLoading && !error && workspaces.length > 0 && (
-          <p className="text-[11px] text-slate-400">
-            Menampilkan {workspaces.length} dari {totalCount} workspace
-          </p>
+        {!isLoading && !error && filteredCount > 0 && (
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredCount}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         )}
       </main>
     </div>
