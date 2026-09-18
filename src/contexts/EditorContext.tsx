@@ -136,7 +136,7 @@ function inferRole(inci: string): EditorIngredient["role"] {
 function mapEditorToDtoPhases(ingredients: EditorIngredient[]) {
   const getPhase = (p: "A" | "B" | "C" | "D") =>
     ingredients
-      .filter((i) => i.phase === p)
+      .filter((i) => i.phase === p && i.weightPct > 0)
       .map((i) => ({
         inci: i.inci,
         name: i.name,
@@ -236,21 +236,24 @@ function buildProposalFromComplianceAudit(
   const failedAudits = auditList.filter((a) => a.status !== "PASSED");
   if (failedAudits.length === 0) return null;
 
-  const updatedIngredients: EditorIngredient[] = currentIngredients.map((i) => ({ ...i }));
+  // Work on a mutable copy
+  let working: EditorIngredient[] = currentIngredients.map((i) => ({ ...i }));
   let totalDelta = 0;
 
   for (const failed of failedAudits) {
-    const target = updatedIngredients.find(
+    const target = working.find(
       (i) =>
         i.inci.toLowerCase() === (failed.inci || "").toLowerCase() ||
         i.name.toLowerCase() === (failed.name || "").toLowerCase()
     );
     if (!target) continue;
 
-    let targetNewPct = target.weightPct;
-    if (typeof failed.bpom_limit_pct === "number" && failed.bpom_limit_pct >= 0) {
+    let targetNewPct: number;
+    if (typeof failed.bpom_limit_pct === "number" && failed.bpom_limit_pct > 0) {
+      // Clamp to BPOM legal limit
       targetNewPct = Number(failed.bpom_limit_pct.toFixed(2));
     } else {
+      // Forbidden ingredient (Halal violation, zero limit) — remove entirely
       targetNewPct = 0;
     }
 
@@ -261,9 +264,13 @@ function buildProposalFromComplianceAudit(
     }
   }
 
+  // Remove ingredients that were set to 0 (forbidden/removed)
+  const removedIds = new Set(working.filter((i) => i.weightPct === 0).map((i) => i.id));
+  working = working.filter((i) => i.weightPct > 0);
+
   // Rebalance water (Aqua / solvent) in Phase A so total stays 100%
   if (totalDelta > 0) {
-    const solvent = updatedIngredients.find(
+    const solvent = working.find(
       (i) =>
         i.role === "solvent" ||
         i.inci.toLowerCase().includes("aqua") ||
@@ -274,8 +281,22 @@ function buildProposalFromComplianceAudit(
     }
   }
 
+  // Re-normalise to exactly 100 to absorb floating-point drift
+  const total = working.reduce((s, i) => s + i.weightPct, 0);
+  if (Math.abs(total - 100) > 0.05) {
+    const solvent = working.find(
+      (i) =>
+        i.role === "solvent" ||
+        i.inci.toLowerCase().includes("aqua") ||
+        i.inci.toLowerCase().includes("water")
+    );
+    if (solvent) {
+      solvent.weightPct = Number((solvent.weightPct + (100 - total)).toFixed(2));
+    }
+  }
+
   const changes: FormulaDiffChange[] = [];
-  for (const item of updatedIngredients) {
+  for (const item of working) {
     const orig = currentIngredients.find((i) => i.id === item.id);
     if (orig && Math.abs(orig.weightPct - item.weightPct) > 0.01) {
       changes.push({
@@ -284,22 +305,46 @@ function buildProposalFromComplianceAudit(
         oldPct: orig.weightPct,
         newPct: item.weightPct,
         phase: item.phase,
-        action: item.weightPct === 0 ? "removed" : "modified",
+        action: "modified",
+      });
+    }
+  }
+  // Record removed ingredients as changes
+  for (const id of removedIds) {
+    const orig = currentIngredients.find((i) => i.id === id);
+    if (orig) {
+      changes.push({
+        ingredientId: orig.id,
+        name: orig.name,
+        oldPct: orig.weightPct,
+        newPct: 0,
+        phase: orig.phase,
+        action: "removed",
       });
     }
   }
 
   if (changes.length === 0) return null;
 
+  const removedNames = [...removedIds]
+    .map((id) => currentIngredients.find((i) => i.id === id)?.name)
+    .filter(Boolean);
+  const cappedNames = failedAudits
+    .filter((f) => typeof f.bpom_limit_pct === "number" && f.bpom_limit_pct > 0)
+    .map((f) => f.name || f.inci);
+
   const title = `Remediasi Kepatuhan BPOM 25/2025 & HAS 23000`;
-  const explanation = `Koreksi otomatis konsentrasi bahan non-compliant (${failedAudits.map((f) => f.name || f.inci).join(", ")}) ke batas aman legal Perka BPOM No. 25/2025. Fase pelarut (Aqua) disesuaikan kembali (+${totalDelta.toFixed(2)}%) agar total massa formula tepat 100.0%.`;
+  const explanation =
+    (cappedNames.length > 0 ? `Koreksi konsentrasi ke batas legal: ${cappedNames.join(", ")}. ` : "") +
+    (removedNames.length > 0 ? `Dihapus (bahan terlarang Halal/BPOM): ${removedNames.join(", ")}. ` : "") +
+    `Fase pelarut (Aqua) disesuaikan kembali (+${totalDelta.toFixed(2)}%) agar total massa formula tepat 100.0%.`;
 
   return {
     id: `prop-sentinel-${Date.now()}`,
     title,
     explanation,
     changes,
-    updatedIngredients,
+    updatedIngredients: working,
   };
 }
 
