@@ -5,7 +5,7 @@ import { FileSpreadsheet, ArrowRight, CheckCircle2 } from "lucide-react";
 export default function BatchSheetPage() {
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
-      <Navbar brandName="Paragon Studio" />
+      <Navbar brandName="CoRamu" />
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-12 w-full space-y-8">
         <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-6">
           <div className="space-y-2">

@@ -88,39 +88,34 @@ export const KitchenCompositionPanel: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200/80 font-sans">
       {/* Header */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/70 shrink-0 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-[#001299] text-white">
+      <div className="p-4 border-b border-slate-100 bg-slate-50/70 shrink-0 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#001299] text-white flex items-center justify-center shrink-0 shadow-2xs">
               <Sliders className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading">
+            <div className="min-w-0">
+              <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading truncate">
                 Composition Panel
               </h2>
-              <span className="text-[10px] text-slate-400 font-mono block">
+              <span
+                className="text-[10px] text-slate-400 font-mono block truncate"
+                title={activeDraft ? activeDraft.name : undefined}
+              >
                 {activeDraft ? activeDraft.name : "Belum Ada Formula"}
               </span>
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Total Formula
+          {ingredients.length > 0 && (
+            <span className="shrink-0 px-2.5 py-1 rounded-xl bg-white border border-slate-200/90 text-slate-600 font-mono text-[10px] font-bold shadow-2xs">
+              {ingredients.length} Bahan
             </span>
-            <div className="flex items-center gap-1 font-mono font-extrabold text-xs">
-              <span className={ingredients.length === 0 ? "text-slate-400" : Math.abs(totalWeight - 100) < 0.1 ? "text-emerald-700" : "text-amber-600"}>
-                {totalWeight.toFixed(1)}%
-              </span>
-              {Math.abs(totalWeight - 100) < 0.1 && ingredients.length > 0 && (
-                <CheckCircle2 className="w-3 h-3 text-emerald-600 inline" />
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Mini Phase Ratio Pill Bar */}
-        <div className="flex items-center justify-between text-[10px] bg-white p-2 rounded-xl border border-slate-200/70 font-mono">
+        <div className="flex items-center justify-between text-[10px] bg-white p-2 rounded-xl border border-slate-200/70 font-mono shadow-2xs">
           <span className="text-amber-700 font-bold">A: {phaseBreakdown.A}%</span>
           <span className="text-slate-300">|</span>
           <span className="text-blue-700 font-bold">B: {phaseBreakdown.B}%</span>
@@ -258,7 +253,23 @@ export const KitchenCompositionPanel: React.FC = () => {
           <Atom className="w-3 h-3 text-[#001299]" />
           <span>Klik bahan untuk inspect 3D</span>
         </span>
-        <span className="text-emerald-700 font-bold">Auto-Rebalanced 100%</span>
+        <span
+          className={`flex items-center gap-1 font-bold font-mono ${
+            Math.abs(totalWeight - 100) < 0.1 ? "text-emerald-700" : "text-amber-700"
+          }`}
+        >
+          {Math.abs(totalWeight - 100) < 0.1 ? (
+            <>
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span>Auto-Rebalanced 100%</span>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+              <span>Total: {totalWeight.toFixed(1)}%</span>
+            </>
+          )}
+        </span>
       </div>
     </div>
   );

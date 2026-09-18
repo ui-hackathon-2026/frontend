@@ -4,8 +4,41 @@ import React, { useState } from "react";
 import { DelayedInfoTooltip } from "@/components/DelayedInfoTooltip";
 import { ShieldCheck, FileCheck, CheckCircle2, AlertTriangle, Layers, Building2, Globe } from "lucide-react";
 
-export const DualScopeSimilarityReport: React.FC = () => {
+export interface InternalMatch {
+  name?: string;
+  formula_id?: string;
+  jaccard?: number;
+  cosine?: number;
+  chassis_overlap_pct?: number;
+}
+
+export interface ExternalMatchItem {
+  brand?: string;
+  product_name?: string;
+  url?: string;
+  similarity?: number;
+  shared_ingredients?: string[];
+}
+
+export interface SimilarityReportData {
+  internal?: {
+    matches?: InternalMatch[];
+  };
+  external?: {
+    novelty_score?: number;
+    top_matches?: ExternalMatchItem[];
+  };
+}
+
+export const DualScopeSimilarityReport: React.FC<{ data?: SimilarityReportData | null }> = ({ data }) => {
   const [activeTab, setActiveTab] = useState<"internal" | "external">("internal");
+  const internalMatches = data?.internal?.matches ?? [];
+  const externalMatches: ExternalMatchItem[] = data?.external?.top_matches ?? [];
+  const noveltyPct = data?.external?.novelty_score != null ? Math.round(data.external.novelty_score * 100) : null;
+  const topInternal = internalMatches[0];
+  const topOverlap = topInternal != null
+    ? Math.round(((topInternal.jaccard ?? 0) + (topInternal.cosine ?? 0)) / 2 * 1000) / 10
+    : null;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-6 shadow-xs font-sans">
@@ -65,10 +98,10 @@ export const DualScopeSimilarityReport: React.FC = () => {
                 Chassis Overlap Index
               </span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-extrabold text-[#001299] font-heading">78.4%</span>
+                <span className="text-2xl font-extrabold text-[#001299] font-heading">{topOverlap != null ? `${topOverlap}%` : "-"}</span>
                 <span className="text-xs text-blue-600 font-medium">Jaccard &amp; Cosine</span>
               </div>
-              <span className="text-[11px] text-slate-500 block">Sangat mirip dengan Wardah Hydra Rose</span>
+              <span className="text-[11px] text-slate-500 block">{topInternal ? `Paling mirip dengan ${topInternal.name ?? topInternal.formula_id}` : "Belum ada pembanding"}</span>
             </div>
 
             <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/60 space-y-1">
@@ -111,27 +144,23 @@ export const DualScopeSimilarityReport: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="p-3 font-semibold text-slate-900">Hydra Rose Moisture Rich Gel</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#001299] font-bold">Wardah</span></td>
-                    <td className="p-3 font-mono font-bold text-[#001299]">78.4%</td>
-                    <td className="p-3 text-slate-500">72h Hydrating Active vs Niacinamide 3%</td>
-                    <td className="p-3 text-right"><span className="text-emerald-700 font-semibold">Lulus Uji 40°C</span></td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="p-3 font-semibold text-slate-900">Triple Protection Sunscreen Gel</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold">Kahf</span></td>
-                    <td className="p-3 font-mono font-bold text-slate-700">64.2%</td>
-                    <td className="p-3 text-slate-500">Menthol refreshing vs Soothing allantoin</td>
-                    <td className="p-3 text-right"><span className="text-emerald-700 font-semibold">Lulus Uji 40°C</span></td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="p-3 font-semibold text-slate-900">Bright Stuff Moisture Gel</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded-md bg-pink-50 text-pink-700 font-bold">Emina</span></td>
-                    <td className="p-3 font-mono font-bold text-slate-700">58.9%</td>
-                    <td className="p-3 text-slate-500">Summer Plum Extract vs High lipid barrier</td>
-                    <td className="p-3 text-right"><span className="text-emerald-700 font-semibold">Lulus Uji 40°C</span></td>
-                  </tr>
+                  {internalMatches.length === 0 && (
+                    <tr>
+                      <td className="p-3 text-slate-400" colSpan={5}>Tidak ada formula pembanding tersimpan.</td>
+                    </tr>
+                  )}
+                  {internalMatches.map((m, idx) => {
+                    const overlap = Math.round(((m.jaccard ?? 0) + (m.cosine ?? 0)) / 2 * 1000) / 10;
+                    return (
+                    <tr key={m.formula_id ?? idx} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-semibold text-slate-900">{m.name ?? m.formula_id}</td>
+                      <td className="p-3"><span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#001299] font-bold">Internal</span></td>
+                      <td className="p-3 font-mono font-bold text-[#001299]">{overlap}%</td>
+                      <td className="p-3 text-slate-500">Chassis overlap {m.chassis_overlap_pct ?? "-"}%</td>
+                      <td className="p-3 text-right"><span className="text-emerald-700 font-semibold">Terdaftar</span></td>
+                    </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -149,10 +178,10 @@ export const DualScopeSimilarityReport: React.FC = () => {
               </div>
               <div>
                 <span className="text-xs font-bold text-emerald-900 block">
-                  Freedom to Operate (FTO) Terkonfirmasi — Risiko Rendah
+                  Skor Kebaruan vs Produk Beredar
                 </span>
                 <span className="text-[11px] text-emerald-700">
-                  Tidak ditemukan pelanggaran klaim independen paten kosmetik internasional aktif (WIPO, USPTO, DJKI).
+                  Estimasi berbasis urutan label, bukan persen lab. Mesin FTO paten belum tersambung.
                 </span>
               </div>
             </div>
@@ -162,7 +191,7 @@ export const DualScopeSimilarityReport: React.FC = () => {
                 Patent Novelty Index
               </span>
               <span className="text-2xl font-extrabold text-emerald-800 font-heading">
-                89 / 100
+                {noveltyPct != null ? `${noveltyPct} / 100` : "-"}
               </span>
             </div>
           </div>
@@ -170,32 +199,25 @@ export const DualScopeSimilarityReport: React.FC = () => {
           {/* Patent Search Results */}
           <div className="space-y-2">
             <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              Skrining Klaim Paten Global Terkait (ChemBERTa Embedding Match)
+              Produk Kompetitor Paling Mirip
             </span>
             <div className="space-y-2">
-              <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-1">
+              {externalMatches.length === 0 && (
+                <p className="text-xs text-slate-400">Tidak ada produk pembanding yang cocok.</p>
+              )}
+              {externalMatches.map((m, idx) => (
+              <div key={idx} className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-1">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-800">WO2021089421A1 — Stabilized Cosmetic Emulsion</span>
+                  <span className="font-bold text-slate-800">{m.product_name} ({m.brand})</span>
                   <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold">
-                    Overlap: 18.2% (Aman)
+                    Mirip: {Math.round((m.similarity ?? 0) * 1000) / 10}%
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Paten L'Oréal membatasi surfaktan poligliseril spesifik dengan rantai C12-C14. Formula Paragon menggunakan GMS C18 &amp; Polyglyceryl-3 sehingga berada di luar cakupan klaim legal.
+                  Bahan bersama: {(m.shared_ingredients || []).join(", ") || "-"}
                 </p>
               </div>
-
-              <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-1">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-800">US20190240135A1 — Topical Niacinamide Delivery Matrix</span>
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold">
-                    Overlap: 14.5% (Aman)
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Paten Johnson &amp; Johnson mengklaim kombinasi Niacinamide dengan sistem polimer crosslinked netral pH &lt; 4.5. Formula Paragon berada pada rentang fisiologis pH 5.5 - 6.0.
-                </p>
-              </div>
+              ))}
             </div>
           </div>
         </div>

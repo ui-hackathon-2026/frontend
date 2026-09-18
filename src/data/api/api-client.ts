@@ -38,6 +38,12 @@ export interface ApiClientConfig {
   timeoutMs?: number;
 }
 
+export function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ps_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export class ApiClient {
   private baseUrl: string;
   private timeoutMs: number;

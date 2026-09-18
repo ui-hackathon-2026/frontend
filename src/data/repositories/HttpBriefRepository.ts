@@ -1,4 +1,5 @@
 import { IBriefRepository, ChatStreamHandlers } from "@/domain/repositories/IBriefRepository";
+import { authHeader } from "@/data/api/api-client";
 import {
   ProjectBriefInput,
   FormulationBlueprint,
@@ -17,7 +18,7 @@ export class HttpBriefRepository implements IBriefRepository {
   async synthesizeBlueprint(brief: ProjectBriefInput): Promise<FormulationBlueprint> {
     const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/synthesize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(brief),
     });
     if (!res.ok) throw new Error("Gagal menyintesis arsitektur formula");
@@ -33,6 +34,7 @@ export class HttpBriefRepository implements IBriefRepository {
     formData.append("file", file);
     const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/parse-brief-pdf`, {
       method: "POST",
+      headers: { ...authHeader() },
       body: formData,
     });
     if (!res.ok) throw new Error("Gagal memproses dokumen PDF brief");
@@ -40,13 +42,17 @@ export class HttpBriefRepository implements IBriefRepository {
   }
 
   async getExistingChassisList(): Promise<ExistingFormulaChassis[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/chassis`);
+    const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/chassis`, {
+      headers: { ...authHeader() },
+    });
     if (!res.ok) throw new Error("Gagal mengambil daftar formula acuan");
     return res.json();
   }
 
   async getHeroIngredientsCatalog(): Promise<HeroIngredientSelection[]> {
-    const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/hero-ingredients`);
+    const res = await fetch(`${this.baseUrl}/api/v1/orchestrator/hero-ingredients`, {
+      headers: { ...authHeader() },
+    });
     if (!res.ok) throw new Error("Gagal mengambil katalog bahan lokal");
     return res.json();
   }
@@ -61,7 +67,7 @@ export class HttpBriefRepository implements IBriefRepository {
   ): Promise<ChatMessage> {
     const res = await fetch(`${this.baseUrl}/api/v1/copilot/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify({
         message,
         session_id: stream?.sessionId,

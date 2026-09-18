@@ -32,6 +32,37 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const STORAGE_KEY_ACTIVE_ID = "ps_editor_active_formula_id";
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("ps_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(`Backend ${path} menjawab ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function apiGet<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { Accept: "application/json", ...authHeaders() },
+  });
+  if (!res.ok) {
+    throw new Error(`Backend ${path} menjawab ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 const INITIAL_MESSAGES_V1: EditorChatMessage[] = [
   {
     id: "msg-welcome-v1",
@@ -221,6 +252,7 @@ interface EditorContextType {
     proposal: FormulaModificationProposal,
     mode?: "overwrite" | "new_version"
   ) => Promise<void>;
+  applyCandidateRecipe: (entries: Array<{ inci: string; weightPct: number }>) => void;
   // Contextual Left Panel
   selectedMoleculeIngredient: EditorIngredient | null;
   setSelectedMoleculeIngredient: (item: EditorIngredient | null) => void;
@@ -382,6 +414,39 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
     drafts.find((d) => d.id === activeDraftId) || (drafts.length > 0 ? drafts[0] : null);
 
   const ingredients = activeDraft ? activeDraft.ingredients : [];
+
+  const [chatSessionId, setChatSessionId] = useState<string | null>(null);
+  const smilesMapRef = React.useRef<Record<string, string>>({});
+
+  // SMILES lookup from backend catalog (for simulate calls)
+  const ensureSmilesMap = useCallback(async () => {
+    if (Object.keys(smilesMapRef.current).length > 0) return smilesMapRef.current;
+    try {
+      const data = await apiGet<{ items: Array<{ inci: string; smiles: string }> }>(
+        "/api/v1/workbench/ingredients"
+      );
+      const map: Record<string, string> = {};
+      for (const item of data.items || []) {
+        if (item.inci && item.smiles) map[item.inci.toLowerCase()] = item.smiles;
+      }
+      smilesMapRef.current = map;
+    } catch {
+      // offline catalog: simulate calls will fail gracefully at request time
+    }
+    return smilesMapRef.current;
+  }, []);
+
+  const toSimulateIngredients = useCallback(async () => {
+    const smilesMap = await ensureSmilesMap();
+    return ingredients.map((it) => ({
+      name: it.name,
+      inci: it.inci,
+      smiles: smilesMap[it.inci.toLowerCase()] || "O",
+      weight_pct: it.weightPct,
+      phase: it.phase,
+      role: it.role,
+    }));
+  }, [ingredients, ensureSmilesMap]);
 
   // Switch Draft
   const switchDraft = useCallback(
@@ -719,9 +784,45 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         });
 
         const restoredIngredients = mapDtoToEditorIngredients(updated.ingredients);
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-restore-${Date.now()}`,
+          sender: "user",
+          content: `Kembalikan formula ke snapshot **Versi ${v.version}** (${v.created_at}).`,
+          timestamp: "Baru saja",
+        };
+        const assistantMsg: EditorChatMessage = {
+          id: `msg-asst-restore-${Date.now() + 1}`,
+          sender: "assistant",
+          content: `Formula berhasil dikembalikan ke snapshot **Versi ${v.version}**. Seluruh konsentrasi bahan di Composition Panel telah diselaraskan sesuai riwayat snapshot.`,
+          timestamp: "Baru saja",
+        };
+
         setDrafts((prev) =>
-          prev.map((d) => (d.id === activeDraft.id ? { ...d, name: updated.name, ingredients: restoredIngredients } : d))
+          prev.map((d) =>
+            d.id === activeDraft.id
+              ? {
+                  ...d,
+                  name: updated.name,
+                  ingredients: restoredIngredients,
+                  messages: [...d.messages, userMsg, assistantMsg],
+                }
+              : d
+          )
         );
+
+        try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
+          await repo.addMessage(activeDraft.id, {
+            role: "assistant",
+            content: assistantMsg.content,
+          });
+        } catch (e) {
+          console.error("Gagal persist restore messages:", e);
+        }
+
         const vList = await repo.listVersions(activeDraft.id);
         setActiveVersions(vList);
       } catch (err) {
@@ -841,9 +942,107 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         const repo = getFormulaRepository();
         const phases = mapEditorToDtoPhases(proposal.updatedIngredients);
 
-        // create_version is true for new_version, false for overwrite
-        const shouldCreateVersion = mode === "new_version";
+        if (mode === "new_version") {
+          // CREATE A REAL NEW DRAFT FORMULA IN BACKEND & WORKSPACE!
+          const newDraftNum = drafts.length + 1;
+          const cleanBaseName = activeDraft.name.replace(/\s*\(v\d+.*?\)$/i, "").trim();
+          const newDraftName = `${cleanBaseName} (v${newDraftNum})`;
 
+          const created = await repo.createFormula({
+            name: newDraftName,
+            category: "skincare",
+            batch_size_g: 500,
+            notes: `Dibuat dari usulan: ${proposal.title}`,
+            phases,
+          });
+
+          const initialMsgContent = `Draft formula baru **${created.name}** berhasil dibuat berdasarkan usulan **${proposal.title}**.\n\nKomposisi baru (${proposal.updatedIngredients.length} bahan) telah dimuat ke Composition Panel. Anda dapat mulai menguji simulasi kestabilan 40°C atau meminta modifikasi formula lanjutan pada chat ini.`;
+
+          const welcomeMsg: EditorChatMessage = {
+            id: `msg-welcome-${Date.now()}`,
+            sender: "assistant",
+            content: initialMsgContent,
+            timestamp: "Baru saja",
+          };
+
+          const newDraft: DraftFormulation = {
+            id: created.formula_id,
+            name: created.name,
+            createdAt: "Baru saja",
+            ingredients: mapDtoToEditorIngredients(created.ingredients),
+            messages: [welcomeMsg],
+            artifacts: [],
+          };
+
+          // Persist initial message to backend for new formula
+          try {
+            await repo.addMessage(created.formula_id, {
+              role: "assistant",
+              content: initialMsgContent,
+            });
+          } catch (e) {
+            console.error("Gagal persist initial message for new formula draft:", e);
+          }
+
+          // Persist user intent in parent draft
+          const parentUserMsg: EditorChatMessage = {
+            id: `msg-user-prop-${Date.now()}`,
+            sender: "user",
+            content: `Terapkan usulan **${proposal.title}** sebagai draft versi baru.`,
+            timestamp: "Baru saja",
+          };
+          try {
+            await repo.addMessage(activeDraft.id, {
+              role: "user",
+              content: parentUserMsg.content,
+            });
+          } catch (e) {
+            console.error("Gagal persist user proposal new_version message:", e);
+          }
+
+          // Mark proposal as applied on the previous draft
+          setDrafts((prev) => [
+            newDraft,
+            ...prev.map((d) => {
+              if (d.id !== activeDraft.id) return d;
+              return {
+                ...d,
+                messages: [
+                  ...d.messages.map((m) => {
+                    if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
+                      return {
+                        ...m,
+                        proposal: {
+                          ...m.proposal,
+                          isApplied: true,
+                          appliedMode: "new_version" as const,
+                        },
+                      };
+                    }
+                    return m;
+                  }),
+                  parentUserMsg,
+                ],
+              };
+            }),
+          ]);
+
+          setActiveDraftId(newDraft.id);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(getActiveStorageKey(), newDraft.id);
+          }
+          setActiveVersions([]);
+          if (newDraft.ingredients.length > 0) {
+            setSelectedMoleculeIngredient(newDraft.ingredients[0]);
+          }
+
+          // Buka chat formula baru
+          setCenterViewMode("chat");
+          setActiveArtifact(null);
+          return;
+        }
+
+        // OVERWRITE MODE: Updates active formula in-place
         const updated = await repo.updateFormula(
           activeDraft.id,
           {
@@ -852,31 +1051,36 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
             batch_size_g: 500,
             phases,
           },
-          shouldCreateVersion
+          false // do not create snapshot, overwrite current
         );
 
         const freshIngredients = mapDtoToEditorIngredients(updated.ingredients);
-
-        const modeBadge =
-          mode === "new_version"
-            ? "versi snapshot baru"
-            : "overwrite (timpa versi saat ini)";
-
-        const confirmationContent = `Usulan formula berhasil diaplikasikan sebagai **${modeBadge}**. Komposisi di Composition Panel telah diperbarui dan disinkronkan ke cloud backend.`;
+        const userMsg: EditorChatMessage = {
+          id: `msg-user-prop-${Date.now()}`,
+          sender: "user",
+          content: `Terapkan usulan **${proposal.title}** ke formula ini (Overwrite).`,
+          timestamp: "Baru saja",
+        };
+        const confirmationContent = `Usulan formula berhasil diaplikasikan ke kanvas! Komposisi di Composition Panel telah disinkronkan langsung ke cloud backend.`;
+        const assistantMsg: EditorChatMessage = {
+          id: `sys-applied-${Date.now() + 1}`,
+          sender: "assistant" as const,
+          content: confirmationContent,
+          timestamp: "Baru saja",
+        };
 
         setDrafts((prev) =>
           prev.map((d) => {
             if (d.id !== activeDraft.id) return d;
 
-            // Mark the proposal that was applied as applied
             const updatedMessages = d.messages.map((m) => {
-              if (m.proposal && m.proposal.id === proposal.id) {
+              if (m.proposal && (m.proposal.id === proposal.id || !proposal.id)) {
                 return {
                   ...m,
                   proposal: {
                     ...m.proposal,
                     isApplied: true,
-                    appliedMode: mode,
+                    appliedMode: "overwrite" as const,
                   },
                 };
               }
@@ -886,19 +1090,16 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
             return {
               ...d,
               ingredients: freshIngredients,
-              messages: [
-                ...updatedMessages,
-                {
-                  id: `sys-applied-${Date.now()}`,
-                  sender: "assistant" as const,
-                  content: confirmationContent,
-                  timestamp: "Baru saja",
-                },
-              ],
+              messages: [...updatedMessages, userMsg, assistantMsg],
             };
           })
         );
+
         try {
+          await repo.addMessage(activeDraft.id, {
+            role: "user",
+            content: userMsg.content,
+          });
           await repo.addMessage(activeDraft.id, {
             role: "assistant",
             content: confirmationContent,
@@ -907,15 +1108,21 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           console.error("Gagal persist applied msg:", e);
         }
 
-        const vList = await repo.listVersions(activeDraft.id);
-        setActiveVersions(vList);
+        try {
+          const vList = await repo.listVersions(activeDraft.id);
+          setActiveVersions(vList);
+        } catch {}
+
+        // Kembali ke chat ini lagi
+        setCenterViewMode("chat");
+        setActiveArtifact(null);
       } catch (err) {
         console.error("Gagal menerapkan usulan formula:", err);
       } finally {
         setIsSaving(false);
       }
     },
-    [activeDraft]
+    [activeDraft, drafts.length, getActiveStorageKey]
   );
 
   // Artifact & Modal Controls
@@ -936,186 +1143,313 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
     setActionConfigModal({ isOpen: false, actionType: null });
   }, []);
 
-  // Execute Action Menu (+)
+  // Apply candidate recipe (bulk, by INCI match, single renormalization + persist)
+  const applyCandidateRecipe = useCallback(
+    async (entries: Array<{ inci: string; weightPct: number }>) => {
+      if (!activeDraft) return;
+      const byInci = new Map(entries.map((e) => [e.inci.toLowerCase(), e.weightPct]));
+      const matched = ingredients.map((it) =>
+        byInci.has(it.inci.toLowerCase())
+          ? { ...it, weightPct: byInci.get(it.inci.toLowerCase()) as number }
+          : it
+      );
+      const total = matched.reduce((acc, it) => acc + it.weightPct, 0);
+      const normalized =
+        total > 0
+          ? matched.map((it) => ({
+              ...it,
+              weightPct: Number(((it.weightPct / total) * 100).toFixed(2)),
+            }))
+          : matched;
+      setDrafts((prev) =>
+        prev.map((d) => (d.id !== activeDraft.id ? d : { ...d, ingredients: normalized }))
+      );
+      try {
+        const repo = getFormulaRepository();
+        await repo.updateFormula(activeDraft.id, {
+          name: activeDraft.name,
+          category: "skincare",
+          batch_size_g: 500,
+          phases: mapEditorToDtoPhases(normalized),
+        });
+      } catch (err) {
+        console.error("Gagal menyimpan hasil apply:", err);
+      }
+    },
+    [ingredients, activeDraft]
+  );
+
+  // Execute Action Menu (+) — real backend engines
   const executeAction = useCallback(
     async (type: ArtifactType, configParams?: any) => {
       if (!activeDraft) return;
       closeActionConfig();
 
-      const newArtId = `art-${type}-${Date.now().toString().slice(-4)}`;
-      let newArtifact: EditorArtifact;
-      let proposal: FormulaModificationProposal | undefined = undefined;
-      let assistantContent = "";
+      const timestamp = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const simIngredients = await toSimulateIngredients();
+      let actionProposal: FormulaModificationProposal | undefined = undefined;
 
+      // Build descriptive user request message for the chat trace
+      let userActionContent = "";
       if (type === "simulation") {
-        newArtifact = {
-          id: newArtId,
-          type: "simulation",
-          title: "Tropical Stability Report (40°C / 75% RH)",
-          subtitle: "Simulasi kestabilan dipercepat 90 hari • LightGBM Model",
-          createdAt: "Baru saja",
-          data: {
-            temperature: configParams?.temperature ?? 40,
-            humidity: configParams?.humidity ?? 75,
-            durationDays: configParams?.durationDays ?? 90,
-            stressCycleEnabled: configParams?.stressCycleEnabled ?? true,
-            stabilityScore: 94.2,
-            phaseSeparationRisk: "Low (0.04)",
-            dropletSize: "148.5 nm",
-            pdi: "0.185",
-            viscosity: "8,450 cP",
-            shelfLifeEst: "24 Bulan",
-          },
-        };
-        assistantContent = `Aksi komputasi **${newArtifact.title}** selesai diproses. Klik tombol di bawah untuk membuka lembar analisis lengkap.`;
+        const temp = configParams?.temperature ?? configParams?.tempCelsius ?? 40;
+        const days = configParams?.durationDays ?? 90;
+        userActionContent = `Jalankan simulasi kestabilan tropis in-silico: **Simulasi Kestabilan ${temp}°C** (${days} hari / 75% RH).`;
       } else if (type === "pareto") {
-        setIsSaving(true);
-        try {
-          const optRepo = getOptimizerRepository();
-          const normalizedPreset = (configParams?.preset || "balanced").replace("-", "_") as any;
-          const minTkdn = configParams?.targetTkdn ?? configParams?.minTkdn ?? 40;
-          const maxCogs = configParams?.maxCogs ?? 45000;
-          const minStability = configParams?.minStability ?? 85;
-
-          const paretoRes = await optRepo.runOptimization({
-            preset: normalizedPreset,
-            trialsCount: 2000,
-            weights: {
-              stabilityWeight: 35,
-              cogsWeight: 30,
-              tkdnWeight: 20,
-              viscosityWeight: 15,
-            },
-            constraints: {
-              minStabilityPct: minStability,
-              maxCogsIdrPerKg: maxCogs,
-              minTkdnPct: minTkdn,
-              targetViscosityMpaS: 5200,
-            },
-          });
-
-          newArtifact = {
-            id: newArtId,
-            type: "pareto",
-            title: "Pareto Frontier Multi-Objective Optimization",
-            subtitle: `${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi NSGA-II • Model LightGBM • Hypervolume ${paretoRes.hypervolumeScore.toFixed(3)}`,
-            createdAt: "Baru saja",
-            data: {
-              ...paretoRes,
-              maxCogs,
-              minStability,
-              minTkdn,
-              candidates: paretoRes.topCandidates.map((c) => ({
-                id: c.id,
-                name: c.title,
-                cogs: c.metrics.cogsIdrPerKg,
-                stability: c.metrics.stabilityPct,
-                tkdn: c.metrics.tkdnPct,
-                isBest: c.id === "A",
-              })),
-            },
-          };
-
-          if (paretoRes.topCandidates.length > 0) {
-            const candA = paretoRes.topCandidates[0];
-            proposal = buildProposalFromParetoCandidate(activeDraft.ingredients, candA);
-            assistantContent = `Aksi komputasi **Pareto Frontier Multi-Objective Optimizer** selesai dievaluasi (${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi dengan model inferensi LightGBM & NSGA-II).\n\n**Rekomendasi Utama (${candA.title})**:\n- **Stabilitas 40°C**: **${candA.metrics.stabilityPct}%** (Lolos Uji Kestabilan Tropis)\n- **Estimasi COGS**: **Rp ${candA.metrics.cogsIdrPerKg.toLocaleString("id-ID")}/kg**\n- **Kandungan TKDN**: **${candA.metrics.tkdnPct}%**\n- **Viskositas**: **${candA.metrics.viscosityMpaS.toLocaleString("id-ID")} mPa.s** (Target HLB: ${candA.metrics.systemHlb})\n\n💡 *${candA.tradeOffSummary}*\n\n🔬 **Rasional Fisikokimia**: ${candA.physicochemicalRationale}\n\nSaya telah menyusun usulan modifikasi formula berdasarkan kandidat ini pada kartu di bawah. Anda dapat memilih **Buat Versi Baru (Snapshot)** atau **Overwrite Versi Ini**, atau klik tombol report untuk meninjau data komputasi.`;
-          } else {
-            assistantContent = `Aksi komputasi **${newArtifact.title}** selesai diproses. Klik tombol di bawah untuk membuka lembar analisis lengkap.`;
-          }
-        } catch (err) {
-          console.error("Gagal menjalankan optimasi Pareto real:", err);
-          newArtifact = {
-            id: newArtId,
-            type: "pareto",
-            title: "Pareto Frontier Multi-Objective Optimization",
-            subtitle: "50.000 iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN",
-            createdAt: "Baru saja",
-            data: {
-              maxCogs: configParams?.maxCogs ?? 45000,
-              minStability: configParams?.minStability ?? 85,
-              minTkdn: configParams?.minTkdn ?? 40,
-              candidates: [
-                { id: "cand-1", name: "Candidate A: Balanced Trade-off", cogs: 38500, stability: 92.4, tkdn: 46.2, isBest: true },
-                { id: "cand-2", name: "Candidate B: Cost Leader (Hemat)", cogs: 29200, stability: 88.1, tkdn: 41.5, isBest: false },
-                { id: "cand-3", name: "Candidate C: High-TKDN Lokal", cogs: 44000, stability: 90.8, tkdn: 54.8, isBest: false },
-              ],
-            },
-          };
-          assistantContent = `Aksi komputasi **${newArtifact.title}** selesai diproses. Klik tombol di bawah untuk membuka lembar analisis lengkap.`;
-        } finally {
-          setIsSaving(false);
-        }
+        const presetMap: Record<string, string> = {
+          "balanced": "Balanced Trade-off",
+          "cost-leader": "Cost Leader (Hemat)",
+          "max-stability": "Stabilitas Maksimal",
+          "high-tkdn": "High-TKDN Lokal",
+          "custom": "Kustom",
+        };
+        const presetLabel = configParams?.preset
+          ? presetMap[configParams.preset] || configParams.preset
+          : "Balanced Trade-off";
+        const maxCogs = configParams?.maxCogs ?? 45000;
+        const minStability = configParams?.minStability ?? 85;
+        const targetTkdn = configParams?.targetTkdn ?? configParams?.minTkdn ?? 40;
+        userActionContent = `Jalankan optimasi: **Pareto Multi-Objective Optimizer** (Preset: ${presetLabel}, Min Stabilitas: ${minStability}%, Max COGS: Rp ${Number(maxCogs).toLocaleString("id-ID")}/kg, Target TKDN: ${targetTkdn}%).`;
       } else if (type === "sentinel") {
-        newArtifact = {
-          id: newArtId,
-          type: "sentinel",
-          title: "Regulatory Compliance & Halal Audit",
-          subtitle: "BPOM Annex III/V • Halal Assurance System HAS-23000",
-          createdAt: "Baru saja",
-          data: {
-            overallStatus: "PASSED",
-            bpomCompliance: "100% Compliant",
-            halalStatus: "100% Certified / Halal Compliant",
-            totalTkdn: "62.8%",
-            checkedCount: ingredients.length,
-            violations: [],
-          },
-        };
-        assistantContent = `Aksi komputasi **${newArtifact.title}** selesai diproses. Klik tombol di bawah untuk membuka lembar analisis lengkap.`;
+        const checks: string[] = [];
+        if (configParams?.checkBpom ?? true) checks.push("BPOM");
+        if (configParams?.checkHalal ?? true) checks.push("Halal HAS-23000");
+        if (configParams?.checkTkdn ?? true) checks.push("TKDN");
+        const checkStr = checks.length > 0 ? ` (${checks.join(", ")})` : "";
+        userActionContent = `Jalankan audit kepatuhan: **Enterprise BPOM, Halal & TKDN Sentinel**${checkStr}.`;
       } else {
-        newArtifact = {
-          id: newArtId,
-          type: "similarity",
-          title: "Benchmark Chemical Similarity Radar",
-          subtitle: "Cosine similarity & Morgan Fingerprints",
-          createdAt: "Baru saja",
-          data: { similarityScore: "91.4%" },
-        };
-        assistantContent = `Aksi komputasi **${newArtifact.title}** selesai diproses. Klik tombol di bawah untuk membuka lembar analisis lengkap.`;
+        const scope = configParams?.brandScope ?? "all";
+        const scopeLabel = scope === "all" ? "Semua Portofolio Merk Paragon" : `Merk ${scope.toUpperCase()}`;
+        userActionContent = `Jalankan analisis kemiripan: **Dual-Scope Formula Similarity & Patent FTO** (Scope: ${scopeLabel}).`;
       }
 
-      const assistantMsg: EditorChatMessage = {
-        id: `msg-art-${Date.now()}`,
-        sender: "assistant" as const,
-        content: assistantContent,
-        timestamp: "Baru saja",
-        linkedArtifactId: newArtifact.id,
-        proposal,
+      const userActionMsg: EditorChatMessage = {
+        id: `msg-user-act-${Date.now()}`,
+        sender: "user",
+        content: userActionContent,
+        timestamp,
       };
 
+      // Instantly show user chat bubble in chat stream
       setDrafts((prev) =>
-        prev.map((d) => {
-          if (d.id !== activeDraft.id) return d;
-          return {
-            ...d,
-            artifacts: [newArtifact, ...d.artifacts],
-            messages: [...d.messages, assistantMsg],
-          };
-        })
+        prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, userActionMsg] } : d))
       );
 
-      // Persist assistant message with proposal to backend
-      try {
-        const repo = getFormulaRepository();
-        await repo.addMessage(activeDraft.id, {
-          role: "assistant",
-          content: assistantContent,
-          proposal: proposal || undefined,
-        });
-      } catch (e) {
-        console.error("Gagal persist artifact message:", e);
-      }
+      // Persist user request message to backend
+      getFormulaRepository()
+        .addMessage(activeDraft.id, {
+          role: "user",
+          content: userActionMsg.content,
+        })
+        .catch((e) => console.error("Gagal persist user action message:", e));
 
-      viewArtifact(newArtifact);
+      const pushArtifact = (
+        title: string,
+        subtitle: string,
+        dataPayload: any,
+        chatText: string,
+        proposal?: FormulaModificationProposal
+      ) => {
+        const newArtifact: EditorArtifact = {
+          id: `art-${type}-${Date.now().toString().slice(-4)}`,
+          type,
+          title,
+          subtitle,
+          createdAt: timestamp,
+          data: dataPayload,
+        };
+        const newChatMsg: EditorChatMessage = {
+          id: `msg-art-${Date.now()}`,
+          sender: "assistant" as const,
+          content: chatText,
+          timestamp,
+          linkedArtifactId: newArtifact.id,
+          proposal,
+        };
+        setDrafts((prev) =>
+          prev.map((d) => {
+            if (d.id !== activeDraft.id) return d;
+            return {
+              ...d,
+              artifacts: [newArtifact, ...d.artifacts],
+              messages: [...d.messages, newChatMsg],
+            };
+          })
+        );
+        getFormulaRepository()
+          .addMessage(activeDraft.id, {
+            role: "assistant",
+            content: chatText,
+            proposal: proposal || undefined,
+          })
+          .catch((e) => console.error("Gagal persist artifact message:", e));
+        viewArtifact(newArtifact);
+      };
+
+      const pushError = (label: string) => {
+        const newChatMsg: EditorChatMessage = {
+          id: `msg-${Date.now()}`,
+          sender: "assistant" as const,
+          content: `${label} gagal dijalankan: backend tidak tersedia. Coba lagi nanti.`,
+          timestamp,
+        };
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== activeDraft.id ? d : { ...d, messages: [...d.messages, newChatMsg] }
+          )
+        );
+      };
+
+      try {
+        if (type === "pareto") {
+          const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
+            constraints: {
+              minStabilityPct: configParams?.minStability ?? 85,
+              maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
+              minTkdnPct: configParams?.targetTkdn ?? 40,
+              targetViscosityMpaS: 5200,
+            },
+            trialsCount: 500,
+          });
+          const candidates = (res.topCandidates || []).map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            stability: `${c.metrics.stabilityPct}%`,
+            cogs: `Rp ${Number(c.metrics.cogsIdrPerKg).toLocaleString("id-ID")}`,
+            tkdn: `${c.metrics.tkdnPct}%`,
+            badge: c.badgeLabel,
+            desc: c.tradeOffSummary,
+            recipe: Object.fromEntries(
+              (c.ingredients || []).map((i: any) => [i.inci, i.weightPct])
+            ),
+          }));
+          if ((res.topCandidates || []).length > 0) {
+            try {
+              actionProposal = buildProposalFromParetoCandidate(
+                activeDraft.ingredients,
+                res.topCandidates[0]
+              );
+            } catch (e) {
+              console.error("Gagal menyusun proposal pareto:", e);
+            }
+          }
+          pushArtifact(
+            "Pareto Frontier Multi-Objective Optimization",
+            `${res.trialsEvaluated} iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN`,
+            {
+              candidates,
+              topCandidates: res.topCandidates || [],
+              trialsEvaluated: res.trialsEvaluated,
+              executionTimeMs: res.executionTimeMs,
+              nonDominatedCount: res.nonDominatedCount,
+            },
+            `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`,
+            actionProposal
+          );
+        } else if (type === "sentinel") {
+          const res: any = await apiPost("/api/v1/compliance/audit", {
+            formula_name: activeDraft.name,
+            ingredients: simIngredients,
+          });
+          const violations = (res.ingredients_audit || []).filter(
+            (a: any) => a.status !== "PASSED"
+          ).length;
+          pushArtifact(
+            "Regulatory Compliance & Halal Audit",
+            "BPOM Annex III/V • Halal Assurance System HAS-23000",
+            {
+              status: res.overall_status,
+              bpomScore: `${Math.round((res.compliance_score || 0) * 100)}%`,
+              halalScore: res.halal_status,
+              tkdnScore: `${res.total_tkdn_pct}%`,
+              checkedRules: (res.ingredients_audit || []).length,
+              violations,
+            },
+            `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan.`
+          );
+        } else if (type === "simulation") {
+          const res: any = await apiPost("/api/v1/simulate/stability", {
+            formula_name: activeDraft.name,
+            temperature_c: configParams?.temperature ?? 40,
+            duration_days: configParams?.durationDays ?? 90,
+            ingredients: simIngredients,
+          });
+          pushArtifact(
+            "Tropical Stability Report (40°C / 75% RH)",
+            "Simulasi kestabilan dipercepat 90 hari • LightGBM Model",
+            {
+              probStability: Math.round((res.stability_score_40c_90days || 0) * 1000) / 10,
+              viscosityMpaS: Math.round(res.dynamic_viscosity_mpas || 0),
+              dropletDlsNm: Math.round((res.mean_droplet_size_nm || 0) * 10) / 10,
+              gibbsDeltaG: res.thermodynamics?.gibbs_free_energy_kj_mol ?? null,
+              verdict: res.verdict,
+            },
+            `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}).`
+          );
+        } else {
+          const payload = {
+            ingredients: simIngredients.map((it: any) => ({
+              inci: it.inci,
+              weight_pct: it.weight_pct,
+            })),
+          };
+          const [internal, external] = await Promise.all([
+            apiPost<any>("/api/v1/similarity/check", payload),
+            apiPost<any>("/api/v1/similarity/external", payload),
+          ]);
+          pushArtifact(
+            "Benchmark Chemical Similarity Radar",
+            "Cosine similarity & Morgan Fingerprints",
+            {
+              internal: {
+                matches: (internal.matches || []).map((m: any) => ({
+                  name: m.name,
+                  formula_id: m.formula_id,
+                  jaccard: m.jaccard,
+                  cosine: m.cosine,
+                  chassis_overlap_pct: m.chassis_overlap_pct,
+                })),
+              },
+              external: {
+                novelty_score: external.novelty_score,
+                top_matches: (external.top_matches || []).map((m: any) => ({
+                  brand: m.brand,
+                  product_name: m.product_name,
+                  url: m.url,
+                  similarity: m.similarity,
+                  shared_ingredients: m.shared_ingredients,
+                })),
+              },
+            },
+            `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%.`
+          );
+        }
+      } catch (err) {
+        console.error(err);
+        pushError(
+          type === "pareto"
+            ? "Optimasi Pareto"
+            : type === "sentinel"
+              ? "Audit regulasi"
+              : type === "simulation"
+                ? "Simulasi kestabilan"
+                : "Analisis similaritas"
+        );
+      }
     },
-    [activeDraft, closeActionConfig, ingredients, viewArtifact]
+    [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
   );
 
-  // Chat message send
+  // Chat message send: propose-adjustment for modification intents,
+  // SSE copilot stream for general discussion. All messages persist.
   const sendMessage = useCallback(
     async (text: string) => {
       if (!activeDraft) return;
+      const draftId = activeDraft.id;
+      const draftName = activeDraft.name;
       const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const userMsg: EditorChatMessage = {
         id: `user-${Date.now()}`,
@@ -1123,27 +1457,110 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         content: text,
         timestamp,
       };
+      const repo = getFormulaRepository();
 
-      // Push user message immediately
       setDrafts((prev) =>
-        prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, userMsg] } : d))
+        prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
+      );
+      repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
+        console.error("Gagal persist user message:", e)
       );
 
-      // Persist user message to backend
-      const repo = getFormulaRepository();
-      repo.addMessage(activeDraft.id, {
-        role: "user",
-        content: text,
-      }).catch((e) => console.error("Gagal persist user message:", e));
+      const persistAssistant = async (content: string, proposal?: FormulaModificationProposal) => {
+        try {
+          await repo.addMessage(draftId, {
+            role: "assistant",
+            content,
+            proposal: proposal || undefined,
+          });
+        } catch (e) {
+          console.error("Gagal persist assistant message:", e);
+        }
+      };
 
-      let assistantReply = "";
-      let proposal: FormulaModificationProposal | undefined = undefined;
-      let linkedArtifactId: string | undefined = undefined;
+      const streamCopilotReply = async (): Promise<string> => {
+        const assistantId = `ai-${Date.now()}`;
+        let streamed = "";
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== draftId
+              ? d
+              : {
+                  ...d,
+                  messages: [
+                    ...d.messages,
+                    { id: assistantId, sender: "assistant" as const, content: "", timestamp },
+                  ],
+                }
+          )
+        );
+        const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            message: text,
+            session_id: chatSessionId,
+            canvas: {
+              formula_name: draftName,
+              ingredients: ingredients.map((it) => ({
+                inci: it.inci,
+                weight_pct: it.weightPct,
+                phase: it.phase,
+              })),
+            },
+          }),
+        });
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const data = trimmed.slice(5).trim();
+            if (data === "[DONE]") continue;
+            let evt: any;
+            try {
+              evt = JSON.parse(data);
+            } catch {
+              continue;
+            }
+            if (evt.type === "token" && typeof evt.token === "string") {
+              streamed += evt.token;
+              const token = evt.token;
+              setDrafts((prev) =>
+                prev.map((d) =>
+                  d.id !== draftId
+                    ? d
+                    : {
+                        ...d,
+                        messages: d.messages.map((m) =>
+                          m.id === assistantId ? { ...m, content: m.content + token } : m
+                        ),
+                      }
+                )
+              );
+            } else if (evt.type === "meta" && typeof evt.session_id === "string") {
+              setChatSessionId(evt.session_id);
+            } else if (evt.type === "error") {
+              throw new Error(typeof evt.detail === "string" ? evt.detail : "AI error");
+            }
+          }
+        }
+        if (!streamed) throw new Error("empty reply");
+        return streamed;
+      };
 
-      // Check if user is asking for Pareto optimization or multi-objective trade-off
-      const isParetoQuery = /(pareto|optima|sweet spot|multi-objective|trade-off|rekomendasi kandidat)/i.test(text);
+      if (ingredients.length > 0) {
 
-      if (isParetoQuery && ingredients.length > 0) {
+      // Pareto / multi-objective trade-off queries → real optimizer + proposal card
+      if (/(pareto|optima|sweet spot|multi-objective|trade-off|rekomendasi kandidat)/i.test(text)) {
         try {
           setIsSaving(true);
           const optRepo = getOptimizerRepository();
@@ -1187,17 +1604,14 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
             },
           };
 
-          // Save artifact into active draft
           setDrafts((prev) =>
-            prev.map((d) => (d.id === activeDraft.id ? { ...d, artifacts: [paretoArtifact, ...d.artifacts] } : d))
+            prev.map((d) => (d.id === draftId ? { ...d, artifacts: [paretoArtifact, ...d.artifacts] } : d))
           );
 
           if (paretoRes.topCandidates.length > 0) {
             const candA = paretoRes.topCandidates[0];
-            proposal = buildProposalFromParetoCandidate(ingredients, candA);
-            linkedArtifactId = paretoArtifact.id;
-
-            assistantReply = `Berdasarkan inferensi model **LightGBM terakselerasi GPU** dan **${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi Pareto NSGA-II**, saya menemukan konfigurasi Sweet Spot (**${candA.title}**).\n\n` +
+            const chatProposal = buildProposalFromParetoCandidate(ingredients, candA);
+            const chatContent = `Berdasarkan inferensi model **LightGBM terakselerasi GPU** dan **${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi Pareto NSGA-II**, saya menemukan konfigurasi Sweet Spot (**${candA.title}**).\n\n` +
               `📊 **Hasil Inferensi Model Multi-Objektif**:\n` +
               `- **Stabilitas Dipercepat 40°C**: **${candA.metrics.stabilityPct}%** (Lolos Uji Kestabilan Tropis)\n` +
               `- **Estimasi COGS**: **Rp ${candA.metrics.cogsIdrPerKg.toLocaleString("id-ID")}/kg**\n` +
@@ -1206,21 +1620,31 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               `🔬 **Rasional Fisikokimia Formulasi**:\n${candA.physicochemicalRationale}\n\n` +
               `💡 *${candA.tradeOffSummary}*\n\n` +
               `Saya telah melampirkan lembar analisis Pareto dan menyusun usulan penyesuaian komposisi formula pada kartu di bawah ini. Anda dapat memilih **Buat Versi Baru (Snapshot)** untuk menyimpan checkpoint baru, atau **Overwrite Versi Ini** untuk langsung menimpa formula aktif.`;
+            const paretoMsg: EditorChatMessage = {
+              id: `ai-${Date.now()}`,
+              sender: "assistant" as const,
+              content: chatContent,
+              timestamp,
+              proposal: chatProposal,
+              linkedArtifactId: paretoArtId,
+            };
+            setDrafts((prev) =>
+              prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, paretoMsg] } : d))
+            );
+            await persistAssistant(chatContent, chatProposal);
+            viewArtifact(paretoArtifact);
+            return;
           }
+          viewArtifact(paretoArtifact);
         } catch (err) {
           console.error("Gagal menjalankan pareto dari chat:", err);
         } finally {
           setIsSaving(false);
         }
       }
-
-      // If formula has ingredients and no pareto proposal generated, call AI backend propose-adjustment endpoint
-      if (!proposal && ingredients.length > 0) {
         try {
-          const res = await repo.proposeAdjustment(activeDraft.id, text);
-
+          const res = await repo.proposeAdjustment(draftId, text);
           if (res && res.changes && res.changes.length > 0) {
-            // Flatten phases to EditorIngredient[]
             const updatedEditorIngredients: EditorIngredient[] = [];
             const mapping = [
               { phase: "A" as const, items: res.updated_phases.phase_a },
@@ -1228,7 +1652,6 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               { phase: "C" as const, items: res.updated_phases.phase_c },
               { phase: "D" as const, items: res.updated_phases.phase_d },
             ];
-
             let idx = 0;
             for (const group of mapping) {
               for (const it of group.items) {
@@ -1243,8 +1666,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 });
               }
             }
-
-            proposal = {
+            const proposal: FormulaModificationProposal = {
               id: `prop-${Date.now()}`,
               title: res.title,
               explanation: res.explanation,
@@ -1258,44 +1680,64 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               })),
               updatedIngredients: updatedEditorIngredients,
             };
-
-            assistantReply = `Saya telah menganalisis permintaan Anda dan menyusun usulan modifikasi formula.\n\nSilakan periksa kartu usulan di bawah ini. Anda dapat memilih untuk **Terapkan Sebagai Versi Baru** (menyimpan snapshot v${activeVersions.length + 1}) atau **Overwrite Versi Ini** (menimpa draft aktif langsung).`;
-          } else {
-            assistantReply = `Saran formulasi R&D: Formula pada **${activeDraft.name}** saat ini memiliki kesetimbangan fase yang sangat baik (${ingredients.length} bahan terdaftar). Anda dapat menjalankan aksi **Simulasi 40°C** atau **Pareto Optimizer** di tombol (+) untuk validasi lebih mendalam.`;
+            const content = `Saya telah menganalisis permintaan Anda dan menyusun usulan modifikasi formula.\n\nSilakan periksa kartu usulan di bawah ini. Anda dapat memilih untuk **Terapkan Sebagai Versi Baru** (menyimpan snapshot v${activeVersions.length + 1}) atau **Overwrite Versi Ini** (menimpa draft aktif langsung).`;
+            const assistantMsg: EditorChatMessage = {
+              id: `ai-${Date.now()}`,
+              sender: "assistant" as const,
+              content,
+              timestamp,
+              proposal,
+            };
+            setDrafts((prev) =>
+              prev.map((d) =>
+                d.id === draftId ? { ...d, messages: [...d.messages, assistantMsg] } : d
+              )
+            );
+            await persistAssistant(content, proposal);
+            return;
           }
         } catch (err) {
           console.error("Gagal meminta usulan formulasi AI:", err);
-          assistantReply = `Mohon maaf, sistem formulasi AI sedang mengalami kendala jaringan. Anda tetap dapat menyesuaikan konsentrasi bahan langsung di Composition Panel.`;
         }
-      } else if (!proposal && ingredients.length === 0) {
-        assistantReply = `Kanvas formula masih kosong. Silakan pilih salah satu acuan benchmark dari Workbench di atas atau tambahkan bahan pertama Anda dari Library Bahan.`;
       }
 
-      const assistantMsg: EditorChatMessage = {
-        id: `ai-${Date.now()}`,
-        sender: "assistant" as const,
-        content: assistantReply,
-        timestamp,
-        proposal,
-        linkedArtifactId,
-      };
-
-      setDrafts((prev) =>
-        prev.map((d) => (d.id === activeDraft.id ? { ...d, messages: [...d.messages, assistantMsg] } : d))
-      );
-
-      // Persist assistant message with proposal to backend
+      if (ingredients.length === 0) {
+        const emptyContent = `Kanvas formula masih kosong. Silakan pilih salah satu acuan benchmark dari Workbench di atas atau tambahkan bahan pertama Anda dari Library Bahan.`;
+        const emptyMsg: EditorChatMessage = {
+          id: `ai-${Date.now()}`,
+          sender: "assistant" as const,
+          content: emptyContent,
+          timestamp,
+        };
+        setDrafts((prev) =>
+          prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, emptyMsg] } : d))
+        );
+        await persistAssistant(emptyContent);
+        return;
+      }
       try {
-        await repo.addMessage(activeDraft.id, {
-          role: "assistant",
-          content: assistantReply,
-          proposal: proposal || undefined,
-        });
-      } catch (e) {
-        console.error("Gagal persist assistant message:", e);
+        const reply = await streamCopilotReply();
+        await persistAssistant(reply);
+      } catch (err) {
+        console.error(err);
+        const fallback = "Maaf, asisten AI tidak tersedia saat ini. Coba lagi nanti.";
+        setDrafts((prev) =>
+          prev.map((d) =>
+            d.id !== draftId
+              ? d
+              : {
+                  ...d,
+                  messages: [
+                    ...d.messages,
+                    { id: `ai-${Date.now()}`, sender: "assistant" as const, content: fallback, timestamp },
+                  ],
+                }
+          )
+        );
+        await persistAssistant(fallback);
       }
     },
-    [ingredients, activeDraft, activeVersions.length]
+    [ingredients, activeDraft, activeVersions.length, chatSessionId]
   );
 
   const workspace: EditorWorkspace = {
@@ -1327,6 +1769,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         removeIngredient,
         addIngredient,
         applyProposal,
+        applyCandidateRecipe,
         selectedMoleculeIngredient,
         setSelectedMoleculeIngredient,
         leftPanelMode,

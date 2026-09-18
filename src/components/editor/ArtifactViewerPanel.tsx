@@ -83,15 +83,10 @@ export const ArtifactViewerPanel: React.FC = () => {
       };
 
       await applyProposal(proposal, mode);
-      setAppliedNotice(
-        `Formula ${cand.title} berhasil diterapkan sebagai ${mode === "new_version" ? "Versi Baru (Snapshot)" : "Overwrite"} di Composition Panel!`
-      );
-      setTimeout(() => setAppliedNotice(null), 3000);
       return;
     }
 
-    setAppliedNotice(`Formula Kandidat ${selectedCandidate} berhasil diterapkan ke Composition Panel!`);
-    setTimeout(() => setAppliedNotice(null), 2500);
+    closeArtifactView();
   };
 
   const getIcon = () => {
@@ -165,7 +160,9 @@ export const ArtifactViewerPanel: React.FC = () => {
                     Top-3 Kandidat Solusi Non-Dominated Pareto Frontier
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Dievaluasi dari 50.000 iterasi dengan algoritma Optuna NSGA-II terakselerasi GPU.
+                    Dievaluasi dari{" "}
+                    {((activeArtifact as any).data?.trialsEvaluated ?? 0).toLocaleString("id-ID")}{" "}
+                    iterasi dengan algoritma Optuna NSGA-II terakselerasi GPU.
                   </p>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold">
@@ -375,25 +372,25 @@ export const ArtifactViewerPanel: React.FC = () => {
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>STATUS: COMPLIANT</span>
+                <span>STATUS: {(activeArtifact as any).data?.status ?? "UNKNOWN"}</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Batas BPOM 17/2022</span>
-                <span className="text-xl font-extrabold text-emerald-700 font-mono mt-1 block">100% Lolos</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Semua zat aktif di bawah ambang batas legal</span>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Batas BPOM 25/2025</span>
+                <span className="text-xl font-extrabold text-emerald-700 font-mono mt-1 block">{(activeArtifact as any).data?.bpomScore ?? "-"}</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Batas aman per bahan terverifikasi</span>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Sertifikasi Halal</span>
-                <span className="text-xl font-extrabold text-[#001299] font-mono mt-1 block">HAS 23000</span>
+                <span className="text-xl font-extrabold text-[#001299] font-mono mt-1 block">{(activeArtifact as any).data?.halalScore ?? "-"}</span>
                 <span className="text-[10px] text-slate-400 block mt-0.5">Bebas turunan hewani non-halal &amp; porcine-free</span>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Bobot TKDN Hayati</span>
-                <span className="text-xl font-extrabold text-indigo-700 font-mono mt-1 block">44.8%</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Memenuhi target minimal TKDN ≥ 40%</span>
+                <span className="text-xl font-extrabold text-indigo-700 font-mono mt-1 block">{(activeArtifact as any).data?.tkdnScore ?? "-"}</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Target minimal TKDN ≥ 40%</span>
               </div>
             </div>
           </div>
@@ -419,22 +416,22 @@ export const ArtifactViewerPanel: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200">
                 <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Probabilitas Stabil</span>
-                <span className="text-2xl font-extrabold text-emerald-800 font-mono mt-1 block">94.2%</span>
-                <span className="text-[10px] text-emerald-600 block">Sangat Tahan Koalesensi</span>
+                <span className="text-2xl font-extrabold text-emerald-800 font-mono mt-1 block">{(activeArtifact as any).data?.probStability ?? "-"}%</span>
+                <span className="text-[10px] text-emerald-600 block">{(activeArtifact as any).data?.verdict ?? ""}</span>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Viskositas Prediksi</span>
-                <span className="text-2xl font-extrabold text-[#0a192f] font-mono mt-1 block">5.350</span>
+                <span className="text-2xl font-extrabold text-[#0a192f] font-mono mt-1 block">{Number((activeArtifact as any).data?.viscosityMpaS ?? 0).toLocaleString("id-ID")}</span>
                 <span className="text-[10px] text-slate-400 block">mPa·s (Gel-Cream)</span>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Ukuran Droplet DLS</span>
-                <span className="text-2xl font-extrabold text-[#001299] font-mono mt-1 block">145 nm</span>
+                <span className="text-2xl font-extrabold text-[#001299] font-mono mt-1 block">{(activeArtifact as any).data?.dropletDlsNm ?? "-"} nm</span>
                 <span className="text-[10px] text-slate-400 block">Distribusi Nanomisel Halus</span>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Energi Bebas Gibbs</span>
-                <span className="text-2xl font-extrabold text-indigo-700 font-mono mt-1 block">-14.2</span>
+                <span className="text-2xl font-extrabold text-indigo-700 font-mono mt-1 block">{(activeArtifact as any).data?.gibbsDeltaG ?? "-"}</span>
                 <span className="text-[10px] text-slate-400 block">kJ/mol (Spontan Stabil)</span>
               </div>
             </div>
@@ -442,7 +439,7 @@ export const ArtifactViewerPanel: React.FC = () => {
         )}
 
         {/* 4. DUAL-SCOPE SIMILARITY & PATENT NOVELTY REPORT */}
-        {activeArtifact.type === "similarity" && <DualScopeSimilarityReport />}
+        {activeArtifact.type === "similarity" && <DualScopeSimilarityReport data={(activeArtifact as any).data} />}
       </div>
     </div>
   );

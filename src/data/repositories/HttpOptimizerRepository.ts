@@ -1,4 +1,5 @@
 import { IOptimizerRepository } from "@/domain/repositories/IOptimizerRepository";
+import { authHeader } from "@/data/api/api-client";
 import {
   ParetoOptimizationParams,
   ParetoOptimizationResult,
@@ -16,7 +17,7 @@ export class HttpOptimizerRepository implements IOptimizerRepository {
   ): Promise<ParetoOptimizationResult> {
     const res = await fetch(`${this.baseUrl}/api/v1/optimizer/run-nsga2`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeader() },
       body: JSON.stringify(params),
     });
 
