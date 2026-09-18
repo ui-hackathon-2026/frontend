@@ -23,6 +23,10 @@ import { HttpFormulaRepository } from "../repositories/HttpFormulaRepository";
 import { MockAuthRepository } from "../repositories/MockAuthRepository";
 import { HttpAuthRepository } from "../repositories/HttpAuthRepository";
 
+import { IWorkspaceRepository } from "@/domain/repositories/IWorkspaceRepository";
+import { MockWorkspaceRepository } from "../repositories/MockWorkspaceRepository";
+import { HttpWorkspaceRepository } from "../repositories/HttpWorkspaceRepository";
+
 function shouldUseMockApi(): boolean {
   if (process.env.NEXT_PUBLIC_USE_MOCK_API === "false") return false;
   return (
@@ -40,6 +44,7 @@ class ServiceContainer {
   private static optimizerRepository: IOptimizerRepository | null = null;
   private static authRepository: IAuthRepository | null = null;
   private static formulaRepository: IFormulaRepository | null = null;
+  private static workspaceRepository: IWorkspaceRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
     if (!this.simulationRepository) {
@@ -132,6 +137,19 @@ class ServiceContainer {
     return this.formulaRepository!;
   }
 
+  public static getWorkspaceRepository(): IWorkspaceRepository {
+    if (!this.workspaceRepository) {
+      const useMock = shouldUseMockApi();
+
+      if (useMock) {
+        this.workspaceRepository = new MockWorkspaceRepository();
+      } else {
+        this.workspaceRepository = new HttpWorkspaceRepository();
+      }
+    }
+    return this.workspaceRepository!;
+  }
+
   public static setComplianceRepository(repo: IComplianceRepository) {
     this.complianceRepository = repo;
   }
@@ -144,5 +162,6 @@ export const getBriefRepository = () => ServiceContainer.getBriefRepository();
 export const getOptimizerRepository = () => ServiceContainer.getOptimizerRepository();
 export const getAuthRepository = () => ServiceContainer.getAuthRepository();
 export const getFormulaRepository = () => ServiceContainer.getFormulaRepository();
+export const getWorkspaceRepository = () => ServiceContainer.getWorkspaceRepository();
 
 

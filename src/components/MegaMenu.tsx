@@ -14,6 +14,8 @@ import {
   Box,
   Palette,
   FlaskConical,
+  FolderOpen,
+  ListChecks,
 } from "lucide-react";
 
 interface MegaMenuProps {
@@ -38,6 +40,26 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                 Core Engine &amp; Modeling
               </h4>
               <ul className="space-y-3 text-sm">
+                <li>
+                  <Link
+                    href="/workspace"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-[#001299] border border-blue-200/80 mt-0.5">
+                      <FolderOpen className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Workspace
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Daftar proyek R&amp;D tim: brief, draft formulasi, dan riwayat per produk.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
                 <li>
                   <Link
                     href="/workbench?step=3"
@@ -121,6 +143,26 @@ export const MegaMenu: React.FC<MegaMenuProps> = ({ isOpen, onClose }) => {
                       </span>
                       <p className="text-xs text-slate-500 leading-snug">
                         Meja racik interaktif Fase A, B, C, D dengan balance matematis 100%.
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+
+                <li>
+                  <Link
+                    href="/formulation"
+                    onClick={onClose}
+                    className="group flex items-start space-x-2.5 p-2 rounded-xl hover:bg-blue-50/70 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200/80 mt-0.5">
+                      <ListChecks className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-slate-900 group-hover:text-[#0018a8] block">
+                        Formulasi
+                      </span>
+                      <p className="text-xs text-slate-500 leading-snug">
+                        Semua formula 4-fase yang pernah dibuat, lintas workspace, dengan status mass-balance.
                       </p>
                     </div>
                   </Link>
