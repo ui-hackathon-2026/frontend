@@ -15,6 +15,7 @@ import {
   DollarSign,
   TrendingUp,
   Sprout,
+  AlertTriangle,
 } from "lucide-react";
 
 type ParetoPreset = "balanced" | "cost-leader" | "max-stability" | "high-tkdn" | "custom";
@@ -55,15 +56,27 @@ const PARETO_PRESETS: Record<
 
 interface InlineActionConfigCardProps {
   actionType: ArtifactType;
+  hasIngredients?: boolean;
   onClose: () => void;
   onExecute: (type: ArtifactType, params: any) => void;
 }
 
 export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
   actionType,
+  hasIngredients = true,
   onClose,
   onExecute,
 }) => {
+  // Listen for Escape key to easily close widget
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
   // Pareto State
   const [activePreset, setActivePreset] = useState<ParetoPreset>("balanced");
   const [maxCogs, setMaxCogs] = useState(45000);
@@ -107,6 +120,7 @@ export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!hasIngredients) return;
     let params: any = {};
     if (actionType === "pareto") {
       params = { maxCogs, minStability, targetTkdn, preset: activePreset };
@@ -184,6 +198,19 @@ export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
           <X className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Warning Notice if formula has 0 ingredients */}
+      {!hasIngredients && (
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs flex items-start gap-2.5 animate-in fade-in">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold block text-amber-950">Formula Aktif Belum Memiliki Bahan Baku</span>
+            <span className="text-[11px] text-amber-800 leading-normal block mt-0.5">
+              Tambahkan bahan baku dari <strong>Library Bahan</strong> di panel kiri atau terapkan acuan benchmark terlebih dahulu untuk mengeksekusi aksi komputasi ini.
+            </span>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 1. PARETO OPTIMIZER CONFIG */}
@@ -458,7 +485,9 @@ export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
           </button>
           <button
             type="submit"
-            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+            disabled={!hasIngredients}
+            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            title={!hasIngredients ? "Formula masih kosong, tambahkan bahan terlebih dahulu" : undefined}
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Jalankan &amp; Buat Artifact</span>

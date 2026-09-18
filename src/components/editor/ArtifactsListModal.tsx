@@ -13,7 +13,19 @@ export const ArtifactsListModal: React.FC = () => {
     viewArtifact,
   } = useEditor();
 
-  if (!artifactsListModalOpen) return null;
+  // Listen for Escape key to close modal
+  React.useEffect(() => {
+    if (!artifactsListModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setArtifactsListModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [artifactsListModalOpen, setArtifactsListModalOpen]);
+
+  if (!artifactsListModalOpen || !activeDraft) return null;
 
   const artifacts = activeDraft ? activeDraft.artifacts : [];
 

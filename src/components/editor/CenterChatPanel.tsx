@@ -20,6 +20,7 @@ import {
   Zap,
   History,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { getSimulationRepository } from "@/data/di/container";
 import { PresetFormulaItem } from "@/domain/models/simulation";
@@ -34,6 +35,8 @@ export const CenterChatPanel: React.FC = () => {
     viewArtifact,
     setArtifactsListModalOpen,
     createNewDraft,
+    isGenerating,
+    generatingStatus,
   } = useEditor();
 
   const [presets, setPresets] = useState<PresetFormulaItem[]>([]);
@@ -69,6 +72,18 @@ export const CenterChatPanel: React.FC = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (isGenerating) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isGenerating]);
+
+  // Clear any active action widget whenever the active draft is changed or deleted
+  useEffect(() => {
+    setActiveInlineAction(null);
+    setPlusMenuOpen(false);
+  }, [activeDraft?.id]);
 
   useEffect(() => {
     if (activeInlineAction) {
@@ -153,7 +168,8 @@ export const CenterChatPanel: React.FC = () => {
             </button>
           </div>
         ) : (
-          messages.map((msg, idx) => {
+          <>
+            {messages.map((msg, idx) => {
             const isUser = msg.sender === "user";
 
             return (
@@ -336,21 +352,48 @@ export const CenterChatPanel: React.FC = () => {
                 </div>
               </div>
             );
-          })
-        )}
+            })}
 
-        {/* Inline Action Launcher (if opened from (+)) */}
-        {activeInlineAction && (
-          <div ref={inlineActionRef} className="pt-2 scroll-mt-4">
-            <InlineActionConfigCard
-              actionType={activeInlineAction}
-              onClose={() => setActiveInlineAction(null)}
-              onExecute={(type, params) => {
-                executeAction(type, params);
-                setActiveInlineAction(null);
-              }}
-            />
-          </div>
+            {/* Chatbot Generating / Processing Notification Indicator */}
+            {isGenerating && (
+              <div className="flex gap-3 max-w-2xl mr-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold bg-[#0a192f] text-blue-200 shadow-2xs">
+                  <Bot className="w-3.5 h-3.5" />
+                </div>
+                <div className="p-3.5 rounded-2xl text-xs bg-slate-50 border border-blue-100/90 text-slate-800 rounded-tl-xs space-y-2 shadow-2xs">
+                  <div className="flex items-center gap-2 text-slate-700 font-semibold">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#001299] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#001299]"></span>
+                    </span>
+                    <span className="text-[#001299] font-bold">
+                      {generatingStatus || "Co-Pilot sedang menganalisis & merumuskan respons..."}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 pl-4">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#001299]/70 animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#001299]/70 animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#001299]/70 animate-bounce"></span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Inline Action Launcher (if opened from (+)) */}
+            {activeInlineAction && (
+              <div ref={inlineActionRef} className="pt-2 scroll-mt-4">
+                <InlineActionConfigCard
+                  actionType={activeInlineAction}
+                  hasIngredients={activeDraft.ingredients.length > 0}
+                  onClose={() => setActiveInlineAction(null)}
+                  onExecute={(type, params) => {
+                    executeAction(type, params);
+                    setActiveInlineAction(null);
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
 
         <div ref={messagesEndRef} />
@@ -363,7 +406,7 @@ export const CenterChatPanel: React.FC = () => {
           <div className="relative shrink-0">
             <button
               type="button"
-              disabled={!activeDraft}
+              disabled={!activeDraft || isGenerating}
               onClick={() => setPlusMenuOpen(!plusMenuOpen)}
               className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-600 hover:text-[#001299] hover:bg-blue-50 border border-slate-200 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-2xs"
               title="Aksi Komputasi Formula: Simulasi 40°C, Pareto NSGA-II, BPOM Sentinel"
@@ -373,7 +416,8 @@ export const CenterChatPanel: React.FC = () => {
 
             {/* Menu Popover */}
             <ActionPlusMenu
-              isOpen={plusMenuOpen}
+              isOpen={plusMenuOpen && !!activeDraft}
+              hasIngredients={activeDraft ? activeDraft.ingredients.length > 0 : false}
               onClose={() => setPlusMenuOpen(false)}
               onSelectAction={(type) => {
                 setActiveInlineAction(type);
@@ -390,22 +434,29 @@ export const CenterChatPanel: React.FC = () => {
               type="text"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              disabled={!activeDraft}
+              disabled={!activeDraft || isGenerating}
               placeholder={
-                activeDraft
-                  ? "Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
-                  : "Buat formula terlebih dahulu untuk memulai obrolan..."
+                !activeDraft
+                  ? "Buat formula terlebih dahulu untuk memulai obrolan..."
+                  : isGenerating
+                    ? (generatingStatus || "AI Co-Pilot sedang memproses respons...")
+                    : "Tanyakan rekomendasi formula, atau minta AI modifikasi bahan..."
               }
               className="w-full h-11 pl-4 pr-12 text-xs bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#001299]/20 focus:border-[#001299] focus:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-normal"
             />
 
             <button
               type="submit"
-              disabled={!inputPrompt.trim() || !activeDraft}
+              disabled={!inputPrompt.trim() || !activeDraft || isGenerating}
               className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-[#001299] text-white hover:bg-[#000e7a] disabled:opacity-40 disabled:hover:bg-[#001299] transition-all cursor-pointer flex items-center justify-center shrink-0"
               aria-label="Kirim Pesan"
+              title={isGenerating ? "Sedang memproses respons..." : "Kirim Pesan"}
             >
-              <Send className="w-3.5 h-3.5" />
+              {isGenerating ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
             </button>
           </div>
         </form>

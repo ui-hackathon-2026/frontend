@@ -6,15 +6,29 @@ import { Zap, ShieldCheck, Thermometer, FileText, Plus, Sparkles } from "lucide-
 
 interface ActionPlusMenuProps {
   isOpen: boolean;
+  hasIngredients?: boolean;
   onClose: () => void;
   onSelectAction: (type: ArtifactType) => void;
 }
 
 export const ActionPlusMenu: React.FC<ActionPlusMenuProps> = ({
   isOpen,
+  hasIngredients = true,
   onClose,
   onSelectAction,
 }) => {
+  // Listen for Escape key to close menu
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const actions: Array<{

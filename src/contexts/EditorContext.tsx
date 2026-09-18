@@ -350,6 +350,8 @@ interface EditorContextType {
   executeAction: (type: ArtifactType, configParams?: any) => void;
   // Chat
   sendMessage: (text: string) => void;
+  isGenerating: boolean;
+  generatingStatus: string | null;
 }
 
 const EditorContext = createContext<EditorContextType | null>(null);
@@ -365,6 +367,8 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const [activeVersions, setActiveVersions] = useState<FormulaVersionItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [generatingStatus, setGeneratingStatus] = useState<string | null>(null);
 
   const [selectedMoleculeIngredient, setSelectedMoleculeIngredient] = useState<EditorIngredient | null>(null);
   const [leftPanelMode, setLeftPanelMode] = useState<"molecule-3d" | "library">("molecule-3d");
@@ -823,6 +827,13 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               localStorage.removeItem(getActiveStorageKey());
             }
           }
+          // Reset artifact viewer, modals, and actions
+          setActiveArtifact(null);
+          setCenterViewMode("chat");
+          setActionConfigModal({ isOpen: false, actionType: null });
+          setArtifactsListModalOpen(false);
+          setIsGenerating(false);
+          setGeneratingStatus(null);
         }
       } catch (err) {
         console.error("Gagal menghapus formula:", err);
@@ -1277,6 +1288,16 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
     async (type: ArtifactType, configParams?: any) => {
       if (!activeDraft) return;
       closeActionConfig();
+      setIsGenerating(true);
+      if (type === "pareto") {
+        setGeneratingStatus("Menjalankan optimasi Pareto 50.000 iterasi simpleks massa (GPU L40S)...");
+      } else if (type === "sentinel") {
+        setGeneratingStatus("Melakukan audit batas legal BPOM No. 25/2025 & Halal HAS 23000...");
+      } else if (type === "simulation") {
+        setGeneratingStatus("Menjalankan simulasi kestabilan dipercepat 40°C in-silico (LightGBM)...");
+      } else if (type === "similarity") {
+        setGeneratingStatus("Menganalisis kemiripan kimiawi chassis & Morgan Fingerprints...");
+      }
 
       const timestamp = new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -1576,6 +1597,9 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 ? "Simulasi kestabilan"
                 : "Analisis similaritas"
         );
+      } finally {
+        setIsGenerating(false);
+        setGeneratingStatus(null);
       }
     },
     [activeDraft, closeActionConfig, toSimulateIngredients, viewArtifact]
@@ -1586,23 +1610,26 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const sendMessage = useCallback(
     async (text: string) => {
       if (!activeDraft) return;
-      const draftId = activeDraft.id;
-      const draftName = activeDraft.name;
-      const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const userMsg: EditorChatMessage = {
-        id: `user-${Date.now()}`,
-        sender: "user" as const,
-        content: text,
-        timestamp,
-      };
-      const repo = getFormulaRepository();
+      setIsGenerating(true);
+      setGeneratingStatus("AI Co-Pilot sedang menganalisis pesan...");
+      try {
+        const draftId = activeDraft.id;
+        const draftName = activeDraft.name;
+        const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const userMsg: EditorChatMessage = {
+          id: `user-${Date.now()}`,
+          sender: "user" as const,
+          content: text,
+          timestamp,
+        };
+        const repo = getFormulaRepository();
 
-      setDrafts((prev) =>
-        prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
-      );
-      repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
-        console.error("Gagal persist user message:", e)
-      );
+        setDrafts((prev) =>
+          prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, userMsg] } : d))
+        );
+        repo.addMessage(draftId, { role: "user", content: text }).catch((e) =>
+          console.error("Gagal persist user message:", e)
+        );
 
       const persistAssistant = async (content: string, proposal?: FormulaModificationProposal) => {
         try {
@@ -1874,9 +1901,13 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         );
         await persistAssistant(fallback);
       }
-    },
-    [ingredients, activeDraft, activeVersions.length, chatSessionId]
-  );
+    } finally {
+      setIsGenerating(false);
+      setGeneratingStatus(null);
+    }
+  },
+  [ingredients, activeDraft, activeVersions.length, chatSessionId]
+);
 
   const workspace: EditorWorkspace = {
     id: workspaceId || "ws-untitled",
@@ -1925,6 +1956,8 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
         closeActionConfig,
         executeAction,
         sendMessage,
+        isGenerating,
+        generatingStatus,
       }}
     >
       {children}
