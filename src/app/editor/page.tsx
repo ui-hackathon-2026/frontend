@@ -17,14 +17,14 @@ function EditorStudioInner() {
   return (
     <div className="flex-1 flex overflow-hidden w-full h-full bg-white font-sans">
       {/* 1. LEFT PANEL (Workspace Drafts & Contextual 3D/Library) */}
-      <aside className="w-72 sm:w-80 flex flex-col border-r border-slate-200/80 bg-white shrink-0 overflow-hidden">
+      <aside className="w-72 sm:w-80 flex flex-col border-r border-slate-200/80 bg-white shrink-0 z-20">
         {/* Top: Workspace & Draft Formulations (Fork) */}
         <div className="shrink-0">
           <LeftWorkspaceDrafts />
         </div>
 
         {/* Bottom: Contextual 3D Molecule / Library Bahan */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           <LeftContextualPanel />
         </div>
       </aside>

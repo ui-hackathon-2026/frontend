@@ -141,7 +141,7 @@ export const LeftWorkspaceDrafts: React.FC = () => {
           <DelayedInfoTooltip
             content="Seluruh draft tersimpan langsung di Neon Postgres Cloud. Setiap perubahan otomatis meng-create version snapshot append-only."
             position="bottom"
-            align="right"
+            align="center"
             delayMs={300}
           />
         </div>
