@@ -40,7 +40,9 @@ export const CenterChatPanel: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState("");
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [activeInlineAction, setActiveInlineAction] = useState<ArtifactType | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inlineActionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const simRepo = getSimulationRepository();
@@ -49,9 +51,33 @@ export const CenterChatPanel: React.FC = () => {
 
   const messages = activeDraft ? activeDraft.messages : [];
 
+  const scrollToInlineAction = React.useCallback(() => {
+    if (inlineActionRef.current) {
+      inlineActionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (activeInlineAction) {
+      const timer1 = setTimeout(scrollToInlineAction, 60);
+      const timer2 = setTimeout(scrollToInlineAction, 180);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, [activeInlineAction, scrollToInlineAction]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +125,7 @@ export const CenterChatPanel: React.FC = () => {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
         {!activeDraft ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#001299] flex items-center justify-center border border-blue-100 mb-1">
@@ -307,7 +333,7 @@ export const CenterChatPanel: React.FC = () => {
 
         {/* Inline Action Launcher (if opened from (+)) */}
         {activeInlineAction && (
-          <div className="pt-2">
+          <div ref={inlineActionRef} className="pt-2 scroll-mt-4">
             <InlineActionConfigCard
               actionType={activeInlineAction}
               onClose={() => setActiveInlineAction(null)}
@@ -344,6 +370,7 @@ export const CenterChatPanel: React.FC = () => {
               onSelectAction={(type) => {
                 setActiveInlineAction(type);
                 setPlusMenuOpen(false);
+                setTimeout(scrollToInlineAction, 80);
               }}
             />
           </div>
