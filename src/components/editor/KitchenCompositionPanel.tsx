@@ -88,39 +88,55 @@ export const KitchenCompositionPanel: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-white border-l border-slate-200/80 font-sans">
       {/* Header */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/70 shrink-0 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-[#001299] text-white">
+      <div className="p-4 border-b border-slate-100 bg-slate-50/70 shrink-0 space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#001299] text-white flex items-center justify-center shrink-0 shadow-2xs">
               <Sliders className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading">
-                Composition Panel
-              </h2>
-              <span className="text-[10px] text-slate-400 font-mono block">
-                {activeDraft ? activeDraft.name : "Belum Ada Formula"}
-              </span>
-            </div>
+            <h2 className="text-xs font-extrabold text-[#0a192f] tracking-tight font-heading truncate">
+              Composition Panel
+            </h2>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border font-mono text-xs shrink-0 whitespace-nowrap shadow-2xs transition-colors ${
+              ingredients.length === 0
+                ? "bg-slate-100 border-slate-200 text-slate-400"
+                : Math.abs(totalWeight - 100) < 0.1
+                ? "bg-emerald-50 border-emerald-200/80 text-emerald-800"
+                : "bg-amber-50 border-amber-200/80 text-amber-800"
+            }`}
+          >
+            <span className="text-[10px] font-bold font-sans uppercase tracking-wider text-slate-500">
               Total Formula
             </span>
-            <div className="flex items-center gap-1 font-mono font-extrabold text-xs">
-              <span className={ingredients.length === 0 ? "text-slate-400" : Math.abs(totalWeight - 100) < 0.1 ? "text-emerald-700" : "text-amber-600"}>
-                {totalWeight.toFixed(1)}%
-              </span>
-              {Math.abs(totalWeight - 100) < 0.1 && ingredients.length > 0 && (
-                <CheckCircle2 className="w-3 h-3 text-emerald-600 inline" />
-              )}
-            </div>
+            <span className="font-extrabold text-xs">
+              {totalWeight.toFixed(1)}%
+            </span>
+            {Math.abs(totalWeight - 100) < 0.1 && ingredients.length > 0 && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            )}
+            {Math.abs(totalWeight - 100) >= 0.1 && ingredients.length > 0 && (
+              <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            )}
           </div>
         </div>
 
+        {/* Formula Title Subtitle Row */}
+        <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 px-0.5">
+          <span className="truncate" title={activeDraft ? activeDraft.name : undefined}>
+            Formula: <span className="text-slate-700 font-semibold">{activeDraft ? activeDraft.name : "Belum Ada Formula"}</span>
+          </span>
+          {ingredients.length > 0 && (
+            <span className="shrink-0 text-slate-400 ml-2 text-[10px]">
+              {ingredients.length} Bahan
+            </span>
+          )}
+        </div>
+
         {/* Mini Phase Ratio Pill Bar */}
-        <div className="flex items-center justify-between text-[10px] bg-white p-2 rounded-xl border border-slate-200/70 font-mono">
+        <div className="flex items-center justify-between text-[10px] bg-white p-2 rounded-xl border border-slate-200/70 font-mono shadow-2xs">
           <span className="text-amber-700 font-bold">A: {phaseBreakdown.A}%</span>
           <span className="text-slate-300">|</span>
           <span className="text-blue-700 font-bold">B: {phaseBreakdown.B}%</span>

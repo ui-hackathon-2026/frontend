@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -25,7 +26,7 @@ interface NavbarProps {
   brandName?: string;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) => {
+export const Navbar: React.FC<NavbarProps> = ({ brandName = "CoRamu" }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [avatarDropdownOpen, setAvatarDropdownOpen] = useState(false);
@@ -72,8 +73,15 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
           {/* Brand Logo */}
           <div className="flex items-center space-x-6">
             <Link href="/" className="flex items-center space-x-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-[#0a192f] text-white flex items-center justify-center shadow-sm group-hover:bg-[#0018a8] transition-colors">
-                <FlaskConical className="w-4 h-4 text-blue-200" />
+              <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-all bg-[#0a192f]">
+                <Image
+                  src="/images/coramu-icon.png"
+                  alt="CoRamu"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-extrabold tracking-tight text-[#0a192f] font-heading">

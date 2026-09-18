@@ -7,7 +7,7 @@ export interface ShimmerSkeletonProps extends React.HTMLAttributes<HTMLDivElemen
 }
 
 /**
- * ShimmerSkeleton - Standar Elemen Loading Shimmer Paragon Studio
+ * ShimmerSkeleton - Standar Elemen Loading Shimmer CoRamu
  * Menghasilkan blok skeleton dengan sapuan kilau gradien halus (shimmer)
  * yang hanya aktif saat komponen sedang memuat data.
  */
@@ -39,7 +39,7 @@ export interface ShimmerWidgetProps extends React.HTMLAttributes<HTMLDivElement>
 }
 
 /**
- * ShimmerWidget - Design System Component for Paragon Studio
+ * ShimmerWidget - Design System Component for CoRamu
  *
  * STANDARD DEVELOP:
  * Efek shimmering HANYA aktif saat status `isLoading = true`.
