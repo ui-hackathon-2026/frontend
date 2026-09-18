@@ -381,7 +381,7 @@ export const InlineActionConfigCard: React.FC<InlineActionConfigCardProps> = ({
                 className="w-4 h-4 text-[#001299] rounded"
               />
               <div>
-                <span className="text-xs font-bold text-slate-800 block">Perka BPOM 17/2022</span>
+                <span className="text-xs font-bold text-slate-800 block">Perka BPOM 25/2025</span>
                 <span className="text-[11px] text-slate-500">Batas maksimum zat aktif.</span>
               </div>
             </label>

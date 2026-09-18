@@ -34,7 +34,7 @@ export const ActionPlusMenu: React.FC<ActionPlusMenuProps> = ({
     {
       type: "sentinel",
       title: "Enterprise BPOM, Halal & TKDN Sentinel",
-      description: "Audit batas legal Perka BPOM No. 17/2022 & screening sertifikasi Halal HAS 23000.",
+      description: "Audit batas legal Perka BPOM No. 25/2025 & screening sertifikasi Halal HAS 23000.",
       icon: ShieldCheck,
       accentColor: "text-emerald-600 bg-emerald-50 border-emerald-200",
     },

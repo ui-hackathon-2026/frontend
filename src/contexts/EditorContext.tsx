@@ -228,6 +228,81 @@ function buildProposalFromParetoCandidate(
   };
 }
 
+function buildProposalFromComplianceAudit(
+  currentIngredients: EditorIngredient[],
+  auditRes: any
+): FormulaModificationProposal | null {
+  const auditList: any[] = auditRes.ingredients_audit || [];
+  const failedAudits = auditList.filter((a) => a.status !== "PASSED");
+  if (failedAudits.length === 0) return null;
+
+  const updatedIngredients: EditorIngredient[] = currentIngredients.map((i) => ({ ...i }));
+  let totalDelta = 0;
+
+  for (const failed of failedAudits) {
+    const target = updatedIngredients.find(
+      (i) =>
+        i.inci.toLowerCase() === (failed.inci || "").toLowerCase() ||
+        i.name.toLowerCase() === (failed.name || "").toLowerCase()
+    );
+    if (!target) continue;
+
+    let targetNewPct = target.weightPct;
+    if (typeof failed.bpom_limit_pct === "number" && failed.bpom_limit_pct >= 0) {
+      targetNewPct = Number(failed.bpom_limit_pct.toFixed(2));
+    } else {
+      targetNewPct = 0;
+    }
+
+    const delta = target.weightPct - targetNewPct;
+    if (delta > 0) {
+      totalDelta += delta;
+      target.weightPct = targetNewPct;
+    }
+  }
+
+  // Rebalance water (Aqua / solvent) in Phase A so total stays 100%
+  if (totalDelta > 0) {
+    const solvent = updatedIngredients.find(
+      (i) =>
+        i.role === "solvent" ||
+        i.inci.toLowerCase().includes("aqua") ||
+        i.inci.toLowerCase().includes("water")
+    );
+    if (solvent) {
+      solvent.weightPct = Number((solvent.weightPct + totalDelta).toFixed(2));
+    }
+  }
+
+  const changes: FormulaDiffChange[] = [];
+  for (const item of updatedIngredients) {
+    const orig = currentIngredients.find((i) => i.id === item.id);
+    if (orig && Math.abs(orig.weightPct - item.weightPct) > 0.01) {
+      changes.push({
+        ingredientId: item.id,
+        name: item.name,
+        oldPct: orig.weightPct,
+        newPct: item.weightPct,
+        phase: item.phase,
+        action: item.weightPct === 0 ? "removed" : "modified",
+      });
+    }
+  }
+
+  if (changes.length === 0) return null;
+
+  const title = `Remediasi Kepatuhan BPOM 25/2025 & HAS 23000`;
+  const explanation = `Koreksi otomatis konsentrasi bahan non-compliant (${failedAudits.map((f) => f.name || f.inci).join(", ")}) ke batas aman legal Perka BPOM No. 25/2025. Fase pelarut (Aqua) disesuaikan kembali (+${totalDelta.toFixed(2)}%) agar total massa formula tepat 100.0%.`;
+
+  return {
+    id: `prop-sentinel-${Date.now()}`,
+    title,
+    explanation,
+    changes,
+    updatedIngredients,
+  };
+}
+
 interface EditorContextType {
   workspace: EditorWorkspace;
   activeDraft: DraftFormulation | null;
@@ -1278,6 +1353,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           subtitle,
           createdAt: timestamp,
           data: dataPayload,
+          proposal: proposal || undefined,
         };
         const newChatMsg: EditorChatMessage = {
           id: `msg-art-${Date.now()}`,
@@ -1375,6 +1451,46 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           const violations = (res.ingredients_audit || []).filter(
             (a: any) => a.status !== "PASSED"
           ).length;
+
+          let chatText = "";
+          let actionProposal: FormulaModificationProposal | undefined = undefined;
+
+          if (res.overall_status === "COMPLIANT" && violations === 0) {
+            chatText = `### ✅ Audit Regulasi BPOM & Halal: COMPLIANT\n\n` +
+              `Formula **${activeDraft.name}** memenuhi seluruh ketentuan batas aman **Perka BPOM No. 25/2025** dan standar kriteria **HAS-23000**.\n\n` +
+              `- **Kepatuhan BPOM Score**: ${Math.round((res.compliance_score || 0) * 100)}%\n` +
+              `- **Status Halal**: ${res.halal_status}\n` +
+              `- **Estimasi TKDN**: ${res.total_tkdn_pct}%\n\n` +
+              `*Semua ${(res.ingredients_audit || []).length} bahan dalam konsentrasi aman dan terdaftar pada basis data kepatuhan.*`;
+          } else {
+            const failedAudits = (res.ingredients_audit || []).filter((a: any) => a.status !== "PASSED");
+            const failedList = failedAudits
+              .map((a: any) => `- **${a.name} (${a.inci})**: ${a.audit_notes}${a.bpom_limit_pct ? ` • Batas aman legal: **${a.bpom_limit_pct}%**` : ""}`)
+              .join("\n");
+
+            const warnings = (res.llm_reasoning?.mandatory_label_warnings || [])
+              .map((w: string) => `- ⚠️ ${w}`)
+              .join("\n");
+
+            const subs = (res.llm_reasoning?.local_substitution_recommendations || [])
+              .map((s: any) => `- **${s.current_ingredient}** ➔ Saran Substitusi: **${s.recommended_local}** (TKDN +${s.tkdn_impact || 0}%). *${s.rationale}*`)
+              .join("\n");
+
+            chatText = `### 🚨 Temuan Audit Regulasi: ${res.overall_status}\n\n` +
+              `Ditemukan **${violations} ketidaksesuaian regulasi** pada formula **${activeDraft.name}** berdasarkan Perka BPOM No. 25/2025 dan kriteria Halal HAS-23000:\n\n` +
+              `#### 📋 Detail Temuan Bahan:\n${failedList}\n\n` +
+              (res.llm_reasoning?.toxicology_evaluation ? `#### 🧪 Evaluasi Toksikologi & Batas Paparan:\n${res.llm_reasoning.toxicology_evaluation}\n\n` : "") +
+              (warnings ? `#### ⚠️ Peringatan Label Wajib (Mandatory Warnings):\n${warnings}\n\n` : "") +
+              (subs ? `#### 🌿 Saran Substitusi Bahan Baku Lokal (Peningkatan TKDN):\n${subs}\n\n` : "") +
+              `💡 **Saran Remediasi Formula**: Sentinel telah menyusun usulan modifikasi formula yang mengoreksi konsentrasi bahan non-compliant ke batas legal BPOM dan menyeimbangkan kembali fase pelarut (Aqua). Anda dapat langsung memilih **Buat Versi Baru (Snapshot)** atau **Overwrite Versi Ini** di bawah untuk menerapkan perbaikan.`;
+
+            try {
+              actionProposal = buildProposalFromComplianceAudit(activeDraft.ingredients, res) || undefined;
+            } catch (e) {
+              console.error("Gagal menyusun proposal kepatuhan:", e);
+            }
+          }
+
           pushArtifact(
             "Regulatory Compliance & Halal Audit",
             "BPOM Annex III/V • Halal Assurance System HAS-23000",
@@ -1385,8 +1501,12 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               tkdnScore: `${res.total_tkdn_pct}%`,
               checkedRules: (res.ingredients_audit || []).length,
               violations,
+              ingredientsAudit: res.ingredients_audit || [],
+              llmReasoning: res.llm_reasoning,
+              summaryVerdict: res.summary_verdict,
             },
-            `Audit regulasi selesai dengan status ${res.overall_status}. ${violations} temuan dari ${(res.ingredients_audit || []).length} bahan.`
+            chatText,
+            actionProposal
           );
         } else if (type === "simulation") {
           const res: any = await apiPost("/api/v1/simulate/stability", {

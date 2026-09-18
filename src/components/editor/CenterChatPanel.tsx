@@ -52,15 +52,17 @@ export const CenterChatPanel: React.FC = () => {
   const messages = activeDraft ? activeDraft.messages : [];
 
   const scrollToInlineAction = React.useCallback(() => {
-    if (inlineActionRef.current) {
-      inlineActionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight + 1500,
         behavior: "smooth",
       });
-    } else {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    if (inlineActionRef.current) {
+      inlineActionRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, []);
 
@@ -70,11 +72,17 @@ export const CenterChatPanel: React.FC = () => {
 
   useEffect(() => {
     if (activeInlineAction) {
+      scrollToInlineAction();
+      requestAnimationFrame(scrollToInlineAction);
       const timer1 = setTimeout(scrollToInlineAction, 60);
       const timer2 = setTimeout(scrollToInlineAction, 180);
+      const timer3 = setTimeout(scrollToInlineAction, 360);
+      const timer4 = setTimeout(scrollToInlineAction, 600);
       return () => {
         clearTimeout(timer1);
         clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
       };
     }
   }, [activeInlineAction, scrollToInlineAction]);
@@ -370,7 +378,8 @@ export const CenterChatPanel: React.FC = () => {
               onSelectAction={(type) => {
                 setActiveInlineAction(type);
                 setPlusMenuOpen(false);
-                setTimeout(scrollToInlineAction, 80);
+                setTimeout(scrollToInlineAction, 50);
+                setTimeout(scrollToInlineAction, 200);
               }}
             />
           </div>

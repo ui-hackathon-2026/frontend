@@ -20,6 +20,8 @@ import {
   History,
   RefreshCw,
   Sprout,
+  AlertTriangle,
+  AlertOctagon,
 } from "lucide-react";
 import { ParetoCandidateFormula } from "@/domain/models/optimizer";
 import { EditorIngredient, FormulaModificationProposal } from "@/domain/models/editor";
@@ -359,42 +361,236 @@ export const ArtifactViewerPanel: React.FC = () => {
         )}
 
         {/* 2. REGULATORY SENTINEL REPORT */}
-        {activeArtifact.type === "sentinel" && (
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-6 shadow-xs">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="space-y-1">
-                <h3 className="text-base font-extrabold text-[#0a192f] font-heading">
-                  Hasil Audit Legalitas BPOM, Halal HAS 23000 &amp; TKDN
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Pemeriksaan kepatuhan komprehensif terhadap 18 aturan regulasi kosmetik tropis.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>STATUS: {(activeArtifact as any).data?.status ?? "UNKNOWN"}</span>
-              </div>
-            </div>
+        {activeArtifact.type === "sentinel" && (() => {
+          const sData = (activeArtifact as any).data || {};
+          const isCompliant = sData.status === "COMPLIANT";
+          const auditList: any[] = sData.ingredientsAudit || [];
+          const llmReasoning = sData.llmReasoning || {};
+          const mandatoryWarnings: string[] = llmReasoning.mandatory_label_warnings || [];
+          const substitutions: any[] = llmReasoning.local_substitution_recommendations || [];
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Batas BPOM 25/2025</span>
-                <span className="text-xl font-extrabold text-emerald-700 font-mono mt-1 block">{(activeArtifact as any).data?.bpomScore ?? "-"}</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Batas aman per bahan terverifikasi</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Sertifikasi Halal</span>
-                <span className="text-xl font-extrabold text-[#001299] font-mono mt-1 block">{(activeArtifact as any).data?.halalScore ?? "-"}</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Bebas turunan hewani non-halal &amp; porcine-free</span>
-              </div>
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Bobot TKDN Hayati</span>
-                <span className="text-xl font-extrabold text-indigo-700 font-mono mt-1 block">{(activeArtifact as any).data?.tkdnScore ?? "-"}</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Target minimal TKDN ≥ 40%</span>
+          return (
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 space-y-6 shadow-xs">
+                {/* Header Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-extrabold text-[#0a192f] font-heading">
+                      Hasil Audit Legalitas BPOM, Halal HAS 23000 &amp; TKDN
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Pemeriksaan kepatuhan komprehensif terhadap Perka BPOM No. 25/2025 dan standar Halal HAS 23000.
+                    </p>
+                  </div>
+                  <div
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 ${
+                      isCompliant
+                        ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        : "bg-rose-50 text-rose-800 border border-rose-200"
+                    }`}
+                  >
+                    {isCompliant ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    <span>
+                      STATUS: {sData.status ?? "UNKNOWN"}
+                      {!isCompliant && sData.violations ? ` (${sData.violations} Temuan)` : ""}
+                    </span>
+                  </div>
+                </div>
+
+                {/* KPI Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Batas BPOM 25/2025</span>
+                    <span className={`text-xl font-extrabold font-mono mt-1 block ${isCompliant ? "text-emerald-700" : "text-rose-600"}`}>
+                      {sData.bpomScore ?? "-"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Batas aman zat aktif terverifikasi</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Sertifikasi Halal</span>
+                    <span className="text-xl font-extrabold text-[#001299] font-mono mt-1 block">
+                      {sData.halalScore ?? "-"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">HAS 23000 &amp; KMA 1360/2021</span>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/60">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Bobot TKDN Hayati</span>
+                    <span className="text-xl font-extrabold text-indigo-700 font-mono mt-1 block">
+                      {sData.tkdnScore ?? "-"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 block mt-0.5">Target minimal TKDN ≥ 40%</span>
+                  </div>
+                </div>
+
+                {/* Detailed Ingredients Audit Table */}
+                {auditList.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        Pemeriksaan Bahan Komposisi ({auditList.length} Komponen)
+                      </span>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-medium">
+                          <tr>
+                            <th className="py-2.5 px-3">Bahan / INCI</th>
+                            <th className="py-2.5 px-3 text-right">Kadar Aktual</th>
+                            <th className="py-2.5 px-3 text-right">Batas BPOM</th>
+                            <th className="py-2.5 px-3 text-center">Status</th>
+                            <th className="py-2.5 px-3">Catatan Audit &amp; Regulasi</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {auditList.map((ing, idx) => {
+                            const passed = ing.status === "PASSED";
+                            return (
+                              <tr key={idx} className={passed ? "hover:bg-slate-50/50" : "bg-rose-50/30 hover:bg-rose-50/60"}>
+                                <td className="py-2 px-3">
+                                  <span className="font-semibold text-slate-800 block">{ing.name || ing.inci}</span>
+                                  <span className="text-[10px] text-slate-400 font-mono block">{ing.inci}</span>
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-slate-700">
+                                  {Number(ing.weight_pct).toFixed(2)}%
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono text-slate-600">
+                                  {typeof ing.bpom_limit_pct === "number" ? `${ing.bpom_limit_pct.toFixed(1)}%` : "Aman / Bebas"}
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  <span
+                                    className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${
+                                      passed
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : "bg-rose-50 text-rose-700 border-rose-200"
+                                    }`}
+                                  >
+                                    {passed ? "PASSED" : "FAILED"}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 text-slate-600">
+                                  <span className="block text-[11px]">{ing.audit_notes}</span>
+                                  {ing.rag_citation && (
+                                    <span className="inline-block mt-0.5 text-[9px] font-mono bg-blue-50 text-[#001299] px-1.5 py-0.5 rounded border border-blue-200/60">
+                                      {ing.rag_citation.regulation} • {ing.rag_citation.appendix}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Toxicology & Warnings Callouts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* Toxicology Evaluation */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                      <Sparkles className="w-3.5 h-3.5 text-[#001299]" />
+                      <span>Evaluasi Toksikologi &amp; Margin Paparan</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {llmReasoning.toxicology_evaluation ||
+                        "Seluruh bahan aktif telah dievaluasi batas penetrasi transdermal dan margin of safety (MoS) sesuai pedoman SCCS kosmetik."}
+                    </p>
+                  </div>
+
+                  {/* Mandatory Warnings */}
+                  <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Peringatan Label Wajib (Perka BPOM 25/2025)</span>
+                    </div>
+                    {mandatoryWarnings.length > 0 ? (
+                      <ul className="space-y-1 text-xs text-amber-800 list-disc list-inside">
+                        {mandatoryWarnings.map((w, i) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-amber-800">
+                        Tidak ada klaim peringatan khusus yang diwajibkan untuk profil konsentrasi ini.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Local Substitutions Recommendations */}
+                {substitutions.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                      <Sprout className="w-4 h-4 text-emerald-600" />
+                      <span>Saran Substitusi Bahan Baku Lokal (Peningkatan Skor TKDN)</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {substitutions.map((sub, i) => (
+                        <div key={i} className="p-3 rounded-xl bg-white border border-emerald-200/80 text-xs space-y-1">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span className="text-slate-700">{sub.current_ingredient}</span>
+                            <span className="text-emerald-700 font-bold font-mono">
+                              +{sub.tkdn_impact ?? 10}% TKDN
+                            </span>
+                          </div>
+                          <p className="text-emerald-800 font-medium">➔ Ganti dengan: {sub.recommended_local}</p>
+                          <p className="text-[11px] text-slate-500 leading-tight">{sub.rationale}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Proposal Apply Button (if proposal is attached to activeArtifact) */}
+                {activeArtifact.proposal && (
+                  <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-[#001299] block font-heading">
+                          Tersedia Usulan Remediasi Kepatuhan Otomatis
+                        </span>
+                        <p className="text-[11px] text-slate-600">
+                          {activeArtifact.proposal.explanation}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          applyProposal(activeArtifact.proposal!, "new_version");
+                          setAppliedNotice("Usulan telah diterapkan sebagai Versi Baru!");
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+                      >
+                        <History className="w-3.5 h-3.5 text-blue-200" />
+                        <span>Terapkan Sebagai Versi Baru</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          applyProposal(activeArtifact.proposal!, "overwrite");
+                          setAppliedNotice("Usulan telah diaplikasikan (Overwrite) ke formula aktif!");
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Overwrite Versi Ini</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 3. SIMULASI KESTABILAN 40°C REPORT */}
         {activeArtifact.type === "simulation" && (
