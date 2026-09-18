@@ -390,17 +390,9 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const loadFormulasFromBackend = useCallback(async () => {
     setIsLoading(true);
     try {
-      // No workspace scope (e.g. /editor opened directly, or a brand new
-      // workspace with nothing imported into it yet) means a blank editor,
-      // never the unscoped global formula list.
-      if (!workspaceId) {
-        setDrafts([]);
-        setActiveDraftId("");
-        setSelectedMoleculeIngredient(null);
-        setActiveVersions([]);
-        return;
-      }
-
+      // Load all formulas regardless of whether a workspace param was provided.
+      // When workspaceId is present we scope to that project; otherwise we
+      // load the user's full global list so the sidebar is never empty.
       const repo = getFormulaRepository();
       const list = await repo.listFormulas(2000, workspaceId);
 
