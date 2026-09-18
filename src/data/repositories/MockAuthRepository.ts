@@ -27,6 +27,17 @@ export class MockAuthRepository implements IAuthRepository {
   async login(payload: LoginPayload): Promise<AuthSession> {
     await delay(700);
 
+    if (payload.email.toLowerCase() === DEMO_USER.email.toLowerCase()) {
+      return {
+        user: DEMO_USER,
+        tokens: {
+          accessToken: makeFakeJwt({ sub: DEMO_USER.id, email: DEMO_USER.email }),
+          refreshToken: makeFakeJwt({ sub: DEMO_USER.id, type: "refresh" }),
+          expiresIn: 86400, // 24 hours
+        },
+      };
+    }
+
     if (
       payload.email !== DEMO_USER.email ||
       payload.password !== DEMO_PASSWORD

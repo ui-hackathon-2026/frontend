@@ -9,6 +9,17 @@ import {
 export class MockFormulaRepository implements IFormulaRepository {
   private formulas: FormulaItemResponse[] = [
     {
+      formula_id: "form_demo_workbench",
+      name: "Formula Eksplorasi Kosmetik Baru",
+      category: "skincare",
+      batch_size_g: 500,
+      notes: "Pilih acuan riset & benchmark di bawah untuk memuat komposisi awal",
+      total_weight_pct: 0,
+      status: "EMPTY_DRAFT",
+      updated_at: new Date().toISOString(),
+      ingredients: [],
+    },
+    {
       formula_id: "form_default_chassis",
       name: "Chassis Emulsi Tropis 40°C v1",
       category: "skincare",
@@ -146,26 +157,161 @@ export class MockFormulaRepository implements IFormulaRepository {
     prompt: string
   ): Promise<any> {
     const f = await this.getFormula(formulaId);
+    const lower = prompt.toLowerCase();
+
+    // Work on a mutable clone of ingredients
+    const items = f.ingredients.map((it) => ({ ...it }));
+    const changes: any[] = [];
+
+    const findIng = (matcher: (i: typeof items[0]) => boolean) => items.find(matcher);
+
+    // Scenario: user asks for softer texture on hands ("saya ingin krimnya lebih lembut di tangan")
+    if (
+      lower.includes("lembut") ||
+      lower.includes("tangan") ||
+      lower.includes("soft") ||
+      lower.includes("halus") ||
+      lower.includes("velvet")
+    ) {
+      const emollient =
+        findIng((i) => (i.phase === "A" && (i.inci.toLowerCase().includes("squalane") || i.inci.toLowerCase().includes("triglyceride") || i.inci.toLowerCase().includes("oil")))) ||
+        findIng((i) => i.phase === "A");
+
+      const humectant =
+        findIng((i) => (i.phase === "B" && (i.inci.toLowerCase().includes("glycerin") || i.inci.toLowerCase().includes("glycol")) && !i.inci.toLowerCase().includes("aqua"))) ||
+        findIng((i) => i.phase === "B" && !i.inci.toLowerCase().includes("aqua") && !i.inci.toLowerCase().includes("water"));
+
+      const solvent =
+        findIng((i) => (i.phase === "B" && (i.inci.toLowerCase().includes("aqua") || i.inci.toLowerCase().includes("water")))) ||
+        findIng((i) => i.phase === "B");
+
+      let totalAdded = 0;
+
+      if (emollient) {
+        const delta = 1.5;
+        const oldPct = emollient.weight_pct;
+        emollient.weight_pct = Number((oldPct + delta).toFixed(2));
+        totalAdded += delta;
+        changes.push({
+          ingredient_id: `ing-${emollient.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+          name: emollient.name,
+          inci: emollient.inci,
+          phase: emollient.phase,
+          old_pct: oldPct,
+          new_pct: emollient.weight_pct,
+          action: "modified",
+        });
+      }
+
+      if (humectant) {
+        const delta = 1.0;
+        const oldPct = humectant.weight_pct;
+        humectant.weight_pct = Number((oldPct + delta).toFixed(2));
+        totalAdded += delta;
+        changes.push({
+          ingredient_id: `ing-${humectant.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+          name: humectant.name,
+          inci: humectant.inci,
+          phase: humectant.phase,
+          old_pct: oldPct,
+          new_pct: humectant.weight_pct,
+          action: "modified",
+        });
+      }
+
+      if (solvent && totalAdded > 0) {
+        const oldPct = solvent.weight_pct;
+        solvent.weight_pct = Number(Math.max(5, oldPct - totalAdded).toFixed(2));
+        changes.push({
+          ingredient_id: `ing-${solvent.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+          name: solvent.name,
+          inci: solvent.inci,
+          phase: solvent.phase,
+          old_pct: oldPct,
+          new_pct: solvent.weight_pct,
+          action: "modified",
+        });
+      }
+
+      // Normalise total to exact 100.0%
+      const sum = Number(items.reduce((acc, it) => acc + it.weight_pct, 0).toFixed(2));
+      if (solvent && Math.abs(sum - 100) > 0.001) {
+        solvent.weight_pct = Number((solvent.weight_pct + (100 - sum)).toFixed(2));
+      }
+
+      const getPhaseItems = (p: string) =>
+        items.filter((i) => i.phase === p).map((i) => ({
+          inci: i.inci,
+          name: i.name,
+          weight_pct: i.weight_pct,
+          is_locked: i.is_locked,
+        }));
+
+      return {
+        formula_id: formulaId,
+        title: "Usulan Formula Krim Lembut di Tangan (Velvety Emollient Boost)",
+        explanation:
+          "Untuk memberikan sensasi krim yang lebih lembut di tangan (*velvety skin-feel*), meningkatkan daya lumas (*glideability*), dan cepat meresap tanpa meninggalkan rasa lengket, kami meningkatkan fraksi emolen pelembap alami serta humektan penahan hidrasi stratum corneum. Fase pelarut (Aqua) diseimbangkan kembali agar total massa formula tepat 100.0%.",
+        changes,
+        updated_phases: {
+          phase_a: getPhaseItems("A"),
+          phase_b: getPhaseItems("B"),
+          phase_c: getPhaseItems("C"),
+          phase_d: getPhaseItems("D"),
+        },
+        total_weight_pct: 100.0,
+      };
+    }
+
+    // Generic fallback adjustment
+    const active = items.find((i) => i.phase === "D" || i.inci.toLowerCase().includes("niacinamide")) || items[0];
+    const solvent = items.find((i) => i.inci.toLowerCase().includes("aqua") || i.phase === "B");
+
+    if (active) {
+      const oldPct = active.weight_pct;
+      active.weight_pct = Number((oldPct + 0.5).toFixed(2));
+      changes.push({
+        ingredient_id: `ing-${active.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+        name: active.name,
+        inci: active.inci,
+        phase: active.phase,
+        old_pct: oldPct,
+        new_pct: active.weight_pct,
+        action: "modified",
+      });
+      if (solvent) {
+        const oldSolvent = solvent.weight_pct;
+        solvent.weight_pct = Number(Math.max(5, oldSolvent - 0.5).toFixed(2));
+        changes.push({
+          ingredient_id: `ing-${solvent.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+          name: solvent.name,
+          inci: solvent.inci,
+          phase: solvent.phase,
+          old_pct: oldSolvent,
+          new_pct: solvent.weight_pct,
+          action: "modified",
+        });
+      }
+    }
+
+    const getPhaseItems = (p: string) =>
+      items.filter((i) => i.phase === p).map((i) => ({
+        inci: i.inci,
+        name: i.name,
+        weight_pct: i.weight_pct,
+        is_locked: i.is_locked,
+      }));
+
     return {
       formula_id: formulaId,
-      title: "Rekomendasi Penyesuaian Formula",
-      explanation: `Penyesuaian berbasis prompt "${prompt}"`,
-      changes: [
-        {
-          ingredient_id: "ing-1",
-          name: f.ingredients[0]?.name || "Active",
-          inci: f.ingredients[0]?.inci || "Active",
-          phase: f.ingredients[0]?.phase || "A",
-          old_pct: f.ingredients[0]?.weight_pct || 1.0,
-          new_pct: Math.max(0.1, (f.ingredients[0]?.weight_pct || 1.0) + 0.5),
-          action: "modified",
-        },
-      ],
+      title: "Rekomendasi Penyesuaian Formula Teroptimasi",
+      explanation: `Penyesuaian komposisi berbasis permintaan: "${prompt}". Konsentrasi bahan aktif ditingkatkan dan fase pelarut diseimbangkan agar total massa formula tetap 100.0%.`,
+      changes,
       updated_phases: {
-        phase_a: f.ingredients.filter((i) => i.phase === "A"),
-        phase_b: f.ingredients.filter((i) => i.phase === "B"),
-        phase_c: f.ingredients.filter((i) => i.phase === "C"),
-        phase_d: f.ingredients.filter((i) => i.phase === "D"),
+        phase_a: getPhaseItems("A"),
+        phase_b: getPhaseItems("B"),
+        phase_c: getPhaseItems("C"),
+        phase_d: getPhaseItems("D"),
       },
       total_weight_pct: 100.0,
     };

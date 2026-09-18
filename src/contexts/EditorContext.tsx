@@ -26,7 +26,15 @@ import {
   FormulaVersionItem,
 } from "@/domain/models/formula";
 import { PresetFormulaItem } from "@/domain/models/simulation";
-import { getFormulaRepository, getOptimizerRepository, getWorkspaceRepository } from "@/data/di/container";
+import {
+  getFormulaRepository,
+  getOptimizerRepository,
+  getWorkspaceRepository,
+  getSimulationRepository,
+  getComplianceRepository,
+  getSimilarityRepository,
+  isDemoMode,
+} from "@/data/di/container";
 import { ParetoCandidateFormula } from "@/domain/models/optimizer";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -348,6 +356,140 @@ function buildProposalFromComplianceAudit(
   };
 }
 
+function buildProposalFromSimulation(
+  currentIngredients: EditorIngredient[]
+): FormulaModificationProposal | null {
+  if (currentIngredients.length === 0) return null;
+  const items = currentIngredients.map((i) => ({ ...i }));
+  const changes: FormulaDiffChange[] = [];
+
+  const emulsifier =
+    items.find((i) => (i.role === "emulsifier" || i.phase === "C") && i.weightPct > 0) ||
+    items.find((i) => i.phase === "C");
+  const thickener =
+    items.find((i) => (i.role === "thickener" || i.phase === "B") && !i.inci.toLowerCase().includes("aqua") && !i.inci.toLowerCase().includes("water"));
+  const solvent =
+    items.find((i) => i.role === "solvent" || i.inci.toLowerCase().includes("aqua") || i.inci.toLowerCase().includes("water")) ||
+    items.find((i) => i.phase === "B");
+
+  let totalAdded = 0;
+  if (emulsifier) {
+    const delta = 0.4;
+    const oldPct = emulsifier.weightPct;
+    emulsifier.weightPct = Number((oldPct + delta).toFixed(2));
+    totalAdded += delta;
+    changes.push({
+      ingredientId: emulsifier.id,
+      name: emulsifier.name,
+      oldPct,
+      newPct: emulsifier.weightPct,
+      phase: emulsifier.phase,
+      action: "modified",
+    });
+  }
+
+  if (thickener) {
+    const delta = 0.1;
+    const oldPct = thickener.weightPct;
+    thickener.weightPct = Number((oldPct + delta).toFixed(2));
+    totalAdded += delta;
+    changes.push({
+      ingredientId: thickener.id,
+      name: thickener.name,
+      oldPct,
+      newPct: thickener.weightPct,
+      phase: thickener.phase,
+      action: "modified",
+    });
+  }
+
+  if (solvent && totalAdded > 0) {
+    const oldPct = solvent.weightPct;
+    solvent.weightPct = Number(Math.max(5, oldPct - totalAdded).toFixed(2));
+    changes.push({
+      ingredientId: solvent.id,
+      name: solvent.name,
+      oldPct,
+      newPct: solvent.weightPct,
+      phase: solvent.phase,
+      action: "modified",
+    });
+  }
+
+  // Normalise to exact 100%
+  const sum = Number(items.reduce((s, it) => s + it.weightPct, 0).toFixed(2));
+  if (solvent && Math.abs(sum - 100) > 0.001) {
+    solvent.weightPct = Number((solvent.weightPct + (100 - sum)).toFixed(2));
+  }
+
+  if (changes.length === 0) return null;
+
+  return {
+    id: `prop-sim-${Date.now()}`,
+    title: "Usulan Penguatan Kestabilan Tropis 40°C",
+    explanation:
+      "Optimalisasi kestabilan dipercepat 90 hari pada inkubator iklim tropis Zona IVb (40°C / 75% RH). Peningkatan emulgator fase C (+0.4%) dan penstabil polimer fase B (+0.1%) dengan penyesuaian fase pelarut (-0.5%) mengunci droplet emulsi dan mengeliminasi risiko pemisahan fase.",
+    changes,
+    updatedIngredients: items,
+  };
+}
+
+function buildProposalFromSimilarity(
+  currentIngredients: EditorIngredient[]
+): FormulaModificationProposal | null {
+  if (currentIngredients.length === 0) return null;
+  const items = currentIngredients.map((i) => ({ ...i }));
+  const changes: FormulaDiffChange[] = [];
+
+  const active =
+    items.find((i) => (i.role === "active" || i.phase === "D") && i.weightPct > 0) ||
+    items.find((i) => i.phase === "D");
+  const solvent =
+    items.find((i) => i.role === "solvent" || i.inci.toLowerCase().includes("aqua") || i.inci.toLowerCase().includes("water")) ||
+    items.find((i) => i.phase === "B");
+
+  if (active && solvent) {
+    const delta = 0.8;
+    const oldActive = active.weightPct;
+    active.weightPct = Number((oldActive + delta).toFixed(2));
+    changes.push({
+      ingredientId: active.id,
+      name: active.name,
+      oldPct: oldActive,
+      newPct: active.weightPct,
+      phase: active.phase,
+      action: "modified",
+    });
+
+    const oldSolvent = solvent.weightPct;
+    solvent.weightPct = Number(Math.max(5, oldSolvent - delta).toFixed(2));
+    changes.push({
+      ingredientId: solvent.id,
+      name: solvent.name,
+      oldPct: oldSolvent,
+      newPct: solvent.weightPct,
+      phase: solvent.phase,
+      action: "modified",
+    });
+  }
+
+  const sum = Number(items.reduce((s, it) => s + it.weightPct, 0).toFixed(2));
+  if (solvent && Math.abs(sum - 100) > 0.001) {
+    solvent.weightPct = Number((solvent.weightPct + (100 - sum)).toFixed(2));
+  }
+
+  if (changes.length === 0) return null;
+
+  return {
+    id: `prop-simil-${Date.now()}`,
+    title: "Usulan Diferensiasi Formula & Peningkatan Novelty",
+    explanation:
+      "Diferensiasi kemiripan chassis terhadap portofolio produk beredar di pasar. Pengayaan fraksi bahan aktif bio-kompatibel (+0.8%) dan penyeimbangan pelarut (-0.8%) menaikkan skor novelty paten ke 92.5% serta memperkuat kebebasan beroperasi (Freedom-to-Operate / FTO).",
+    changes,
+    updatedIngredients: items,
+  };
+}
+
 interface EditorContextType {
   workspace: EditorWorkspace;
   activeDraft: DraftFormulation | null;
@@ -565,10 +707,12 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
   const toSimulateIngredients = useCallback(async () => {
     const smilesMap = await ensureSmilesMap();
     return ingredients.map((it) => ({
+      id: it.id,
       name: it.name,
       inci: it.inci,
       smiles: smilesMap[it.inci.toLowerCase()] || "O",
       weight_pct: it.weightPct,
+      weightPct: it.weightPct,
       phase: it.phase,
       role: it.role,
     }));
@@ -1466,15 +1610,38 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
 
       try {
         if (type === "pareto") {
-          const res: any = await apiPost("/api/v1/optimizer/run-nsga2", {
-            constraints: {
-              minStabilityPct: configParams?.minStability ?? 85,
-              maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
-              minTkdnPct: configParams?.targetTkdn ?? 40,
-              targetViscosityMpaS: 5200,
-            },
-            trialsCount: 500,
-          });
+          let res: any;
+          if (isDemoMode()) {
+            const optRepo = getOptimizerRepository();
+            const optRes = await optRepo.runOptimization({
+              preset: configParams?.preset || "balanced",
+              trialsCount: 50000,
+              weights: { stabilityWeight: 35, cogsWeight: 30, tkdnWeight: 20, viscosityWeight: 15 },
+              constraints: {
+                minStabilityPct: configParams?.minStability ?? 85,
+                maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
+                minTkdnPct: configParams?.targetTkdn ?? 40,
+                targetViscosityMpaS: 5200,
+              },
+            });
+            res = {
+              topCandidates: optRes.topCandidates,
+              trialsEvaluated: optRes.trialsEvaluated,
+              executionTimeMs: 1250,
+              nonDominatedCount: 18,
+            };
+          } else {
+            res = await apiPost("/api/v1/optimizer/run-nsga2", {
+              constraints: {
+                minStabilityPct: configParams?.minStability ?? 85,
+                maxCogsIdrPerKg: configParams?.maxCogs ?? 45000,
+                minTkdnPct: configParams?.targetTkdn ?? 40,
+                targetViscosityMpaS: 5200,
+              },
+              trialsCount: 500,
+            });
+          }
+
           const candidates = (res.topCandidates || []).map((c: any) => ({
             id: c.id,
             title: c.title,
@@ -1499,7 +1666,7 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
           }
           pushArtifact(
             "Pareto Frontier Multi-Objective Optimization",
-            `${res.trialsEvaluated} iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN`,
+            `${res.trialsEvaluated.toLocaleString("id-ID")} iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN`,
             {
               candidates,
               topCandidates: res.topCandidates || [],
@@ -1507,14 +1674,44 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               executionTimeMs: res.executionTimeMs,
               nonDominatedCount: res.nonDominatedCount,
             },
-            `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`,
+            `Optimasi Pareto selesai: ${res.trialsEvaluated.toLocaleString("id-ID")} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`,
             actionProposal
           );
         } else if (type === "sentinel") {
-          const res: any = await apiPost("/api/v1/compliance/audit", {
-            formula_name: activeDraft.name,
-            ingredients: simIngredients,
-          });
+          let res: any;
+          if (isDemoMode()) {
+            const compRepo = getComplianceRepository();
+            const auditReport = await compRepo.auditFormula(activeDraft.name, "skincare", simIngredients);
+            res = {
+              overall_status: auditReport.overallStatus,
+              compliance_score: auditReport.complianceScore,
+              halal_status: auditReport.halalStatus,
+              total_tkdn_pct: auditReport.totalTkdnPct,
+              ingredients_audit: (auditReport.ingredientsAudit || []).map((a: any) => ({
+                name: a.name,
+                inci: a.inci,
+                status: a.status,
+                audit_notes: a.auditNotes,
+                bpom_limit_pct: a.bpomLimitPct,
+              })),
+              llm_reasoning: {
+                toxicology_evaluation: auditReport.llmReasoning?.toxicologyEvaluation,
+                mandatory_label_warnings: auditReport.llmReasoning?.mandatoryLabelWarnings,
+                local_substitution_recommendations: (auditReport.llmReasoning?.localSubstitutionRecommendations || []).map((s: any) => ({
+                  current_ingredient: s.currentIngredient,
+                  recommended_local: s.recommendedLocal,
+                  tkdn_impact: s.tkdnImpact,
+                  rationale: s.rationale,
+                })),
+              },
+            };
+          } else {
+            res = await apiPost("/api/v1/compliance/audit", {
+              formula_name: activeDraft.name,
+              ingredients: simIngredients,
+            });
+          }
+
           const violations = (res.ingredients_audit || []).filter(
             (a: any) => a.status !== "PASSED"
           ).length;
@@ -1576,12 +1773,34 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
             actionProposal
           );
         } else if (type === "simulation") {
-          const res: any = await apiPost("/api/v1/simulate/stability", {
-            formula_name: activeDraft.name,
-            temperature_c: configParams?.temperature ?? 40,
-            duration_days: configParams?.durationDays ?? 90,
-            ingredients: simIngredients,
-          });
+          let res: any;
+          if (isDemoMode()) {
+            const simRepo = getSimulationRepository();
+            const simRes = await simRepo.simulateStability({
+              formulaName: activeDraft.name,
+              temperatureC: configParams?.temperature ?? 40,
+              durationDays: configParams?.durationDays ?? 90,
+              engine: "LIGHTGBM_GPU",
+              ingredients: simIngredients,
+            });
+            res = {
+              stability_score_40c_90days: simRes.stabilityScore,
+              dynamic_viscosity_mpas: simRes.dynamicViscosityMpaS,
+              mean_droplet_size_nm: simRes.meanDropletSizeNm,
+              thermodynamics: { gibbs_free_energy_kj_mol: simRes.thermodynamics.gibbsFreeEnergyKjMol },
+              verdict: simRes.verdict,
+            };
+          } else {
+            res = await apiPost("/api/v1/simulate/stability", {
+              formula_name: activeDraft.name,
+              temperature_c: configParams?.temperature ?? 40,
+              duration_days: configParams?.durationDays ?? 90,
+              ingredients: simIngredients,
+            });
+          }
+
+          actionProposal = buildProposalFromSimulation(activeDraft.ingredients) || undefined;
+
           pushArtifact(
             "Tropical Stability Report (40°C / 75% RH)",
             "Simulasi kestabilan dipercepat 90 hari • LightGBM Model",
@@ -1592,19 +1811,42 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
               gibbsDeltaG: res.thermodynamics?.gibbs_free_energy_kj_mol ?? null,
               verdict: res.verdict,
             },
-            `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}).`
+            `Simulasi kestabilan 40°C selesai: skor ${Math.round((res.stability_score_40c_90days || 0) * 1000) / 10}% (${res.verdict}). Usulan formulasi kestabilan terlampir dan dapat langsung diaplikasikan ke kanvas.`,
+            actionProposal
           );
         } else {
-          const payload = {
-            ingredients: simIngredients.map((it: any) => ({
+          let internal: any;
+          let external: any;
+          if (isDemoMode()) {
+            const similRepo = getSimilarityRepository();
+            const similarityInputs = simIngredients.map((it: any) => ({
               inci: it.inci,
               weight_pct: it.weight_pct,
-            })),
-          };
-          const [internal, external] = await Promise.all([
-            apiPost<any>("/api/v1/similarity/check", payload),
-            apiPost<any>("/api/v1/similarity/external", payload),
-          ]);
+              phase: it.phase,
+            }));
+            const [iRes, eRes] = await Promise.all([
+              similRepo.checkInternalSimilarity(similarityInputs, activeDraft.id),
+              similRepo.checkExternalSimilarity(similarityInputs),
+            ]);
+            internal = { matches: iRes };
+            external = eRes;
+          } else {
+            const payload = {
+              ingredients: simIngredients.map((it: any) => ({
+                inci: it.inci,
+                weight_pct: it.weight_pct,
+              })),
+            };
+            const [iRes, eRes] = await Promise.all([
+              apiPost<any>("/api/v1/similarity/check", payload),
+              apiPost<any>("/api/v1/similarity/external", payload),
+            ]);
+            internal = iRes;
+            external = eRes;
+          }
+
+          actionProposal = buildProposalFromSimilarity(activeDraft.ingredients) || undefined;
+
           pushArtifact(
             "Benchmark Chemical Similarity Radar",
             "Cosine similarity & Morgan Fingerprints",
@@ -1629,7 +1871,8 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 })),
               },
             },
-            `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%.`
+            `Analisis komparasi selesai. Skor kebaruan vs produk beredar: ${Math.round((external.novelty_score || 0) * 100)}%. Usulan diferensiasi formula telah disusun dan siap diaplikasikan.`,
+            actionProposal
           );
         }
       } catch (err) {
@@ -1705,6 +1948,69 @@ export const EditorProvider: React.FC<{ children: ReactNode; workspaceId?: strin
                 }
           )
         );
+
+        if (isDemoMode()) {
+          const mockTokens = [
+            "Halo! ",
+            "Saya ",
+            "CoRamu ",
+            "Formulation ",
+            "Co-Pilot. ",
+            "\n\nFormulasi ",
+            "Anda ",
+            "saat ",
+            "ini ",
+            "telah ",
+            "tersinkronisasi. ",
+            "Keseimbangan ",
+            "fase ",
+            "dan ",
+            "karakteristik ",
+            "koloid ",
+            "berada ",
+            "dalam ",
+            "kondisi ",
+            "baik. ",
+            "\n\nAnda ",
+            "dapat ",
+            "meminta ",
+            "penyesuaian ",
+            "tekstur ",
+            "(seperti ",
+            "**\"saya ingin krimnya lebih lembut di tangan\"**), ",
+            "menjalankan ",
+            "simulasi ",
+            "kestabilan ",
+            "40°C, ",
+            "audit ",
+            "kepatuhan ",
+            "BPOM/Halal, ",
+            "atau ",
+            "optimasi ",
+            "Pareto ",
+            "melalui ",
+            "menu ",
+            "**(+)**."
+          ];
+          for (const token of mockTokens) {
+            await new Promise((r) => setTimeout(r, 35));
+            streamed += token;
+            setDrafts((prev) =>
+              prev.map((d) =>
+                d.id !== draftId
+                  ? d
+                  : {
+                      ...d,
+                      messages: d.messages.map((m) =>
+                        m.id === assistantId ? { ...m, content: m.content + token } : m
+                      ),
+                    }
+              )
+            );
+          }
+          return streamed;
+        }
+
         const res = await fetch(`${API_BASE}/api/v1/copilot/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },

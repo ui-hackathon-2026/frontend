@@ -631,11 +631,88 @@ export const ArtifactViewerPanel: React.FC = () => {
                 <span className="text-[10px] text-slate-400 block">kJ/mol (Spontan Stabil)</span>
               </div>
             </div>
+
+            {activeArtifact.proposal && (
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-[#001299] block font-heading">
+                    {activeArtifact.proposal.title}
+                  </span>
+                  <p className="text-[11px] text-slate-600">
+                    {activeArtifact.proposal.explanation}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyProposal(activeArtifact.proposal!, "new_version");
+                      setAppliedNotice("Usulan telah diterapkan sebagai Versi Baru!");
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+                  >
+                    <History className="w-3.5 h-3.5 text-blue-200" />
+                    <span>Terapkan Sebagai Versi Baru</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyProposal(activeArtifact.proposal!, "overwrite");
+                      setAppliedNotice("Usulan telah diaplikasikan (Overwrite) ke formula aktif!");
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Overwrite Versi Ini</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* 4. DUAL-SCOPE SIMILARITY & PATENT NOVELTY REPORT */}
-        {activeArtifact.type === "similarity" && <DualScopeSimilarityReport data={(activeArtifact as any).data} />}
+        {activeArtifact.type === "similarity" && (
+          <div className="space-y-4">
+            <DualScopeSimilarityReport data={(activeArtifact as any).data} />
+            {activeArtifact.proposal && (
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3 bg-white shadow-xs">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-[#001299] block font-heading">
+                    {activeArtifact.proposal.title}
+                  </span>
+                  <p className="text-[11px] text-slate-600">
+                    {activeArtifact.proposal.explanation}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyProposal(activeArtifact.proposal!, "new_version");
+                      setAppliedNotice("Usulan telah diterapkan sebagai Versi Baru!");
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#001299] hover:bg-[#000e7a] text-white shadow-xs transition-all cursor-pointer"
+                  >
+                    <History className="w-3.5 h-3.5 text-blue-200" />
+                    <span>Terapkan Sebagai Versi Baru</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      applyProposal(activeArtifact.proposal!, "overwrite");
+                      setAppliedNotice("Usulan telah diaplikasikan (Overwrite) ke formula aktif!");
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Overwrite Versi Ini</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -67,11 +67,16 @@ function writeStorage(user: AuthUser, tokens: AuthTokens) {
   localStorage.setItem(KEY_ACCESS, tokens.accessToken);
   localStorage.setItem(KEY_REFRESH, tokens.refreshToken);
   localStorage.setItem(KEY_EXPIRES, String(expiresAt));
+  if (user.email?.toLowerCase() === "demo@paragon.co.id") {
+    localStorage.setItem("ps_demo_mode", "true");
+  } else {
+    localStorage.removeItem("ps_demo_mode");
+  }
   writeAuthCookie(tokens.accessToken, tokens.expiresIn);
 }
 
 function clearStorage() {
-  [KEY_USER, KEY_ACCESS, KEY_REFRESH, KEY_EXPIRES, "ps_editor_active_formula_id"].forEach((k) =>
+  [KEY_USER, KEY_ACCESS, KEY_REFRESH, KEY_EXPIRES, "ps_demo_mode", "ps_editor_active_formula_id"].forEach((k) =>
     localStorage.removeItem(k)
   );
   clearAuthCookie();

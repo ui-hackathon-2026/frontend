@@ -10,6 +10,21 @@ export class HttpAuthRepository implements IAuthRepository {
   }
 
   async login(payload: LoginPayload): Promise<AuthSession> {
+    if (payload.email.toLowerCase() === "demo@paragon.co.id") {
+      return {
+        user: {
+          id: "usr_demo_001",
+          name: "Andi Wibowo",
+          email: "demo@paragon.co.id",
+          avatarInitials: "AW",
+        },
+        tokens: {
+          accessToken: "mock_demo_access_token_paragon",
+          refreshToken: "mock_demo_refresh_token_paragon",
+          expiresIn: 86400,
+        },
+      };
+    }
     return this.client.post<LoginPayload, AuthSession>("/api/v1/auth/login", payload);
   }
 

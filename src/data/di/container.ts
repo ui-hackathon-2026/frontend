@@ -31,7 +31,21 @@ import { ISimilarityRepository } from "@/domain/repositories/ISimilarityReposito
 import { MockSimilarityRepository } from "../repositories/MockSimilarityRepository";
 import { HttpSimilarityRepository } from "../repositories/HttpSimilarityRepository";
 
+export function isDemoMode(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (localStorage.getItem("ps_demo_mode") === "true") return true;
+    const userStr = localStorage.getItem("ps_user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user?.email?.toLowerCase() === "demo@paragon.co.id") return true;
+    }
+  } catch {}
+  return false;
+}
+
 function shouldUseMockApi(): boolean {
+  if (isDemoMode()) return true;
   if (process.env.NEXT_PUBLIC_USE_MOCK_API === "false") return false;
   return (
     process.env.NEXT_PUBLIC_USE_MOCK_API === "true" ||
@@ -41,135 +55,153 @@ function shouldUseMockApi(): boolean {
 }
 
 class ServiceContainer {
-  private static simulationRepository: ISimulationRepository | null = null;
-  private static workbenchRepository: IWorkbenchRepository | null = null;
-  private static complianceRepository: IComplianceRepository | null = null;
-  private static briefRepository: IBriefRepository | null = null;
-  private static optimizerRepository: IOptimizerRepository | null = null;
-  private static authRepository: IAuthRepository | null = null;
-  private static formulaRepository: IFormulaRepository | null = null;
-  private static workspaceRepository: IWorkspaceRepository | null = null;
-  private static similarityRepository: ISimilarityRepository | null = null;
+  private static mockSimulationRepository: ISimulationRepository | null = null;
+  private static httpSimulationRepository: ISimulationRepository | null = null;
+
+  private static mockWorkbenchRepository: IWorkbenchRepository | null = null;
+  private static httpWorkbenchRepository: IWorkbenchRepository | null = null;
+
+  private static mockComplianceRepository: IComplianceRepository | null = null;
+  private static httpComplianceRepository: IComplianceRepository | null = null;
+
+  private static mockBriefRepository: IBriefRepository | null = null;
+  private static httpBriefRepository: IBriefRepository | null = null;
+
+  private static mockOptimizerRepository: IOptimizerRepository | null = null;
+  private static httpOptimizerRepository: IOptimizerRepository | null = null;
+
+  private static mockAuthRepository: IAuthRepository | null = null;
+  private static httpAuthRepository: IAuthRepository | null = null;
+
+  private static mockFormulaRepository: IFormulaRepository | null = null;
+  private static httpFormulaRepository: IFormulaRepository | null = null;
+
+  private static mockWorkspaceRepository: IWorkspaceRepository | null = null;
+  private static httpWorkspaceRepository: IWorkspaceRepository | null = null;
+
+  private static mockSimilarityRepository: ISimilarityRepository | null = null;
+  private static httpSimilarityRepository: ISimilarityRepository | null = null;
 
   public static getSimulationRepository(): ISimulationRepository {
-    if (!this.simulationRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.simulationRepository = new MockSimulationRepository();
-      } else {
-        this.simulationRepository = new HttpSimulationRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockSimulationRepository) {
+        this.mockSimulationRepository = new MockSimulationRepository();
       }
+      return this.mockSimulationRepository;
     }
-    return this.simulationRepository!;
+    if (!this.httpSimulationRepository) {
+      this.httpSimulationRepository = new HttpSimulationRepository();
+    }
+    return this.httpSimulationRepository;
   }
 
   public static getWorkbenchRepository(): IWorkbenchRepository {
-    if (!this.workbenchRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.workbenchRepository = new MockWorkbenchRepository();
-      } else {
-        this.workbenchRepository = new HttpWorkbenchRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockWorkbenchRepository) {
+        this.mockWorkbenchRepository = new MockWorkbenchRepository();
       }
+      return this.mockWorkbenchRepository;
     }
-    return this.workbenchRepository!;
+    if (!this.httpWorkbenchRepository) {
+      this.httpWorkbenchRepository = new HttpWorkbenchRepository();
+    }
+    return this.httpWorkbenchRepository;
   }
 
   public static getComplianceRepository(): IComplianceRepository {
-    if (!this.complianceRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.complianceRepository = new MockComplianceRepository();
-      } else {
-        this.complianceRepository = new HttpComplianceRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockComplianceRepository) {
+        this.mockComplianceRepository = new MockComplianceRepository();
       }
+      return this.mockComplianceRepository;
     }
-    return this.complianceRepository!;
+    if (!this.httpComplianceRepository) {
+      this.httpComplianceRepository = new HttpComplianceRepository();
+    }
+    return this.httpComplianceRepository;
   }
 
   public static getBriefRepository(): IBriefRepository {
-    if (!this.briefRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.briefRepository = new MockBriefRepository();
-      } else {
-        this.briefRepository = new HttpBriefRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockBriefRepository) {
+        this.mockBriefRepository = new MockBriefRepository();
       }
+      return this.mockBriefRepository;
     }
-    return this.briefRepository!;
+    if (!this.httpBriefRepository) {
+      this.httpBriefRepository = new HttpBriefRepository();
+    }
+    return this.httpBriefRepository;
   }
 
   public static getOptimizerRepository(): IOptimizerRepository {
-    if (!this.optimizerRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.optimizerRepository = new MockOptimizerRepository();
-      } else {
-        this.optimizerRepository = new HttpOptimizerRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockOptimizerRepository) {
+        this.mockOptimizerRepository = new MockOptimizerRepository();
       }
+      return this.mockOptimizerRepository;
     }
-    return this.optimizerRepository!;
+    if (!this.httpOptimizerRepository) {
+      this.httpOptimizerRepository = new HttpOptimizerRepository();
+    }
+    return this.httpOptimizerRepository;
   }
 
   public static getAuthRepository(): IAuthRepository {
-    if (!this.authRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.authRepository = new MockAuthRepository();
-      } else {
-        this.authRepository = new HttpAuthRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockAuthRepository) {
+        this.mockAuthRepository = new MockAuthRepository();
       }
+      return this.mockAuthRepository;
     }
-    return this.authRepository!;
+    if (!this.httpAuthRepository) {
+      this.httpAuthRepository = new HttpAuthRepository();
+    }
+    return this.httpAuthRepository;
   }
 
   public static getFormulaRepository(): IFormulaRepository {
-    if (!this.formulaRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.formulaRepository = new MockFormulaRepository();
-      } else {
-        this.formulaRepository = new HttpFormulaRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockFormulaRepository) {
+        this.mockFormulaRepository = new MockFormulaRepository();
       }
+      return this.mockFormulaRepository;
     }
-    return this.formulaRepository!;
+    if (!this.httpFormulaRepository) {
+      this.httpFormulaRepository = new HttpFormulaRepository();
+    }
+    return this.httpFormulaRepository;
   }
 
   public static getWorkspaceRepository(): IWorkspaceRepository {
-    if (!this.workspaceRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.workspaceRepository = new MockWorkspaceRepository();
-      } else {
-        this.workspaceRepository = new HttpWorkspaceRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockWorkspaceRepository) {
+        this.mockWorkspaceRepository = new MockWorkspaceRepository();
       }
+      return this.mockWorkspaceRepository;
     }
-    return this.workspaceRepository!;
+    if (!this.httpWorkspaceRepository) {
+      this.httpWorkspaceRepository = new HttpWorkspaceRepository();
+    }
+    return this.httpWorkspaceRepository;
   }
 
   public static getSimilarityRepository(): ISimilarityRepository {
-    if (!this.similarityRepository) {
-      const useMock = shouldUseMockApi();
-
-      if (useMock) {
-        this.similarityRepository = new MockSimilarityRepository();
-      } else {
-        this.similarityRepository = new HttpSimilarityRepository();
+    if (shouldUseMockApi()) {
+      if (!this.mockSimilarityRepository) {
+        this.mockSimilarityRepository = new MockSimilarityRepository();
       }
+      return this.mockSimilarityRepository;
     }
-    return this.similarityRepository!;
+    if (!this.httpSimilarityRepository) {
+      this.httpSimilarityRepository = new HttpSimilarityRepository();
+    }
+    return this.httpSimilarityRepository;
   }
 
   public static setComplianceRepository(repo: IComplianceRepository) {
-    this.complianceRepository = repo;
+    this.mockComplianceRepository = repo;
+    this.httpComplianceRepository = repo;
   }
 }
 
