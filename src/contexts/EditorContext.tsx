@@ -17,6 +17,7 @@ import {
   EditorArtifact,
   ArtifactType,
   FormulaModificationProposal,
+  FormulaDiffChange,
 } from "@/domain/models/editor";
 import {
   FormulaAdjustmentResponse,
@@ -25,7 +26,8 @@ import {
   FormulaVersionItem,
 } from "@/domain/models/formula";
 import { PresetFormulaItem } from "@/domain/models/simulation";
-import { getFormulaRepository } from "@/data/di/container";
+import { getFormulaRepository, getOptimizerRepository } from "@/data/di/container";
+import { ParetoCandidateFormula } from "@/domain/models/optimizer";
 import { useAuth } from "@/contexts/AuthContext";
 
 const STORAGE_KEY_ACTIVE_ID = "ps_editor_active_formula_id";
@@ -148,6 +150,81 @@ function mapEditorToDtoPhases(ingredients: EditorIngredient[]) {
     phase_b: getPhase("B"),
     phase_c: getPhase("C"),
     phase_d: getPhase("D"),
+  };
+}
+
+function buildProposalFromParetoCandidate(
+  currentIngredients: EditorIngredient[],
+  candidate: ParetoCandidateFormula,
+  customTitle?: string
+): FormulaModificationProposal {
+  const updatedIngredients: EditorIngredient[] = candidate.ingredients.map((c, idx) => ({
+    id: `ing-cand-${candidate.id.toLowerCase()}-${c.phase.toLowerCase()}-${c.inci.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${idx}`,
+    name: c.name || c.inci,
+    inci: c.inci,
+    phase: c.phase,
+    weightPct: Number(c.weightPct.toFixed(2)),
+    role: inferRole(c.inci),
+    isLocked: false,
+  }));
+
+  const currentMap = new Map<string, EditorIngredient>();
+  currentIngredients.forEach((it) => currentMap.set(it.inci.toLowerCase(), it));
+
+  const updatedMap = new Map<string, EditorIngredient>();
+  updatedIngredients.forEach((it) => updatedMap.set(it.inci.toLowerCase(), it));
+
+  const changes: FormulaDiffChange[] = [];
+
+  // Updated or added ingredients
+  for (const item of updatedIngredients) {
+    const existing = currentMap.get(item.inci.toLowerCase());
+    if (existing) {
+      if (Math.abs(existing.weightPct - item.weightPct) > 0.05) {
+        changes.push({
+          ingredientId: existing.id,
+          name: item.name,
+          oldPct: existing.weightPct,
+          newPct: item.weightPct,
+          phase: item.phase,
+          action: "modified",
+        });
+      }
+    } else {
+      changes.push({
+        ingredientId: item.id,
+        name: item.name,
+        oldPct: 0,
+        newPct: item.weightPct,
+        phase: item.phase,
+        action: "added",
+      });
+    }
+  }
+
+  // Removed ingredients
+  for (const item of currentIngredients) {
+    if (!updatedMap.has(item.inci.toLowerCase())) {
+      changes.push({
+        ingredientId: item.id,
+        name: item.name,
+        oldPct: item.weightPct,
+        newPct: 0,
+        phase: item.phase,
+        action: "removed",
+      });
+    }
+  }
+
+  const title = customTitle || `Usulan Optimasi Pareto (${candidate.title})`;
+  const explanation = `${candidate.archetype} • ${candidate.tradeOffSummary}\n\n🔬 Rasional Fisikokimia: ${candidate.physicochemicalRationale}\n📊 Metrik Model: Stabilitas 40°C ${candidate.metrics.stabilityPct}% | COGS Rp ${candidate.metrics.cogsIdrPerKg.toLocaleString("id-ID")}/kg | TKDN ${candidate.metrics.tkdnPct}%`;
+
+  return {
+    id: `prop-pareto-${candidate.id.toLowerCase()}-${Date.now()}`,
+    title,
+    explanation,
+    changes,
+    updatedIngredients,
   };
 }
 
@@ -933,12 +1010,14 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         minute: "2-digit",
       });
       const simIngredients = await toSimulateIngredients();
+      let actionProposal: FormulaModificationProposal | undefined = undefined;
 
       const pushArtifact = (
         title: string,
         subtitle: string,
         dataPayload: any,
-        chatText: string
+        chatText: string,
+        proposal?: FormulaModificationProposal
       ) => {
         const newArtifact: EditorArtifact = {
           id: `art-${type}-${Date.now().toString().slice(-4)}`,
@@ -954,6 +1033,7 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           content: chatText,
           timestamp,
           linkedArtifactId: newArtifact.id,
+          proposal,
         };
         setDrafts((prev) =>
           prev.map((d) => {
@@ -965,6 +1045,13 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
           })
         );
+        getFormulaRepository()
+          .addMessage(activeDraft.id, {
+            role: "assistant",
+            content: chatText,
+            proposal: proposal || undefined,
+          })
+          .catch((e) => console.error("Gagal persist artifact message:", e));
         viewArtifact(newArtifact);
       };
 
@@ -1005,16 +1092,28 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
               (c.ingredients || []).map((i: any) => [i.inci, i.weightPct])
             ),
           }));
+          if ((res.topCandidates || []).length > 0) {
+            try {
+              actionProposal = buildProposalFromParetoCandidate(
+                activeDraft.ingredients,
+                res.topCandidates[0]
+              );
+            } catch (e) {
+              console.error("Gagal menyusun proposal pareto:", e);
+            }
+          }
           pushArtifact(
             "Pareto Frontier Multi-Objective Optimization",
             `${res.trialsEvaluated} iterasi NSGA-II • Trade-off Cost vs. Stability vs. TKDN`,
             {
               candidates,
+              topCandidates: res.topCandidates || [],
               trialsEvaluated: res.trialsEvaluated,
               executionTimeMs: res.executionTimeMs,
               nonDominatedCount: res.nonDominatedCount,
             },
-            `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`
+            `Optimasi Pareto selesai: ${res.trialsEvaluated} iterasi, ${res.nonDominatedCount} titik front non-dominated. Report telah siap ditinjau.`,
+            actionProposal
           );
         } else if (type === "sentinel") {
           const res: any = await apiPost("/api/v1/compliance/audit", {
@@ -1225,6 +1324,90 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       };
 
       if (ingredients.length > 0) {
+
+      // Pareto / multi-objective trade-off queries → real optimizer + proposal card
+      if (/(pareto|optima|sweet spot|multi-objective|trade-off|rekomendasi kandidat)/i.test(text)) {
+        try {
+          setIsSaving(true);
+          const optRepo = getOptimizerRepository();
+          const paretoRes = await optRepo.runOptimization({
+            preset: "balanced",
+            trialsCount: 2000,
+            weights: {
+              stabilityWeight: 35,
+              cogsWeight: 30,
+              tkdnWeight: 20,
+              viscosityWeight: 15,
+            },
+            constraints: {
+              minStabilityPct: 85,
+              maxCogsIdrPerKg: 45000,
+              minTkdnPct: 40,
+              targetViscosityMpaS: 5200,
+            },
+          });
+
+          const paretoArtId = `art-pareto-${Date.now().toString().slice(-4)}`;
+          const paretoArtifact: EditorArtifact = {
+            id: paretoArtId,
+            type: "pareto",
+            title: "Pareto Frontier Multi-Objective Optimization",
+            subtitle: `${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi NSGA-II • LightGBM Model`,
+            createdAt: "Baru saja",
+            data: {
+              ...paretoRes,
+              maxCogs: 45000,
+              minStability: 85,
+              minTkdn: 40,
+              candidates: paretoRes.topCandidates.map((c) => ({
+                id: c.id,
+                name: c.title,
+                cogs: c.metrics.cogsIdrPerKg,
+                stability: c.metrics.stabilityPct,
+                tkdn: c.metrics.tkdnPct,
+                isBest: c.id === "A",
+              })),
+            },
+          };
+
+          setDrafts((prev) =>
+            prev.map((d) => (d.id === draftId ? { ...d, artifacts: [paretoArtifact, ...d.artifacts] } : d))
+          );
+
+          if (paretoRes.topCandidates.length > 0) {
+            const candA = paretoRes.topCandidates[0];
+            const chatProposal = buildProposalFromParetoCandidate(ingredients, candA);
+            const chatContent = `Berdasarkan inferensi model **LightGBM terakselerasi GPU** dan **${paretoRes.trialsEvaluated.toLocaleString("id-ID")} iterasi Pareto NSGA-II**, saya menemukan konfigurasi Sweet Spot (**${candA.title}**).\n\n` +
+              `📊 **Hasil Inferensi Model Multi-Objektif**:\n` +
+              `- **Stabilitas Dipercepat 40°C**: **${candA.metrics.stabilityPct}%** (Lolos Uji Kestabilan Tropis)\n` +
+              `- **Estimasi COGS**: **Rp ${candA.metrics.cogsIdrPerKg.toLocaleString("id-ID")}/kg**\n` +
+              `- **Kandungan TKDN**: **${candA.metrics.tkdnPct}%**\n` +
+              `- **Viskositas Target**: **${candA.metrics.viscosityMpaS.toLocaleString("id-ID")} mPa.s** (HLB Sistem: ${candA.metrics.systemHlb})\n\n` +
+              `🔬 **Rasional Fisikokimia Formulasi**:\n${candA.physicochemicalRationale}\n\n` +
+              `💡 *${candA.tradeOffSummary}*\n\n` +
+              `Saya telah melampirkan lembar analisis Pareto dan menyusun usulan penyesuaian komposisi formula pada kartu di bawah ini. Anda dapat memilih **Buat Versi Baru (Snapshot)** untuk menyimpan checkpoint baru, atau **Overwrite Versi Ini** untuk langsung menimpa formula aktif.`;
+            const paretoMsg: EditorChatMessage = {
+              id: `ai-${Date.now()}`,
+              sender: "assistant" as const,
+              content: chatContent,
+              timestamp,
+              proposal: chatProposal,
+              linkedArtifactId: paretoArtId,
+            };
+            setDrafts((prev) =>
+              prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, paretoMsg] } : d))
+            );
+            await persistAssistant(chatContent, chatProposal);
+            viewArtifact(paretoArtifact);
+            return;
+          }
+          viewArtifact(paretoArtifact);
+        } catch (err) {
+          console.error("Gagal menjalankan pareto dari chat:", err);
+        } finally {
+          setIsSaving(false);
+        }
+      }
         try {
           const res = await repo.proposeAdjustment(draftId, text);
           if (res && res.changes && res.changes.length > 0) {
@@ -1284,6 +1467,20 @@ export const EditorProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
       }
 
+      if (ingredients.length === 0) {
+        const emptyContent = `Kanvas formula masih kosong. Silakan pilih salah satu acuan benchmark dari Workbench di atas atau tambahkan bahan pertama Anda dari Library Bahan.`;
+        const emptyMsg: EditorChatMessage = {
+          id: `ai-${Date.now()}`,
+          sender: "assistant" as const,
+          content: emptyContent,
+          timestamp,
+        };
+        setDrafts((prev) =>
+          prev.map((d) => (d.id === draftId ? { ...d, messages: [...d.messages, emptyMsg] } : d))
+        );
+        await persistAssistant(emptyContent);
+        return;
+      }
       try {
         const reply = await streamCopilotReply();
         await persistAssistant(reply);

@@ -10,7 +10,6 @@ import {
   Sliders,
   Zap,
   ShieldCheck,
-  Box,
   Bot,
   Gauge,
   FileSpreadsheet,
@@ -72,15 +71,6 @@ export default function HomePage() {
       icon: ShieldCheck,
       accent: "amber",
     },
-    {
-      badge: "3D WebGL",
-      title: "Molecular Inspector",
-      desc: "Inspeksi konformasi 3D bahan aktif dan antarmuka koloid emulsi untuk memahami stabilitas fisikokimia sebelum uji oven 40°C.",
-      href: "/molecular-inspector",
-      cta: "Inspeksi Molekul 3D",
-      icon: Box,
-      accent: "purple",
-    },
   ];
 
   const accentMap: Record<string, { soft: string; border: string; text: string; icon: string; glow: string }> = {
@@ -104,13 +94,6 @@ export default function HomePage() {
       text: "text-amber-800",
       icon: "bg-amber-50 text-amber-700 border-amber-200",
       glow: "bg-amber-200/50",
-    },
-    purple: {
-      soft: "bg-purple-50",
-      border: "hover:border-purple-300",
-      text: "text-purple-800",
-      icon: "bg-purple-50 text-purple-700 border-purple-200",
-      glow: "bg-purple-200/50",
     },
   };
 
@@ -566,7 +549,6 @@ export default function HomePage() {
             <ul className="space-y-2">
               <li><Link href="/optimizer" className="hover:text-[#001299]">Pareto Optimizer</Link></li>
               <li><Link href="/compliance" className="hover:text-[#001299]">BPOM & Halal Sentinel</Link></li>
-              <li><Link href="/molecular-inspector" className="hover:text-[#001299]">Molecular 3D Inspector</Link></li>
             </ul>
           </div>
           <div>

@@ -13,8 +13,6 @@ import {
   Zap,
   ShieldCheck,
   FileSpreadsheet,
-  Box,
-  Atom,
   Sparkles,
   LogOut,
   LogIn,
@@ -65,7 +63,6 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
     { label: "Formulation Canvas", href: "/workbench", icon: Sliders },
     { label: "Pareto Optimizer", href: "/optimizer", icon: Zap },
     { label: "Regulatory Sentinel", href: "/compliance", icon: ShieldCheck },
-    { label: "Molecular Inspector", href: "/molecular-inspector", icon: Atom },
   ];
 
   return (
@@ -237,14 +234,6 @@ export const Navbar: React.FC<NavbarProps> = ({ brandName = "Paragon Studio" }) 
               >
                 <FileSpreadsheet className="w-4 h-4 text-sky-600" />
                 <span>Master Batch Record &amp; SOP</span>
-              </Link>
-              <Link
-                href="/molecular-inspector"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-slate-800 hover:bg-slate-50"
-              >
-                <Box className="w-4 h-4 text-purple-600" />
-                <span>3D Molecular Inspector</span>
               </Link>
             </div>
           </div>
